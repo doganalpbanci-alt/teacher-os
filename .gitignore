@@ -1,0 +1,22 @@
+# Ortam degiskenleri - ASLA commit edilmez
+.env
+.env.local
+.env.*.local
+
+# Bagimliliklar
+node_modules/
+
+# Build ciktilari
+.next/
+out/
+dist/
+build/
+
+# Loglar
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

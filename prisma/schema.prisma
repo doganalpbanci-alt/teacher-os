@@ -4,7 +4,11 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Uygulama calisma zamani: Supabase transaction pooler (port 6543).
+  url       = env("DATABASE_URL")
+  // Migration ve introspection: pooler DDL/advisory lock desteklemedigi icin
+  // dogrudan baglanti gerekir (session pooler, port 5432).
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------- Enums ----------
