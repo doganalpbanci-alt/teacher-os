@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum BehaviorType {
+  PLUS
+  MINUS
+  YELLOW_CARD
+  RED_CARD
+}
+
+enum SubmissionStatus {
+  PENDING
+  DONE
+  MISSING
+  LATE
+}
+
+enum MessageStatus {
+  DRAFT
+  SENT
+}
+
+// ---------- Core ----------
+
+model Teacher {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  classrooms     Classroom[]
+  behaviorLogs   BehaviorLog[]
+  parentMessages ParentMessage[]
+}
+
+model Classroom {
+  id        String   @id @default(cuid())
+  teacherId String
+  name      String
+  createdAt DateTime @default(now())
+
+  teacher      Teacher       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  students     Student[]
+  lessons      Lesson[]
+  assignments  Assignment[]
+  exams        Exam[]
+  behaviorLogs BehaviorLog[]
+
+  @@index([teacherId])
+}
+
+model Student {
+  id          String  @id @default(cuid())
+  classroomId String?
+  firstName   String
+  lastName    String
+  parentName  String?
+  parentPhone String?
+
+  // Cached value. Kaynak gerçek BehaviorLog kayıtlarıdır; loglardan yeniden hesaplanabilir.
+  performanceScore Int @default(90)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  classroom      Classroom?      @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  behaviorLogs   BehaviorLog[]
+  submissions    Submission[]
+  examResults    ExamResult[]
+  parentMessages ParentMessage[]
+
+  @@index([classroomId])
+}
+
+// ---------- Ders ----------
+
+model Lesson {
+  id          String   @id @default(cuid())
+  classroomId String
+  date        DateTime
+  createdAt   DateTime @default(now())
+
+  classroom    Classroom     @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  behaviorLogs BehaviorLog[]
+
+  @@index([classroomId, date])
+}
+
+// ---------- Davranış ----------
+
+// Append-only event log. Kayıtlar silinmez.
+model BehaviorLog {
+  id          String       @id @default(cuid())
+  studentId   String
+  teacherId   String
+  classroomId String
+  lessonId    String
+  type        BehaviorType
+  points      Int
+  reason      String?
+  createdAt   DateTime     @default(now())
+
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher   Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  lesson    Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@index([lessonId, studentId])
+}
+
+// ---------- Ödev ----------
+
+model Assignment {
+  id          String    @id @default(cuid())
+  classroomId String
+  title       String
+  description String?
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+
+  classroom   Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@index([classroomId])
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  studentId    String
+  status       SubmissionStatus @default(PENDING)
+  note         String?
+  updatedAt    DateTime         @updatedAt
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId])
+}
+
+// ---------- Sınav ----------
+
+model Exam {
+  id          String   @id @default(cuid())
+  classroomId String
+  title       String
+  examDate    DateTime
+  maxScore    Float    @default(100)
+  createdAt   DateTime @default(now())
+
+  classroom Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  results   ExamResult[]
+
+  @@index([classroomId])
+}
+
+model ExamResult {
+  id        String   @id @default(cuid())
+  examId    String
+  studentId String
+  score     Float
+  note      String?
+  createdAt DateTime @default(now())
+
+  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, studentId])
+  @@index([studentId])
+}
+
+// ---------- Veli ----------
+
+model ParentMessage {
+  id        String        @id @default(cuid())
+  studentId String
+  teacherId String
+  body      String
+  status    MessageStatus @default(DRAFT)
+  sentAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+}
