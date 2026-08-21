@@ -1,7 +1,8 @@
 # Ortam degiskenleri - ASLA commit edilmez
+# .env.backup dahil tum .env turevleri; sadece .env.example takip edilir.
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # Bagimliliklar
 node_modules/
