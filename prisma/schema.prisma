@@ -109,13 +109,17 @@ model BehaviorLog {
   reason      String?
   createdAt   DateTime     @default(now())
 
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  teacher   Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  lesson    Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  // Restrict: davranis gecmisi olan bir kayit silinemez.
+  // Silme yerine arsivleme (Student.isActive) kullanilir.
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  teacher   Teacher   @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Restrict)
+  lesson    Lesson    @relation(fields: [lessonId], references: [id], onDelete: Restrict)
 
   @@index([studentId, createdAt])
   @@index([lessonId, studentId])
+  @@index([classroomId, createdAt])
+  @@index([teacherId])
 }
 
 // ---------- Ödev ----------
@@ -195,4 +199,5 @@ model ParentMessage {
   teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@index([studentId, createdAt])
+  @@index([teacherId])
 }
