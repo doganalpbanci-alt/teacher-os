@@ -21,3 +21,6 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+
+# Turetilmis dosya: migration.sql'den yeniden uretilir
+prisma/pending-sql-editor.sql
