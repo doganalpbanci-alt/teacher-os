@@ -3,15 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "prisma generate",
     "migration:new": "node scripts/new-migration.mjs",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.3"
+    "@prisma/client": "^6.19.3",
+    "next": "^15.5.23",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "prisma": "^6.19.3"
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "prisma": "^6.19.3",
+    "typescript": "^5.9.3"
   }
 }

@@ -24,3 +24,8 @@ npm-debug.log*
 
 # Turetilmis dosya: migration.sql'den yeniden uretilir
 prisma/pending-sql-editor.sql
+
+# Next.js / TypeScript turetilmis dosyalar
+next-env.d.ts
+*.tsbuildinfo
+.vercel/

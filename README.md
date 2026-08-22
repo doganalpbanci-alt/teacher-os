@@ -1,4 +1,42 @@
 # teacher-os
+
+Ingilizce ogretmenleri icin ogrenci, sinif, ders, odev, performans ve davranis
+takip paneli. Next.js 15 (App Router) + TypeScript + Prisma + Supabase.
+
+## Uygulamayi calistirma
+
+```
+npm install          # postinstall Prisma Client'i uretir
+npm run dev          # gelistirme sunucusu, http://localhost:3000
+npm run build        # uretim derlemesi
+npm start            # derlenmis uygulamayi calistirir
+```
+
+`.env` dosyasi gereklidir; sablonu `.env.example` icindedir.
+
+Ana sayfa su an yalnizca bir baglanti testidir: `Teacher` tablosundaki kayit
+sayisini okuyup ekrana yazar. Veritabanina ulasilamazsa sayfa cokmez, hatanin
+sebebini gosterir.
+
+## Vercel'e deploy
+
+1. Vercel'de projeyi bu depoya bagla (Framework: Next.js, otomatik algilanir).
+2. Settings > Environment Variables altina `DATABASE_URL` ve `DIRECT_URL`
+   degerlerini ekle. `.env.example` icindeki aciklamalar gecerlidir.
+3. Degiskenleri Production, Preview ve Development ortamlarinin hepsine ekle;
+   aksi halde preview deployment'lar veritabanina ulasamaz.
+
+`DATABASE_URL` transaction pooler (port 6543) olmalidir: serverless ortamda
+her istek yeni bir baglanti acar, pooler bunu tasir. `connection_limit=1` ve
+`pgbouncer=true` parametreleri bu yuzden zorunludur.
+
+`postinstall` script'i `prisma generate` calistirir. Vercel bagimlilik
+onbellegini kullandigi icin bu adim olmadan build "@prisma/client did not
+initialize yet" hatasi verir.
+
+Ana sayfa `force-dynamic` isaretlidir; build sirasinda veritabanina gitmez,
+her istekte taze veri okur.
+
 ## Migration akisi
 
 Bu proje Supabase kullanir. Migration'in nasil uygulandigi, uzerinde
