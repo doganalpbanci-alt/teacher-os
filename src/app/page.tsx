@@ -1,66 +1,73 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getCurrentTeacher } from "@/lib/current-teacher";
+import { SinifFormu } from "@/components/SinifFormu";
 
-// Bu sayfa her istekte veritabanina gider. force-dynamic olmazsa Next.js
-// sayfayi build sirasinda onceden uretmeye calisir; Vercel build ortaminda
-// veritabani erisimi olmadigi icin build hata verir.
+// Her istekte veritabanına gidilir; build sırasında önceden üretilmez.
 export const dynamic = "force-dynamic";
 
-type Result =
-  | { ok: true; count: number }
-  | { ok: false; message: string };
+type Sinif = { id: string; name: string; _count: { students: number } };
 
-async function checkDatabase(): Promise<Result> {
+type Sonuc =
+  | { ok: true; siniflar: Sinif[] }
+  | { ok: false; mesaj: string };
+
+async function siniflariGetir(): Promise<Sonuc> {
   try {
-    return { ok: true, count: await prisma.teacher.count() };
+    const ogretmen = await getCurrentTeacher();
+    const siniflar = await prisma.classroom.findMany({
+      where: { teacherId: ogretmen.id, isActive: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, _count: { select: { students: true } } },
+    });
+    return { ok: true, siniflar };
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : String(error),
+      mesaj: error instanceof Error ? error.message : String(error),
     };
   }
 }
 
-export default async function Home() {
-  const result = await checkDatabase();
+export default async function AnaSayfa() {
+  const sonuc = await siniflariGetir();
+
+  if (!sonuc.ok) {
+    return (
+      <main className="kart">
+        <h1>Teacher OS</h1>
+        <p className="uyari">Veritabanına bağlanılamadı.</p>
+        <pre className="kod">{sonuc.mesaj}</pre>
+      </main>
+    );
+  }
 
   return (
-    <main
-      style={{
-        maxWidth: "34rem",
-        padding: "2rem",
-        margin: "1rem",
-        background: "#ffffff",
-        border: "1px solid #e2e5ea",
-        borderRadius: "0.75rem",
-      }}
-    >
-      <h1 style={{ margin: "0 0 1rem", fontSize: "1.25rem" }}>Teacher OS</h1>
-
-      {result.ok ? (
-        <p style={{ margin: 0, color: "#136c3a" }}>
-          Veritabani baglantisi calisiyor — {result.count} ogretmen kaydi var.
-        </p>
-      ) : (
-        <>
-          <p style={{ margin: "0 0 0.75rem", color: "#a11212" }}>
-            Veritabanina baglanilamadi.
+    <>
+      <main className="kart">
+        <h1>Sınıflarım</h1>
+        {sonuc.siniflar.length === 0 ? (
+          <p className="soluk">
+            Henüz sınıf yok. Aşağıdaki formdan ilk sınıfınızı ekleyin.
           </p>
-          <pre
-            style={{
-              margin: 0,
-              padding: "0.75rem",
-              background: "#f6f7f9",
-              border: "1px solid #e2e5ea",
-              borderRadius: "0.5rem",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              fontSize: "0.8125rem",
-            }}
-          >
-            {result.message}
-          </pre>
-        </>
-      )}
-    </main>
+        ) : (
+          <ul className="liste">
+            {sonuc.siniflar.map((sinif) => (
+              <li key={sinif.id}>
+                <Link className="satir" href={`/sinif/${sinif.id}`}>
+                  <span className="satir-ad">{sinif.name}</span>
+                  <span className="rozet">{sinif._count.students} öğrenci</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+
+      <section className="kart">
+        <h2>Yeni sınıf</h2>
+        <SinifFormu />
+      </section>
+    </>
   );
 }

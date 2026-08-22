@@ -80,3 +80,7 @@ sorgusu ile kontrol edebilirsin.
 `scripts/behavior-test.sh` silme kurallarini, arsivlemeyi, puan tutarliligini
 ve RLS'i gercek veri uzerinde dener. Migration'larin uygulandigi bir
 veritabanina karsi calistirilir.
+
+`scripts/e2e-test.mjs` sınıf ve öğrenci ekleme akışını gerçek tarayıcıda
+dener (33 kontrol). Çalıştırma adımları dosyanın başındadır. Test veri yazar;
+üretim veritabanına karşı çalıştırılmaz.

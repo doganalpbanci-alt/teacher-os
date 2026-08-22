@@ -1,0 +1,170 @@
+:root {
+  --zemin: #f6f7f9;
+  --kart: #ffffff;
+  --cizgi: #e2e5ea;
+  --metin: #1a1d21;
+  --soluk: #5c6570;
+  --vurgu: #1d4ed8;
+  --basari: #136c3a;
+  --hata: #a11212;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 1rem;
+  background: var(--zemin);
+  color: var(--metin);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+.sayfa {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.kart {
+  background: var(--kart);
+  border: 1px solid var(--cizgi);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 1.375rem;
+  margin: 0 0 0.25rem;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.soluk {
+  color: var(--soluk);
+  font-size: 0.875rem;
+}
+
+.geri {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--vurgu);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.geri:hover {
+  text-decoration: underline;
+}
+
+/* Listeler */
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.liste li {
+  border-top: 1px solid var(--cizgi);
+}
+
+.liste li:first-child {
+  border-top: none;
+}
+
+.satir {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.satir:hover .satir-ad {
+  color: var(--vurgu);
+}
+
+.satir-ad {
+  font-weight: 500;
+}
+
+.rozet {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  color: var(--soluk);
+  white-space: nowrap;
+}
+
+/* Formlar */
+.form {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.form input {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  font: inherit;
+  /* 16px altı yazı tipi mobil tarayıcılarda sayfayı yakınlaştırır. */
+  font-size: 1rem;
+  background: var(--kart);
+  color: var(--metin);
+}
+
+.form input:focus {
+  outline: 2px solid var(--vurgu);
+  outline-offset: -1px;
+}
+
+.form button {
+  padding: 0.625rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--vurgu);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ikili {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.hata {
+  margin: 0;
+  color: var(--hata);
+  font-size: 0.875rem;
+}
+
+.uyari {
+  margin: 0 0 0.75rem;
+  color: var(--hata);
+}
+
+.kod {
+  margin: 0;
+  padding: 0.75rem;
+  background: var(--zemin);
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8125rem;
+}
