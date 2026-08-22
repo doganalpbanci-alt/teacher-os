@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import type { FormState } from "@/lib/form-state";
+import { dersBaslat } from "@/lib/current-lesson";
+import { davranisKaydet, DavranisHatasi } from "@/lib/behavior";
 
 const AD_SINIRI = 60;
 const TELEFON_SINIRI = 30;
@@ -108,6 +110,51 @@ export async function ogrenciEkle(
   }
 
   revalidatePath(`/sinif/${sinifId}`);
+  revalidatePath("/");
+  return basarili(onceki);
+}
+
+export async function yeniDersBaslat(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const sinifId = metin(formData.get("sinifId"));
+  if (!sinifId) return hata(onceki, "Sınıf bilgisi eksik.", {});
+
+  try {
+    const sinif = await prisma.classroom.findUnique({ where: { id: sinifId } });
+    if (!sinif) return hata(onceki, "Sınıf bulunamadı.", {});
+    await dersBaslat(sinifId);
+  } catch {
+    return hata(onceki, "Ders başlatılamadı. Veritabanına ulaşılamıyor olabilir.", {});
+  }
+
+  revalidatePath(`/sinif/${sinifId}`);
+  return basarili(onceki);
+}
+
+export async function davranisKaydiOlustur(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const ogrenciId = metin(formData.get("ogrenciId"));
+  const dersId = metin(formData.get("dersId"));
+  const tur = metin(formData.get("tur"));
+
+  if (!ogrenciId || !dersId) return hata(onceki, "Kayıt bilgisi eksik.", {});
+  if (tur !== "PLUS" && tur !== "IHLAL") {
+    return hata(onceki, "Geçersiz davranış türü.", {});
+  }
+
+  try {
+    await davranisKaydet(ogrenciId, dersId, tur);
+  } catch (error) {
+    if (error instanceof DavranisHatasi) return hata(onceki, error.message, {});
+    return hata(onceki, "Kayıt eklenemedi. Veritabanına ulaşılamıyor olabilir.", {});
+  }
+
+  const sinifId = metin(formData.get("sinifId"));
+  if (sinifId) revalidatePath(`/sinif/${sinifId}`);
   revalidatePath("/");
   return basarili(onceki);
 }

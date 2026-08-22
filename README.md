@@ -82,5 +82,25 @@ ve RLS'i gercek veri uzerinde dener. Migration'larin uygulandigi bir
 veritabanina karsi calistirilir.
 
 `scripts/e2e-test.mjs` sınıf ve öğrenci ekleme akışını gerçek tarayıcıda
-dener (33 kontrol). Çalıştırma adımları dosyanın başındadır. Test veri yazar;
-üretim veritabanına karşı çalıştırılmaz.
+dener (33 kontrol). `scripts/behavior-ui-test.mjs` ders başlatma, +/- puan ve
+sarı/kırmızı kart kurallarını dener (23 kontrol). Çalıştırma adımları
+dosyaların başındadır. İkisi de veri yazar; üretim veritabanına karşı
+çalıştırılmaz.
+
+## Kart ve puan kuralları
+
+Kurallar tek modülde toplanmıştır: `src/lib/behavior.ts`. Puan sabitleri de
+oradadır (başlangıç 90, PLUS +1, MINUS -5).
+
+Bir ders içinde öğrencinin ilk kural ihlali sarı kart ve uyarıdır, puana
+dokunmaz. Aynı ders içindeki tekrar eden ihlaller kırmızı kart ve MINUS
+üretir. Kart durumu her zaman yalnızca aktif dersin kayıtlarına bakılarak
+hesaplanır; bu yüzden sarı kart sonraki derse taşınmaz. Sıfırlama diye bir
+yazma işlemi yoktur, geçmiş kayıtlara dokunulmaz.
+
+`Student.performanceScore` bir önbellektir. Her davranış kaydından sonra
+loglardan yeniden toplanarak yazılır, artırma/azaltma yapılmaz.
+
+Ders yönetimi ekranı henüz yok. Geçici kural `src/lib/current-lesson.ts`
+içindedir: bir sınıfın en son açılmış dersi aktif derstir. Gerçek ders ekranı
+geldiğinde yalnızca o dosya değişir.
