@@ -50,6 +50,7 @@ model Classroom {
   id        String   @id @default(cuid())
   teacherId String
   name      String
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
   teacher      Teacher       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
@@ -96,6 +97,7 @@ model Lesson {
   classroom    Classroom     @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   behaviorLogs BehaviorLog[]
 
+  @@unique([classroomId, date])
   @@index([classroomId, date])
 }
 
@@ -150,8 +152,9 @@ model Submission {
   note         String?
   updatedAt    DateTime         @updatedAt
 
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  // Restrict: teslim kaydi gecmistir; odev veya ogrenci silinerek yok edilemez.
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Restrict)
 
   @@unique([assignmentId, studentId])
   @@index([studentId])
@@ -181,8 +184,9 @@ model ExamResult {
   note      String?
   createdAt DateTime @default(now())
 
-  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  // Restrict: sinav sonucu gecmistir.
+  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Restrict)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
 
   @@unique([examId, studentId])
   @@index([studentId])
@@ -199,8 +203,9 @@ model ParentMessage {
   sentAt    DateTime?
   createdAt DateTime      @default(now())
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  // Restrict: veli iletisim gecmisi silinmez.
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Restrict)
 
   @@index([studentId, createdAt])
   @@index([teacherId])

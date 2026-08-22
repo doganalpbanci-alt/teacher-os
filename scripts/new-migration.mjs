@@ -8,7 +8,9 @@
 //   3. Supabase SQL Editor'a yapistirilacak SQL'i uretir (Prisma kaydi dahil)
 //   4. Tum migration'lari bos bir veritabaninda bastan oynatip dogrular
 //
-// Kullanim: npm run migration:new -- <ad>      ornek: npm run migration:new -- add_lesson_unique
+// Kullanim: npm run migration:new -- <ad> [--sql <dosya>]
+//   --sql  Prisma semasinin ifade edemedigi SQL (CHECK kisiti, RLS, trigger)
+//          uretilen migration'in sonuna eklenir ve birlikte dogrulanir.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -124,6 +126,17 @@ if (!/^[a-z0-9_]+$/.test(rawName)) {
   process.exit(1);
 }
 
+const sqlFlag = process.argv.indexOf("--sql");
+const extraPath = sqlFlag !== -1 ? process.argv[sqlFlag + 1] : null;
+if (sqlFlag !== -1 && !extraPath) {
+  console.error("\n  HATA: --sql bir dosya yolu bekler.\n");
+  process.exit(1);
+}
+if (extraPath && !existsSync(extraPath)) {
+  console.error(`\n  HATA: --sql dosyasi bulunamadi: ${extraPath}\n`);
+  process.exit(1);
+}
+
 const stamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
 const migrationName = `${stamp}_${rawName}`;
 
@@ -144,9 +157,16 @@ try {
     "--shadow-database-url", url("shadow"),
     "--script",
   ];
-  const sql = run("npx", diffArgs, { env: { ...process.env } }).trim();
+  let sql = run("npx", diffArgs, { env: { ...process.env } }).trim();
+  const isEmpty = !sql || /^-- This is an empty migration\.?$/im.test(sql);
 
-  if (!sql || /^-- This is an empty migration\.?$/im.test(sql)) {
+  if (extraPath) {
+    const extra = readFileSync(extraPath, "utf8").trim();
+    sql = isEmpty ? extra : `${sql}\n\n${extra}`;
+    log(`  Ek SQL eklendi: ${extraPath}`);
+  }
+
+  if (!extraPath && isEmpty) {
     log("\n  Sema ile migration'lar zaten ayni. Yeni migration gerekmiyor.\n");
     noChanges = true;
   }
