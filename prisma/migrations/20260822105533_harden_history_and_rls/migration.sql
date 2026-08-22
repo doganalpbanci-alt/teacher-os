@@ -19,9 +19,6 @@ ALTER TABLE "Submission" DROP CONSTRAINT "Submission_studentId_fkey";
 -- AlterTable
 ALTER TABLE "Classroom" ADD COLUMN     "isActive" BOOLEAN NOT NULL DEFAULT true;
 
--- CreateIndex
-CREATE UNIQUE INDEX "Lesson_classroomId_date_key" ON "Lesson"("classroomId", "date");
-
 -- AddForeignKey
 ALTER TABLE "Submission" ADD CONSTRAINT "Submission_assignmentId_fkey" FOREIGN KEY ("assignmentId") REFERENCES "Assignment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 

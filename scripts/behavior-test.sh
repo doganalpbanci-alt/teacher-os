@@ -47,9 +47,11 @@ seed
 ok "Sinif arsivlenebilir (isActive=false)"      "UPDATE \"Classroom\" SET \"isActive\"=false WHERE id='c1';"
 ok "Ogrenci arsivlenebilir"                     "UPDATE \"Student\" SET \"isActive\"=false WHERE id='s1';"
 
-echo "════ D. DERS TEKRARI ════"
+echo "════ D. AYNI GUN BIRDEN FAZLA DERS ════"
 seed
-no "Ayni sinifa ayni gun ikinci ders acilamaz"  "INSERT INTO \"Lesson\"(id,\"classroomId\",date) VALUES ('lx','c1','2026-03-02');"
+ok "Ayni sinifa ayni gun ikinci ders acilabilir" "INSERT INTO \"Lesson\"(id,\"classroomId\",date) VALUES ('lx','c1','2026-03-02');"
+ok "Ucuncu ders de acilabilir"                   "INSERT INTO \"Lesson\"(id,\"classroomId\",date) VALUES ('lw','c1','2026-03-02');"
+ok "Her ders kendi davranis kaydini tutar"       "INSERT INTO \"BehaviorLog\"(id,\"studentId\",\"teacherId\",\"classroomId\",\"lessonId\",type,points) VALUES ('bx','s1','t1','c1','lx','PLUS',1);"
 ok "Farkli gune ders acilabilir"                "INSERT INTO \"Lesson\"(id,\"classroomId\",date) VALUES ('ly','c1','2026-03-10');"
 ok "Baska sinifa ayni gun ders acilabilir"      "INSERT INTO \"Lesson\"(id,\"classroomId\",date) VALUES ('lz','c2','2026-03-02');"
 

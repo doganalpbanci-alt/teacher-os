@@ -97,7 +97,9 @@ model Lesson {
   classroom    Classroom     @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   behaviorLogs BehaviorLog[]
 
-  @@unique([classroomId, date])
+  // Bilerek unique kisit YOK: ayni sinifa ayni gun birden fazla ders islenebilir.
+  // Yanlislikla acilan cift kayit uygulama tarafinda engellenir; kart kurallari
+  // lessonId uzerinden calistigi icin ayni gundeki dersler birbirine karismaz.
   @@index([classroomId, date])
 }
 
