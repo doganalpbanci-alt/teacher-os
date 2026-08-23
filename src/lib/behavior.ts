@@ -12,7 +12,7 @@ export const KART_PUAN = 0;
 export const NOTR_PUAN = 0;
 
 // Basit şablonda artı/eksi; kart şablonunda yıldız, uyarı ve doğrudan kart.
-export type Eylem = "PLUS" | "MINUS" | "IHLAL" | "SARI_KART" | "KIRMIZI_KART";
+export type Eylem = "PLUS" | "MINUS" | "SARI_KART" | "KIRMIZI_KART";
 export type KartDurumu = "SARI" | "KIRMIZI";
 
 // Kural ihlali sayılan kayıt türleri. Kart durumu bunlara bakılarak bulunur.
@@ -20,12 +20,8 @@ const IHLAL_TURLERI = ["YELLOW_CARD", "RED_CARD"] as const;
 
 const SABLON_EYLEMLERI: Record<BehaviorTemplate, readonly Eylem[]> = {
   SIMPLE: ["PLUS", "MINUS"],
-  CARD: ["PLUS", "IHLAL", "SARI_KART", "KIRMIZI_KART"],
+  CARD: ["PLUS", "SARI_KART", "KIRMIZI_KART"],
 };
-
-// Sarı üstüne sarı kırmızı demektir: hem uyarı düğmesi hem doğrudan sarı,
-// derste zaten kart varsa kırmızıya çıkar.
-const YUKSELEN_EYLEMLER: readonly Eylem[] = ["IHLAL", "SARI_KART"];
 
 export class DavranisHatasi extends Error {}
 
@@ -84,8 +80,9 @@ export async function ogrenciSayimlari(
  * Davranış kaydı oluşturur.
  *
  * Basit şablon: PLUS ve MINUS nötr kayıtlardır, performans notuna dokunmaz.
- * Kart şablonu: PLUS +1; IHLAL derste ilkse sarı kart (puan etkisi yok),
- * tekrar edense kırmızı kart + MINUS (-5). Not loglardan yeniden toplanır.
+ * Kart şablonu: PLUS +1; SARI_KART derste ilkse sarı kart (puan etkisi yok),
+ * üstüne gelirse kırmızı kart + MINUS (-5); KIRMIZI_KART koşulsuz kırmızıdır.
+ * Not loglardan yeniden toplanır.
  */
 export async function davranisKaydet(
   ogrenciId: string,
@@ -154,7 +151,8 @@ export async function davranisKaydet(
     } else if (eylem === "KIRMIZI_KART") {
       // Doğrudan kırmızı: derste kart olup olmadığına bakılmaz.
       await kirmiziYaz();
-    } else if (YUKSELEN_EYLEMLER.includes(eylem)) {
+    } else if (eylem === "SARI_KART") {
+      // Sarı üstüne sarı kırmızı demektir: derste zaten kart varsa yükselir.
       const oncekiKart = await tx.behaviorLog.count({
         where: {
           studentId: ogrenciId,

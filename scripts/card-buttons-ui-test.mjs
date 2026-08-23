@@ -67,9 +67,10 @@ for (const [a, b] of [["Ali", "Bir"], ["Ece", "Iki"], ["Can", "Uc"], ["Sude", "D
   await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
   await sayfa.waitForFunction((x) => document.body.innerText.includes(x), a, { timeout: 10000 });
 }
-ok("Dort dugme goruluyor", (await satir("Ali").getByRole("button").count()) === 4,
+ok("Uc dugme goruluyor", (await satir("Ali").getByRole("button").count()) === 3,
    `dugme=${await satir("Ali").getByRole("button").count()}`);
-for (const e of ["Yıldız ver", "Uyarı ver", "Sarı kart ver", "Kırmızı kart ver"]) {
+ok("Uyari dugmesi KALDIRILDI", (await satir("Ali").getByRole("button", { name: "Uyarı ver" }).count()) === 0);
+for (const e of ["Yıldız ver", "Sarı kart ver", "Kırmızı kart ver"]) {
   ok(`"${e}" dugmesi var`, await satir("Ali").getByRole("button", { name: e }).isVisible());
 }
 await dersBaslat();
@@ -92,12 +93,12 @@ await bas("Ece", "Kırmızı kart ver");
 ok("Kart yokken bile kirmizi", (await kart("Ece")) === "KIRMIZI", await kart("Ece"));
 ok("-5 puan", (await puan("Ece")) === 85, `puan=${await puan("Ece")}`);
 
-// --- E: Dogrudan sari sonra uyari ---
-console.log("\nE. Dogrudan sari + uyari dugmesi");
+// --- E: Sari ustune dogrudan kirmizi ---
+console.log("\nE. Sari ustune dogrudan kirmizi");
 await bas("Can", "Sarı kart ver");
 ok("Once sari", (await kart("Can")) === "SARI");
-await bas("Can", "Uyarı ver");
-ok("Uyari kirmiziya cevirdi", (await kart("Can")) === "KIRMIZI", await kart("Can"));
+await bas("Can", "Kırmızı kart ver");
+ok("Kirmiziya dondu", (await kart("Can")) === "KIRMIZI", await kart("Can"));
 ok("-5 puan", (await puan("Can")) === 85, `puan=${await puan("Can")}`);
 
 // --- F: Yildiz ---
@@ -131,7 +132,7 @@ await sayfa.goto(T, { waitUntil: "networkidle" });
 await sayfa.getByRole("link", { name: /Kart-Test/ }).click();
 await sayfa.getByRole("heading", { name: "Kart-Test" }).waitFor();
 ok("Kart dugmeleri gizlendi", (await satir("Ali").getByRole("button", { name: /kart ver/ }).count()) === 0);
-ok("Sadece iki dugme", (await satir("Ali").getByRole("button").count()) === 2);
+ok("Basit sablonda iki dugme", (await satir("Ali").getByRole("button").count()) === 2);
 
 // Dugmenin degerini kurcalayip SARI_KART gondermeyi dene
 const oncekiPuan = await puan("Ece");

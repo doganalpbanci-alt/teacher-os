@@ -88,7 +88,7 @@ veritabanina karsi calistirilir.
 - `scripts/behavior-ui-test.mjs` — kart kuralları (24 kontrol)
 - `scripts/history-ui-test.mjs` — öğrenci geçmişi ve dönem toplamları (16 kontrol)
 - `scripts/auth-ui-test.mjs` — giriş sistemi ve veri ayrımı (26 kontrol)
-- `scripts/card-buttons-ui-test.mjs` — kart şablonunun dört düğmesi (24 kontrol)
+- `scripts/card-buttons-ui-test.mjs` — kart şablonunun üç düğmesi (24 kontrol)
 
 Çalıştırma adımları dosyaların başındadır. Hepsi veri yazar; üretim
 veritabanına karşı çalıştırılmaz.
@@ -118,10 +118,10 @@ modülde toplanmıştır: `src/lib/behavior.ts`.
 nötrdür, performans notunu değiştirmez. Notu öğretmen öğrenci sayfasından
 elle girer.
 
-**Kart sistemi.** Dört düğme vardır: yıldız (+1), uyarı, doğrudan sarı kart,
-doğrudan kırmızı kart. Uyarı ve doğrudan sarı aynı yükselme kuralına uyar:
-derste öğrencinin kartı yoksa sarı, varsa kırmızı verir — sarı üstüne sarı
-kırmızı demektir. Doğrudan kırmızı koşulsuzdur. Kırmızı kart bir MINUS (-5)
+**Kart sistemi.** Üç düğme vardır: yıldız (+1), sarı kart, kırmızı kart. Sarı
+kart düğmesi yükselir: derste öğrencinin kartı yoksa sarı, varsa kırmızı
+verir — sarı üstüne sarı kırmızı demektir. Sarı kartın kendisi zaten uyarıdır.
+Kırmızı kart düğmesi koşulsuzdur. Kırmızı kart bir MINUS (-5)
 kaydı da üretir, sarı kart puana dokunmaz. Kart durumu yalnızca aktif dersin kayıtlarına bakılarak
 hesaplanır, bu yüzden sarı kart sonraki derse taşınmaz. Sıfırlama diye bir
 yazma işlemi yoktur.

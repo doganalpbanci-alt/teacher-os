@@ -272,8 +272,7 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 /* Davranış düğmeleri */
 .davranis .d-arti,
 .davranis .d-yildiz { color: var(--basari); }
-.davranis .d-eksi,
-.davranis .d-uyari { color: var(--hata); }
+.davranis .d-eksi { color: var(--hata); }
 
 /* Öğrenci sayfası ölçümleri */
 .olcum-satiri {

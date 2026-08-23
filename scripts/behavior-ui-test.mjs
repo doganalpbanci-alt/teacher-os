@@ -46,7 +46,7 @@ async function bas(ad, tur) {
   // Onceki degeri de innerText ile alinir; textContent ile karsilastirilirsa
   // ikisi bastan farkli oldugu icin bekleme aninda gecer.
   const oncekiMetin = await satir(ad).evaluate((el) => el.innerText);
-  await satir(ad).getByRole("button", { name: tur === "PLUS" ? "Yıldız ver" : "Uyarı ver" }).click();
+  await satir(ad).getByRole("button", { name: tur === "PLUS" ? "Yıldız ver" : "Sarı kart ver" }).click();
   await sayfa.waitForFunction(
     ([isim, eski]) => {
       const li = [...document.querySelectorAll("li")].find((e) => e.innerText.includes(isim));
@@ -87,7 +87,7 @@ ok("Baslangic puani 90", (await puan("Ela")) === 90);
 console.log("\nB. Ders baslatilmadan");
 ok("Aktif ders yok uyarisi", (await sayfa.textContent("body")).includes("Aktif ders yok"));
 ok("Arti dugmesi pasif", await satir("Ela").getByRole("button", { name: "Yıldız ver" }).isDisabled());
-ok("Eksi dugmesi pasif", await satir("Ela").getByRole("button", { name: "Uyarı ver" }).isDisabled());
+ok("Eksi dugmesi pasif", await satir("Ela").getByRole("button", { name: "Sarı kart ver" }).isDisabled());
 
 // --- C: 1. ders ---
 console.log("\nC. Birinci ders");

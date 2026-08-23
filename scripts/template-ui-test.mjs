@@ -119,15 +119,15 @@ await sayfa.goto(TEMEL, { waitUntil: "networkidle" });
 await sayfa.getByRole("link", { name: /8-D/ }).click();
 await sayfa.getByRole("heading", { name: "8-D" }).waitFor();
 ok("Yildiz dugmesi geldi", await satir("Deniz").getByRole("button", { name: "Yıldız ver" }).isVisible());
-ok("Uyari dugmesi geldi", await satir("Deniz").getByRole("button", { name: "Uyarı ver" }).isVisible());
+ok("Sari kart dugmesi geldi", await satir("Deniz").getByRole("button", { name: "Sarı kart ver" }).isVisible());
 ok("Arti dugmesi gitti", (await satir("Deniz").getByRole("button", { name: "Artı ver" }).count()) === 0);
 ok("Elle girilen not korundu", (await puan("Deniz")) === 74, `puan=${await puan("Deniz")}`);
 
 // --- E: Kart kurallari hala calisiyor ---
 console.log("\nE. Kart kurallari");
-await bas("Deniz", "Uyarı ver");
+await bas("Deniz", "Sarı kart ver");
 ok("Ilk uyari sari kart", (await satirMetni("Deniz")).includes("Sarı kart"));
-await bas("Deniz", "Uyarı ver");
+await bas("Deniz", "Sarı kart ver");
 ok("Ikinci uyari kirmizi kart", (await satirMetni("Deniz")).includes("Kırmızı kart"));
 
 // --- F: Basit sisteme geri donus ---
