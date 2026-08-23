@@ -1,15 +1,19 @@
 -- Teacher OS - veritabani durum kontrolu
 -- Supabase SQL Editor'a yapistirip calistirin. Her satirda "TAMAM" bekleniyor.
 WITH k AS (
-  SELECT 1 s, 'Migration 1/2 · init' kontrol,
+  SELECT 1 s, 'Migration 1/3 · init' kontrol,
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260821214524_init'
        AND checksum='a47f4ba3092679ef4c671f9542a8dd076ee7f407cde95e65ace9b2bb91cafdc1') bulunan, '1' beklenen
-  UNION ALL SELECT 2, 'Migration 2/2 · koruma kurallari + RLS',
+  UNION ALL SELECT 2, 'Migration 2/3 · koruma kurallari + RLS',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260822105533_harden_history_and_rls'
        AND checksum='afcb1876314d16c32ff82d26aa7af9a82e3a8f0fa71bdc50da01790069cccff5'), '1'
+  UNION ALL SELECT 3, 'Migration 3/3 · davranis sablonu',
+    (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260822235800_behavior_template'
+       AND checksum='94375e958bda926bddd3ea6bb05d597ac74693c1ed9276c1187560ab021f56f7'), '1'
   UNION ALL SELECT 4, 'Fazladan/taninmayan migration kaydi',
     (SELECT coalesce(string_agg(migration_name,', '),'yok') FROM "_prisma_migrations"
-       WHERE migration_name NOT IN ('20260821214524_init','20260822105533_harden_history_and_rls')), 'yok'
+       WHERE migration_name NOT IN ('20260821214524_init','20260822105533_harden_history_and_rls',
+                                    '20260822235800_behavior_template')), 'yok'
   UNION ALL SELECT 5, 'Geri alinmis migration',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE rolled_back_at IS NOT NULL OR finished_at IS NULL), '0'
   UNION ALL SELECT 6, 'Tablo sayisi',
@@ -22,6 +26,16 @@ WITH k AS (
     (SELECT count(*)::text FROM information_schema.columns WHERE table_name='Classroom' AND column_name='isActive'), '1'
   UNION ALL SELECT 10, 'Puan tutarlilik kisiti',
     (SELECT count(*)::text FROM pg_constraint WHERE conname='BehaviorLog_points_matches_type'), '1'
+  UNION ALL SELECT 12, 'Davranis sablonu alani (Teacher)',
+    (SELECT count(*)::text FROM information_schema.columns
+       WHERE table_name='Teacher' AND column_name='behaviorTemplate'), '1'
+  UNION ALL SELECT 13, 'Sablon varsayilani basit sistem',
+    (SELECT count(*)::text FROM information_schema.columns
+       WHERE table_name='Teacher' AND column_name='behaviorTemplate'
+         AND column_default LIKE '%SIMPLE%'), '1'
+  UNION ALL SELECT 14, 'Notr kayit yazilabilir (kisit gevsedi)',
+    (SELECT CASE WHEN pg_get_constraintdef(oid) LIKE '%>= 0%' THEN 'gevsek' ELSE 'eski' END
+       FROM pg_constraint WHERE conname='BehaviorLog_points_matches_type'), 'gevsek'
   UNION ALL SELECT 11, 'RLS acik tablo',
     (SELECT count(*)::text FROM pg_tables WHERE schemaname='public' AND tablename<>'_prisma_migrations' AND rowsecurity), '10'
 )
