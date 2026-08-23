@@ -15,14 +15,15 @@ export default async function DersGecmisiSayfasi({
 
   const ogretmen = await getCurrentTeacher();
 
-  // Sahiplik sorgunun parcasi: baskasinin sinifi 404 doner.
-  const sinif = await prisma.classroom.findFirst({
-    where: { id, teacherId: ogretmen.id },
-    select: { id: true, name: true },
-  });
+  // Sahiplik her iki sorgunun da parcasi, o yuzden ayni anda calisabilirler.
+  const [sinif, dersler] = await Promise.all([
+    prisma.classroom.findFirst({
+      where: { id, teacherId: ogretmen.id },
+      select: { id: true, name: true },
+    }),
+    dersGecmisi(id, ogretmen.id),
+  ]);
   if (!sinif) notFound();
-
-  const dersler = await dersGecmisi(sinif.id);
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
 
   return (

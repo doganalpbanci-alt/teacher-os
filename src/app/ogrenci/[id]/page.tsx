@@ -45,11 +45,14 @@ export default async function OgrenciSayfasi({
   if (!ogrenci) notFound();
 
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
-  const ozet = await ogrenciOzeti(ogrenci.id);
-  const gecmis = await ogrenciGecmisi(ogrenci.id);
+  // Üçü de aynı öğrenciye bakar, birbirini beklemez.
   // Teneffüs cezaları yalnızca kart sisteminde oluşur; basit sisteme geçilse
   // bile geçmişte kalanlar gösterilir.
-  const cezalar = await ogrenciCezalari(ogrenci.id);
+  const [ozet, gecmis, cezalar] = await Promise.all([
+    ogrenciOzeti(ogrenci.id),
+    ogrenciGecmisi(ogrenci.id),
+    ogrenciCezalari(ogrenci.id),
+  ]);
 
   // Basit sistemde kartlar gündemde değil; kart sisteminde yıldız/kart öne çıkar.
   const olcumler = kartSistemi

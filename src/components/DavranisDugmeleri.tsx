@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { BehaviorTemplate } from "@prisma/client";
 import { davranisKaydiOlustur } from "@/app/actions";
 import { BOS_FORM } from "@/lib/form-state";
+import { eylemGecerliMi, type Eylem } from "@/lib/behavior-rules";
 
 // Şablona göre hangi düğmelerin görüneceği. value sunucuya gönderilen eylemdir.
 const DUGMELER: Record<
@@ -26,15 +27,34 @@ export function DavranisDugmeleri({
   sinifId,
   dersId,
   sablon,
+  onIyimser,
 }: {
   ogrenciId: string;
   sinifId: string;
   // Aktif ders yoksa null gelir; düğmeler pasif olur.
   dersId: string | null;
   sablon: BehaviorTemplate;
+  // Basılan eylemin sonucunu sunucuyu beklemeden gösterir. Kaydı yine sunucu
+  // yazar; bu yalnızca ekrandaki geri bildirimdir.
+  onIyimser?: (eylem: Eylem) => void;
 }) {
-  const [durum, gonder, bekliyor] = useActionState(davranisKaydiOlustur, BOS_FORM);
-  const kapali = dersId === null || bekliyor;
+  // Gönderimler sıraya girer: bir kayıt sürerken basılan ikinci düğme onun
+  // bitmesini bekler. Bu bilerek böyle — kart yükselme kuralı "derste kart
+  // var mı" sorusuna bakar; iki kayıt aynı anda gitseydi ikisi de "yok"
+  // görüp iki sarı kart yazabilirdi. Basış kaybolmaz, sırasını bekler.
+  const [durum, gonder] = useActionState(
+    async (onceki: typeof BOS_FORM, veri: FormData) => {
+      const tur = veri.get("tur");
+      // Sunucu da aynı kontrolü yapar; buradaki yalnızca ekranı yanlış
+      // güncellememek için.
+      if (typeof tur === "string" && eylemGecerliMi(sablon, tur)) onIyimser?.(tur);
+      return davranisKaydiOlustur(onceki, veri);
+    },
+    BOS_FORM,
+  );
+  // Kayıt sürerken düğmeler pasifleşmez: öğretmen arka arkaya basabilmeli,
+  // basışlar sırayla işlenir.
+  const kapali = dersId === null;
 
   return (
     <form className="davranis" action={gonder}>

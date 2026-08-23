@@ -1,34 +1,34 @@
 import { prisma } from "@/lib/prisma";
 import type { BehaviorTemplate } from "@prisma/client";
 import { kirmiziKartCezasiEkle } from "@/lib/penalty";
+import {
+  BASLANGIC_PUANI,
+  KART_PUAN,
+  MINUS_PUAN,
+  NOTR_PUAN,
+  PLUS_PUAN,
+  eylemGecerliMi,
+  type Eylem,
+  type KartDurumu,
+} from "@/lib/behavior-rules";
 
-// Kart şablonunun puan sabitleri. Basit şablonda kayıtlar performans notunu
-// değiştirmez; not öğretmen tarafından elle girilir.
-export const BASLANGIC_PUANI = 90;
-export const PLUS_PUAN = 1;
-export const MINUS_PUAN = -5;
-// Kartların kendisi puan taşımaz; ceza ayrı MINUS kaydıyla verilir.
-export const KART_PUAN = 0;
-// Basit şablonda her kayıt nötrdür.
-export const NOTR_PUAN = 0;
-
-// Basit şablonda artı/eksi; kart şablonunda yıldız, uyarı ve doğrudan kart.
-export type Eylem = "PLUS" | "MINUS" | "SARI_KART" | "KIRMIZI_KART";
-export type KartDurumu = "SARI" | "KIRMIZI";
+// Şablon kurallarının veritabanısız kısmı `behavior-rules.ts` içindedir; ekran
+// da onu kullanır. Burası kaydı yazan taraftır. Çağıranlar tek bir yerden
+// okusun diye sabitler ve tipler buradan da açılır.
+export {
+  BASLANGIC_PUANI,
+  KART_PUAN,
+  MINUS_PUAN,
+  NOTR_PUAN,
+  PLUS_PUAN,
+  eylemGecerliMi,
+} from "@/lib/behavior-rules";
+export type { Eylem, KartDurumu } from "@/lib/behavior-rules";
 
 // Kural ihlali sayılan kayıt türleri. Kart durumu bunlara bakılarak bulunur.
 const IHLAL_TURLERI = ["YELLOW_CARD", "RED_CARD"] as const;
 
-const SABLON_EYLEMLERI: Record<BehaviorTemplate, readonly Eylem[]> = {
-  SIMPLE: ["PLUS", "MINUS"],
-  CARD: ["PLUS", "SARI_KART", "KIRMIZI_KART"],
-};
-
 export class DavranisHatasi extends Error {}
-
-export function eylemGecerliMi(sablon: BehaviorTemplate, eylem: string): eylem is Eylem {
-  return (SABLON_EYLEMLERI[sablon] as readonly string[]).includes(eylem);
-}
 
 /**
  * Bir dersteki kart durumları. Yalnızca verilen dersin kayıtlarına bakar;

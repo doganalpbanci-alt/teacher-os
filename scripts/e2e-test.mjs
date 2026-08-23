@@ -12,7 +12,7 @@
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
 
-const TEMEL = "http://127.0.0.1:3000";
+const TEMEL = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
 
 function ok(ad, kosul, ayrinti = "") {

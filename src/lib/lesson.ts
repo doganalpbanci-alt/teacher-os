@@ -70,11 +70,17 @@ function gunlukSiralar(dersler: { id: string; date: Date }[]): Map<string, numbe
   return siralar;
 }
 
-export async function aktifDersiGetir(sinifId: string): Promise<AktifDers | null> {
+export async function aktifDersiGetir(
+  sinifId: string,
+  ogretmenId: string,
+): Promise<AktifDers | null> {
   // Günlük sırayı bulmak için son dersler çekilir. Bir sınıfta aynı gün
   // onlarca ders olmayacağı için küçük bir pencere yeterli.
+  //
+  // Sahiplik sorgunun parçası: sınıf sorgusunun sonucunu beklemeden, onunla
+  // aynı anda çalışabilsin diye. Başkasının sınıfı için boş döner.
   const dersler = await prisma.lesson.findMany({
-    where: { classroomId: sinifId },
+    where: { classroomId: sinifId, classroom: { teacherId: ogretmenId } },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take: 50,
     select: { id: true, date: true, endedAt: true },
@@ -139,10 +145,16 @@ export type DersOzeti = {
   sayimlar: DersSayimlari;
 };
 
-/** Bir sınıfın dersleri, en yeniden eskiye. Ders geçmişi ekranında listelenir. */
-export async function dersGecmisi(sinifId: string): Promise<DersOzeti[]> {
+/**
+ * Bir sınıfın dersleri, en yeniden eskiye. Ders geçmişi ekranında listelenir.
+ * Sahiplik sorgunun parçası; başkasının sınıfı boş liste döner.
+ */
+export async function dersGecmisi(
+  sinifId: string,
+  ogretmenId: string,
+): Promise<DersOzeti[]> {
   const dersler = await prisma.lesson.findMany({
-    where: { classroomId: sinifId },
+    where: { classroomId: sinifId, classroom: { teacherId: ogretmenId } },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take: GECMIS_SINIRI,
     select: { id: true, date: true, endedAt: true },
@@ -213,28 +225,26 @@ export async function dersDetayi(
   sinifId: string,
   ogretmenId: string,
 ): Promise<DersDetayi | null> {
-  const ders = await prisma.lesson.findFirst({
-    where: { id: dersId, classroomId: sinifId, classroom: { teacherId: ogretmenId } },
-    select: { id: true },
-  });
-  if (!ders) return null;
-
   // Günlük sıra ve sayımlar geçmiş listesiyle aynı kuraldan gelsin diye
-  // özet oradan okunur; iki ekran aynı dersi farklı anlatmaz.
-  const ozet = (await dersGecmisi(sinifId)).find((d) => d.id === dersId);
-  if (!ozet) return null;
+  // özet oradan okunur; iki ekran aynı dersi farklı anlatmaz. Sahiplik her
+  // iki sorgunun da parçası olduğu için ikisi aynı anda çalışabilir.
+  const [gecmis, kayitlar] = await Promise.all([
+    dersGecmisi(sinifId, ogretmenId),
+    prisma.behaviorLog.findMany({
+      where: { lessonId: dersId, classroom: { teacherId: ogretmenId } },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        type: true,
+        points: true,
+        createdAt: true,
+        student: { select: { id: true, firstName: true, lastName: true } },
+      },
+    }),
+  ]);
 
-  const kayitlar = await prisma.behaviorLog.findMany({
-    where: { lessonId: dersId },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      type: true,
-      points: true,
-      createdAt: true,
-      student: { select: { id: true, firstName: true, lastName: true } },
-    },
-  });
+  const ozet = gecmis.find((d) => d.id === dersId);
+  if (!ozet) return null;
 
   const ogrenciler = new Map<string, DersOgrencisi>();
   for (const kayit of kayitlar) {
