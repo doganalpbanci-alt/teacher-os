@@ -89,6 +89,7 @@ veritabanina karsi calistirilir.
 - `scripts/history-ui-test.mjs` — öğrenci geçmişi ve dönem toplamları (16 kontrol)
 - `scripts/auth-ui-test.mjs` — giriş sistemi ve veri ayrımı (26 kontrol)
 - `scripts/card-buttons-ui-test.mjs` — kart şablonunun üç düğmesi (24 kontrol)
+- `scripts/penalty-ui-test.mjs` — teneffüs cezası ve kronometre (22 kontrol)
 
 Çalıştırma adımları dosyaların başındadır. Hepsi veri yazar; üretim
 veritabanına karşı çalıştırılmaz.
@@ -125,6 +126,17 @@ Kırmızı kart düğmesi koşulsuzdur. Kırmızı kart bir MINUS (-5)
 kaydı da üretir, sarı kart puana dokunmaz. Kart durumu yalnızca aktif dersin kayıtlarına bakılarak
 hesaplanır, bu yüzden sarı kart sonraki derse taşınmaz. Sıfırlama diye bir
 yazma işlemi yoktur.
+
+**Teneffüs cezası.** Kırmızı kart puan düşüşünün yanında bir de teneffüse geç
+çıkma cezası üretir: arka arkaya birinci kırmızı 2 dakika, ikinci 3, üçüncü ve
+sonrası 5. Kırmızı kart almadan geçen bir ders sayacı sıfırlar. Bir öğrencinin
+aynı anda en fazla bir açık cezası olur; yeni kırmızı kart süreyi mevcut
+cezaya ekler, böylece öğrenci bir kez tutulur.
+
+Kronometre geri sayar. Başlangıç anı veritabanına yazıldığı için sayfa
+kapansa da başka cihazdan girilse de kaldığı yerden devam eder. Öğretmen süre
+ekleyebilir, çıkarabilir, doğrudan ayarlayabilir ve cezayı erken bitirebilir.
+Süre dolduğunda ceza kendiliğinden kapanır.
 
 Şablon değiştirmek geçmiş kayıtları silmez. Kart sisteminde
 `Student.performanceScore` bir önbellektir: her kayıttan sonra loglardan

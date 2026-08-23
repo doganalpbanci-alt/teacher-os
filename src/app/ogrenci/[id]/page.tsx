@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import { dersTarihiYazisi } from "@/lib/current-lesson";
 import { ogrenciGecmisi, ogrenciOzeti } from "@/lib/student-history";
+import { ogrenciCezalari } from "@/lib/penalty";
 import { NotFormu } from "@/components/NotFormu";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,9 @@ export default async function OgrenciSayfasi({
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
   const ozet = await ogrenciOzeti(ogrenci.id);
   const gecmis = await ogrenciGecmisi(ogrenci.id);
+  // Teneffüs cezaları yalnızca kart sisteminde oluşur; basit sisteme geçilse
+  // bile geçmişte kalanlar gösterilir.
+  const cezalar = await ogrenciCezalari(ogrenci.id);
 
   // Basit sistemde kartlar gündemde değil; kart sisteminde yıldız/kart öne çıkar.
   const olcumler = kartSistemi
@@ -118,6 +122,33 @@ export default async function OgrenciSayfasi({
           </>
         )}
       </section>
+
+      {cezalar.length > 0 && (
+        <section className="kart">
+          <h2>Teneffüs cezaları</h2>
+          <ul className="liste">
+            {cezalar.map((ceza) => (
+              <li key={ceza.id}>
+                <div className="satir">
+                  <span className="satir-ad">{ceza.dakika} dakika</span>
+                  <span className="satir-sag">
+                    <span className={`ceza-durum ceza-${ceza.durum.toLowerCase()}`}>
+                      {ceza.durum === "TAMAMLANDI"
+                        ? "Uygulandı"
+                        : ceza.durum === "SURUYOR"
+                          ? "Sürüyor"
+                          : "Bekliyor"}
+                    </span>
+                    <span className="rozet">
+                      {dersTarihiYazisi(ceza.tamamlandi ?? ceza.olusturuldu)}
+                    </span>
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="kart">
         <h2>Geçmiş</h2>

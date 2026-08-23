@@ -91,6 +91,7 @@ model Student {
 
   classroom      Classroom?      @relation(fields: [classroomId], references: [id], onDelete: SetNull)
   behaviorLogs   BehaviorLog[]
+  breakPenalties BreakPenalty[]
   submissions    Submission[]
   examResults    ExamResult[]
   parentMessages ParentMessage[]
@@ -99,6 +100,32 @@ model Student {
 }
 
 // ---------- Ders ----------
+
+/// Teneffuse gec cikma cezasi. Bir ogrencinin ayni anda en fazla bir acik
+/// cezasi olur; yeni kirmizi kart geldiginde suresi mevcut cezaya eklenir.
+/// Boylece ogretmen ogrenciyi bir kez tutar.
+model BreakPenalty {
+  id String @id @default(cuid())
+
+  studentId String
+
+  /// Toplam ceza suresi, saniye. Kirmizi kart geldikce artar; ogretmen
+  /// kronometre uzerinden elle ekleyip cikarabilir.
+  seconds Int
+
+  /// Kronometrenin baslatildigi an. Null ise ceza henuz baslatilmamistir.
+  startedAt DateTime?
+
+  /// Ceza tamamlandiginda dolar. Null olan kayitlar "bekliyor" sayilir.
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  // Restrict: ceza gecmisi olan ogrenci silinemez.
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@index([studentId, completedAt])
+}
 
 model Lesson {
   id          String   @id @default(cuid())

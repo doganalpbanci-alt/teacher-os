@@ -35,6 +35,10 @@
 - Aynı ders içinde tekrar eden ihlal → Red Card + MINUS.
 - Sarı üstüne sarı kırmızı demektir: uyarı ve doğrudan sarı kart aynı yükselme kuralına uyar.
 - Doğrudan kırmızı kart verilebilir; koşulsuzdur.
+- Kırmızı kart ayrıca teneffüs cezası üretir: arka arkaya 1. kırmızı 2 dk, 2. 3 dk, 3. ve sonrası 5 dk.
+- Kırmızı kart almadan geçen bir ders ceza sayacını sıfırlar.
+- Bir öğrencinin aynı anda tek açık cezası olur; yeni kırmızı süreyi ona ekler.
+- Ceza süresi öğretmen tarafından değiştirilebilir ve erken bitirilebilir.
 - Yellow Card, öğrenci davranışını düzelttiyse sonraki derste sıfırlanır.
 - Kart durumu yalnızca aktif dersin kayıtlarından hesaplanır; sıfırlama diye bir yazma işlemi yoktur.
 - Performance score loglardan türetilir; `Student` üzerindeki değer hızlı erişim için cached value olarak tutulabilir.

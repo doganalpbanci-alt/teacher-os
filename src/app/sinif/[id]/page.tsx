@@ -7,6 +7,8 @@ import { dersKartDurumlari, ogrenciSayimlari, type KartDurumu } from "@/lib/beha
 import { OgrenciFormu } from "@/components/OgrenciFormu";
 import { DersBaslatFormu } from "@/components/DersBaslatFormu";
 import { DavranisDugmeleri } from "@/components/DavranisDugmeleri";
+import { CezaKontrolu } from "@/components/CezaKontrolu";
+import { bekleyenCezalar } from "@/lib/penalty";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +59,10 @@ export default async function SinifSayfasi({
   const sayimlar = kartSistemi
     ? new Map()
     : await ogrenciSayimlari(sinif.students.map((o) => o.id));
+  // Teneffüs cezası yalnızca kart sisteminde oluşur.
+  const cezalar = kartSistemi
+    ? await bekleyenCezalar(sinif.students.map((o) => o.id))
+    : new Map();
 
   return (
     <>
@@ -90,6 +96,7 @@ export default async function SinifSayfasi({
             {sinif.students.map((ogrenci) => {
               const kart = kartlar.get(ogrenci.id);
               const sayim = sayimlar.get(ogrenci.id) ?? { arti: 0, eksi: 0 };
+              const ceza = cezalar.get(ogrenci.id);
               return (
                 <li key={ogrenci.id}>
                   <div className="satir">
@@ -109,6 +116,14 @@ export default async function SinifSayfasi({
                         <span className="rozet">
                           {sayim.arti} artı · {sayim.eksi} eksi
                         </span>
+                      )}
+                      {ceza && (
+                        <CezaKontrolu
+                          cezaId={ceza.id}
+                          sinifId={sinif.id}
+                          kalanSaniye={ceza.kalanSaniye}
+                          calisiyor={ceza.calisiyor}
+                        />
                       )}
                       <span className="rozet">{ogrenci.performanceScore} puan</span>
                       <DavranisDugmeleri

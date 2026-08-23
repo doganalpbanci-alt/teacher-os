@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { BehaviorTemplate } from "@prisma/client";
+import { kirmiziKartCezasiEkle } from "@/lib/penalty";
 
 // Kart şablonunun puan sabitleri. Basit şablonda kayıtlar performans notunu
 // değiştirmez; not öğretmen tarafından elle girilir.
@@ -135,14 +136,18 @@ export async function davranisKaydet(
       return;
     }
 
-    // Kırmızı kart iki kayıt yazar: kartın kendisi ve cezası olan MINUS.
-    const kirmiziYaz = () =>
-      tx.behaviorLog.createMany({
+    // Kırmızı kart üç şey yazar: kartın kendisi, cezası olan MINUS ve
+    // teneffüs cezası. Üçü aynı transaction içindedir; biri olmadan diğeri
+    // kalamaz.
+    const kirmiziYaz = async () => {
+      await tx.behaviorLog.createMany({
         data: [
           { ...ortak, type: "RED_CARD", points: KART_PUAN },
           { ...ortak, type: "MINUS", points: MINUS_PUAN },
         ],
       });
+      await kirmiziKartCezasiEkle(tx, ogrenciId, ders.classroomId, dersId);
+    };
 
     if (eylem === "PLUS") {
       await tx.behaviorLog.create({

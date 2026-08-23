@@ -239,3 +239,96 @@ export async function sablonDegistir(
   revalidatePath("/", "layout");
   return basarili(onceki);
 }
+
+const CEZA_ISLEMLERI = ["BASLAT", "EKLE", "AZALT", "AYARLA", "BITIR"] as const;
+type CezaIslemi = (typeof CEZA_ISLEMLERI)[number];
+
+const EN_UZUN_CEZA_DAKIKA = 60;
+
+export async function cezaGuncelle(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const cezaId = metin(formData.get("cezaId"));
+  const islem = metin(formData.get("islem")) as CezaIslemi;
+  const sinifId = metin(formData.get("sinifId"));
+  const dakika = Number(metin(formData.get("dakika")) || "0");
+
+  if (!cezaId) return hata(onceki, "Ceza bilgisi eksik.", {});
+  if (!CEZA_ISLEMLERI.includes(islem)) return hata(onceki, "Geçersiz işlem.", {});
+
+  // Sonuç istemciye döner. Süre işlemlerinde sayfa tazelenmez: tazelenirse
+  // kronometre paneli her basışta kapanır ve öğretmen paneli tekrar açmak
+  // zorunda kalır.
+  let kalanSaniye = 0;
+  let calisiyor = false;
+
+  try {
+    const ogretmen = await getCurrentTeacher();
+    // Ceza, öğretmenin bir sınıfındaki öğrenciye ait olmalı.
+    const ceza = await prisma.breakPenalty.findFirst({
+      where: {
+        id: cezaId,
+        completedAt: null,
+        student: { classroom: { teacherId: ogretmen.id } },
+      },
+    });
+    if (!ceza) return hata(onceki, "Ceza bulunamadı.", {});
+
+    if (islem === "BITIR") {
+      await prisma.breakPenalty.update({
+        where: { id: ceza.id },
+        data: { completedAt: new Date() },
+      });
+    } else if (islem === "BASLAT") {
+      if (!ceza.startedAt) {
+        await prisma.breakPenalty.update({
+          where: { id: ceza.id },
+          data: { startedAt: new Date() },
+        });
+      }
+    } else {
+      if (!Number.isInteger(dakika) || dakika < 0 || dakika > EN_UZUN_CEZA_DAKIKA) {
+        return hata(onceki, `Süre 0 ile ${EN_UZUN_CEZA_DAKIKA} dakika arasında olmalı.`, {});
+      }
+
+      // Süre ekleme/çıkarma çalışan kronometreyi de etkiler: kalan süre
+      // "toplam - geçen" olduğu için toplamı değiştirmek yeter.
+      let yeniSaniye: number;
+      if (islem === "AYARLA") {
+        const gecen = ceza.startedAt
+          ? Math.floor((Date.now() - ceza.startedAt.getTime()) / 1000)
+          : 0;
+        yeniSaniye = gecen + dakika * 60;
+      } else {
+        const fark = (islem === "EKLE" ? 1 : -1) * dakika * 60;
+        yeniSaniye = Math.max(ceza.seconds + fark, 0);
+      }
+
+      await prisma.breakPenalty.update({
+        where: { id: ceza.id },
+        data: { seconds: yeniSaniye },
+      });
+    }
+
+    const guncel = await prisma.breakPenalty.findUnique({ where: { id: ceza.id } });
+    if (guncel && !guncel.completedAt) {
+      const gecen = guncel.startedAt
+        ? Math.floor((Date.now() - guncel.startedAt.getTime()) / 1000)
+        : 0;
+      kalanSaniye = Math.max(guncel.seconds - gecen, 0);
+      calisiyor = guncel.startedAt !== null;
+    }
+  } catch {
+    return hata(onceki, "Ceza güncellenemedi. Veritabanına ulaşılamıyor olabilir.", {});
+  }
+
+  // Ceza bittiğinde rozet tamamen kalkmalı; bunun için sayfa tazelenir.
+  if (islem === "BITIR" && sinifId) revalidatePath(`/sinif/${sinifId}`);
+
+  return {
+    hata: null,
+    deneme: onceki.deneme + 1,
+    degerler: { kalanSaniye: String(kalanSaniye), calisiyor: calisiyor ? "1" : "0" },
+  };
+}

@@ -465,3 +465,106 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 /* Dört düğme dar ekranda alta sarsın */
 .davranis { flex-wrap: wrap; justify-content: flex-end; }
 .davranis button { width: 2rem; height: 2rem; font-size: 1rem; }
+
+/* Teneffüs cezası */
+.ceza { position: relative; flex-shrink: 0; }
+
+.ceza-rozet {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 999px;
+  background: var(--kart);
+  color: var(--metin);
+  font: inherit;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ceza-rozet.ceza-calisiyor {
+  border-color: var(--hata);
+  color: var(--hata);
+  font-weight: 600;
+}
+
+.ceza-panel {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  right: 0;
+  z-index: 10;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  min-width: 15rem;
+  background: var(--kart);
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.ceza-sure {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ceza-bitti {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--hata);
+  font-weight: 500;
+}
+
+.ceza-islemler {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.ceza-islemler button,
+.ceza-ayarla button {
+  flex: 1;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.375rem;
+  background: var(--kart);
+  color: var(--metin);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ceza-islemler button.ceza-bitir {
+  border-color: var(--hata);
+  color: var(--hata);
+}
+
+.ceza-islemler button:disabled,
+.ceza-ayarla button:disabled { opacity: 0.6; cursor: default; }
+
+.ceza-ayarla {
+  display: flex;
+  gap: 0.375rem;
+  border-top: 1px solid var(--cizgi);
+  padding-top: 0.5rem;
+}
+
+.ceza-ayarla input {
+  width: 4rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.375rem;
+  font: inherit;
+  font-size: 1rem;
+  background: var(--kart);
+  color: var(--metin);
+}
+
+.ceza-durum { font-size: 0.8125rem; font-weight: 500; }
+.ceza-durum.ceza-tamamlandi { color: var(--basari); }
+.ceza-durum.ceza-suruyor { color: var(--hata); }
+.ceza-durum.ceza-bekliyor { color: var(--soluk); }
