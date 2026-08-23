@@ -62,3 +62,6 @@ Mimari ileride Exam, PDF processing, AI assistant, reporting, smartboard ve gami
 
 ## Çalışma yöntemi
 Önce incele → planla → onay al → uygula → test et → kısa rapor ver.
+
+`HANDOFF.md` ve `ROADMAP.md` her oturumda kendiliğinden güncellenmez.
+Bunlar en son iştir ve yalnızca öğretmen istediğinde güncellenir.
