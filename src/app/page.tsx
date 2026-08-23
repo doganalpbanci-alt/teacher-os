@@ -45,7 +45,12 @@ export default async function AnaSayfa() {
   return (
     <>
       <main className="kart">
-        <h1>Sınıflarım</h1>
+        <div className="sayfa-basi">
+          <h1>Sınıflarım</h1>
+          <Link className="baglanti" href="/ayarlar">
+            Ayarlar
+          </Link>
+        </div>
         {sonuc.siniflar.length === 0 ? (
           <p className="soluk">
             Henüz sınıf yok. Aşağıdaki formdan ilk sınıfınızı ekleyin.

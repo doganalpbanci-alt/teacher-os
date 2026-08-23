@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import type { FormState } from "@/lib/form-state";
 import { dersBaslat } from "@/lib/current-lesson";
-import { davranisKaydet, DavranisHatasi } from "@/lib/behavior";
+import { davranisKaydet, eylemGecerliMi, DavranisHatasi } from "@/lib/behavior";
 
 const AD_SINIRI = 60;
 const TELEFON_SINIRI = 30;
@@ -142,12 +142,15 @@ export async function davranisKaydiOlustur(
   const tur = metin(formData.get("tur"));
 
   if (!ogrenciId || !dersId) return hata(onceki, "Kayıt bilgisi eksik.", {});
-  if (tur !== "PLUS" && tur !== "IHLAL") {
-    return hata(onceki, "Geçersiz davranış türü.", {});
-  }
 
   try {
-    await davranisKaydet(ogrenciId, dersId, tur);
+    // Hangi eylemlerin gecerli oldugu ogretmenin sablonuna baglidir; sablon
+    // istemciden degil sunucudan okunur.
+    const ogretmen = await getCurrentTeacher();
+    if (!eylemGecerliMi(ogretmen.behaviorTemplate, tur)) {
+      return hata(onceki, "Geçersiz davranış türü.", {});
+    }
+    await davranisKaydet(ogrenciId, dersId, tur, ogretmen.behaviorTemplate);
   } catch (error) {
     if (error instanceof DavranisHatasi) return hata(onceki, error.message, {});
     return hata(onceki, "Kayıt eklenemedi. Veritabanına ulaşılamıyor olabilir.", {});
@@ -156,5 +159,62 @@ export async function davranisKaydiOlustur(
   const sinifId = metin(formData.get("sinifId"));
   if (sinifId) revalidatePath(`/sinif/${sinifId}`);
   revalidatePath("/");
+  return basarili(onceki);
+}
+
+export async function performansNotuKaydet(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const ogrenciId = metin(formData.get("ogrenciId"));
+  const ham = metin(formData.get("not"));
+  const girilen = { not: ham };
+
+  if (!ogrenciId) return hata(onceki, "Öğrenci bilgisi eksik.", girilen);
+  if (!ham) return hata(onceki, "Not boş olamaz.", girilen);
+
+  const deger = Number(ham);
+  if (!Number.isInteger(deger)) {
+    return hata(onceki, "Not tam sayı olmalı.", girilen);
+  }
+  if (deger < 0 || deger > 100) {
+    return hata(onceki, "Not 0 ile 100 arasında olmalı.", girilen);
+  }
+
+  try {
+    await prisma.student.update({
+      where: { id: ogrenciId },
+      data: { performanceScore: deger },
+    });
+  } catch {
+    return hata(onceki, "Not kaydedilemedi. Veritabanına ulaşılamıyor olabilir.", girilen);
+  }
+
+  revalidatePath(`/ogrenci/${ogrenciId}`);
+  revalidatePath("/");
+  return basarili(onceki);
+}
+
+export async function sablonDegistir(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const secim = metin(formData.get("sablon"));
+  if (secim !== "SIMPLE" && secim !== "CARD") {
+    return hata(onceki, "Geçersiz sistem seçimi.", {});
+  }
+
+  try {
+    const ogretmen = await getCurrentTeacher();
+    await prisma.teacher.update({
+      where: { id: ogretmen.id },
+      data: { behaviorTemplate: secim },
+    });
+  } catch {
+    return hata(onceki, "Ayar kaydedilemedi. Veritabanına ulaşılamıyor olabilir.", {});
+  }
+
+  // Butun siniflarda dugmeler degistigi icin tum sayfalar tazelenir.
+  revalidatePath("/", "layout");
   return basarili(onceki);
 }

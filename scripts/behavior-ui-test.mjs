@@ -42,7 +42,7 @@ async function bas(ad, tur) {
   // Onceki degeri de innerText ile alinir; textContent ile karsilastirilirsa
   // ikisi bastan farkli oldugu icin bekleme aninda gecer.
   const oncekiMetin = await satir(ad).evaluate((el) => el.innerText);
-  await satir(ad).getByRole("button", { name: tur === "PLUS" ? "Artı puan ver" : "Kural ihlali kaydet" }).click();
+  await satir(ad).getByRole("button", { name: tur === "PLUS" ? "Yıldız ver" : "Uyarı ver" }).click();
   await sayfa.waitForFunction(
     ([isim, eski]) => {
       const li = [...document.querySelectorAll("li")].find((e) => e.innerText.includes(isim));
@@ -57,6 +57,13 @@ async function bas(ad, tur) {
 
 // --- Hazirlik ---
 console.log("\nA. Hazirlik");
+// Kart sistemi varsayilan degil; once ayarlardan secilir.
+await sayfa.goto(`${TEMEL}/ayarlar`, { waitUntil: "networkidle" });
+await sayfa.getByRole("radio", { name: /Kart sistemi/ }).check();
+await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.waitForSelector(".basari", { timeout: 10000 });
+ok("Kart sistemi secildi", true);
+
 await sayfa.goto(TEMEL, { waitUntil: "networkidle" });
 await sayfa.getByLabel("Sınıf adı").fill("7-C");
 await sayfa.getByRole("button", { name: "Sınıf ekle" }).click();
@@ -75,15 +82,15 @@ ok("Baslangic puani 90", (await puan("Ela")) === 90);
 // --- B: Ders yokken ---
 console.log("\nB. Ders baslatilmadan");
 ok("Aktif ders yok uyarisi", (await sayfa.textContent("body")).includes("Aktif ders yok"));
-ok("Arti dugmesi pasif", await satir("Ela").getByRole("button", { name: "Artı puan ver" }).isDisabled());
-ok("Eksi dugmesi pasif", await satir("Ela").getByRole("button", { name: "Kural ihlali kaydet" }).isDisabled());
+ok("Arti dugmesi pasif", await satir("Ela").getByRole("button", { name: "Yıldız ver" }).isDisabled());
+ok("Eksi dugmesi pasif", await satir("Ela").getByRole("button", { name: "Uyarı ver" }).isDisabled());
 
 // --- C: 1. ders ---
 console.log("\nC. Birinci ders");
 await sayfa.getByRole("button", { name: "Yeni ders başlat" }).click();
 await sayfa.waitForFunction(() => document.body.innerText.includes("Aktif ders:"), null, { timeout: 10000 });
 ok("Ders basladi", (await sayfa.textContent("body")).includes("1. ders"));
-ok("Arti dugmesi aktif", !(await satir("Ela").getByRole("button", { name: "Artı puan ver" }).isDisabled()));
+ok("Arti dugmesi aktif", !(await satir("Ela").getByRole("button", { name: "Yıldız ver" }).isDisabled()));
 
 await bas("Ela", "PLUS");
 ok("PLUS puani 1 artirdi", (await puan("Ela")) === 91, `puan=${await puan("Ela")}`);

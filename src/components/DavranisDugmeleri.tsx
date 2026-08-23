@@ -1,18 +1,36 @@
 "use client";
 
 import { useActionState } from "react";
+import type { BehaviorTemplate } from "@prisma/client";
 import { davranisKaydiOlustur } from "@/app/actions";
 import { BOS_FORM } from "@/lib/form-state";
+
+// Şablona göre hangi düğmelerin görüneceği. value sunucuya gönderilen eylemdir.
+const DUGMELER: Record<
+  BehaviorTemplate,
+  { deger: string; yazi: string; etiket: string; sinif: string }[]
+> = {
+  SIMPLE: [
+    { deger: "PLUS", yazi: "+", etiket: "Artı ver", sinif: "d-arti" },
+    { deger: "MINUS", yazi: "−", etiket: "Eksi ver", sinif: "d-eksi" },
+  ],
+  CARD: [
+    { deger: "PLUS", yazi: "★", etiket: "Yıldız ver", sinif: "d-yildiz" },
+    { deger: "IHLAL", yazi: "!", etiket: "Uyarı ver", sinif: "d-uyari" },
+  ],
+};
 
 export function DavranisDugmeleri({
   ogrenciId,
   sinifId,
   dersId,
+  sablon,
 }: {
   ogrenciId: string;
   sinifId: string;
   // Aktif ders yoksa null gelir; düğmeler pasif olur.
   dersId: string | null;
+  sablon: BehaviorTemplate;
 }) {
   const [durum, gonder, bekliyor] = useActionState(davranisKaydiOlustur, BOS_FORM);
   const kapali = dersId === null || bekliyor;
@@ -22,27 +40,20 @@ export function DavranisDugmeleri({
       <input type="hidden" name="ogrenciId" value={ogrenciId} />
       <input type="hidden" name="sinifId" value={sinifId} />
       <input type="hidden" name="dersId" value={dersId ?? ""} />
-      {/* Tür, basılan düğmenin value'sundan gelir; iki düğme tek form paylaşır. */}
-      <button
-        type="submit"
-        name="tur"
-        value="PLUS"
-        disabled={kapali}
-        aria-label="Artı puan ver"
-        title="Artı puan"
-      >
-        +
-      </button>
-      <button
-        type="submit"
-        name="tur"
-        value="IHLAL"
-        disabled={kapali}
-        aria-label="Kural ihlali kaydet"
-        title="Kural ihlali"
-      >
-        −
-      </button>
+      {DUGMELER[sablon].map((dugme) => (
+        <button
+          key={dugme.deger}
+          type="submit"
+          name="tur"
+          value={dugme.deger}
+          className={dugme.sinif}
+          disabled={kapali}
+          aria-label={dugme.etiket}
+          title={dugme.etiket}
+        >
+          {dugme.yazi}
+        </button>
+      ))}
       {durum.hata && <span className="hata">{durum.hata}</span>}
     </form>
   );

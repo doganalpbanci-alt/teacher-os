@@ -13,6 +13,13 @@ datasource db {
 
 // ---------- Enums ----------
 
+// Ogretmenin davranis sistemi. Varsayilan basit arti/eksi; kart sistemi
+// (uyari, sari/kirmizi kart, ceza) secime baglidir.
+enum BehaviorTemplate {
+  SIMPLE
+  CARD
+}
+
 enum BehaviorType {
   PLUS
   MINUS
@@ -40,6 +47,11 @@ model Teacher {
   name         String
   passwordHash String
   createdAt    DateTime @default(now())
+
+  // Hangi davranis sisteminin kullanildigini belirler. Kayit katmani her iki
+  // sablonda ayni; degisen hangi dugmelerin gosterildigi ve puanin nasil
+  // isledigi. Ayarlardan degistirilir.
+  behaviorTemplate BehaviorTemplate @default(SIMPLE)
 
   classrooms     Classroom[]
   behaviorLogs   BehaviorLog[]

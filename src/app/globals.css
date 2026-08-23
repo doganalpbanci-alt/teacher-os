@@ -244,3 +244,134 @@ a.satir:hover .satir-ad {
   gap: 0.5rem;
   flex-shrink: 0;
 }
+
+/* Sayfa başlıkları ve bağlantılar */
+.sayfa-basi {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+.sayfa-basi h1 { margin-bottom: 0; }
+
+.baglanti {
+  color: var(--vurgu);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+.baglanti:hover { text-decoration: underline; }
+
+a.satir-ad {
+  color: var(--metin);
+  text-decoration: none;
+  font-size: 1rem;
+}
+a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
+
+/* Davranış düğmeleri */
+.davranis .d-arti,
+.davranis .d-yildiz { color: var(--basari); }
+.davranis .d-eksi,
+.davranis .d-uyari { color: var(--hata); }
+
+/* Öğrenci sayfası ölçümleri */
+.olcum-satiri {
+  display: flex;
+  gap: 1.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cizgi);
+}
+
+.olcum { display: grid; gap: 0.125rem; }
+
+.olcum-deger {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.olcum-etiket {
+  font-size: 0.75rem;
+  color: var(--soluk);
+}
+
+/* Not formu */
+.not-formu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.not-formu input {
+  width: 6rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 1rem;
+  background: var(--kart);
+  color: var(--metin);
+}
+
+.not-formu button {
+  padding: 0.5rem 0.875rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--vurgu);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.not-formu button:disabled { opacity: 0.6; cursor: default; }
+.not-formu .hata { flex-basis: 100%; }
+
+/* Şablon seçimi */
+.sablon-formu {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  justify-items: start;
+}
+
+.sablon-secenek {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.625rem;
+  align-items: start;
+  padding: 0.875rem 1rem;
+  width: 100%;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.sablon-secenek:has(input:checked) {
+  border-color: var(--vurgu);
+  background: #f2f6fd;
+}
+
+.sablon-secenek input { margin-top: 0.3rem; }
+.sablon-secenek > span { display: grid; gap: 0.25rem; }
+.sablon-secenek .soluk { font-size: 0.875rem; }
+
+.sablon-formu > button {
+  padding: 0.625rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--vurgu);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sablon-formu > button:disabled { opacity: 0.6; cursor: default; }
+
+.basari { margin: 0; color: var(--basari); font-size: 0.875rem; }

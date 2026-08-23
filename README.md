@@ -81,25 +81,34 @@ sorgusu ile kontrol edebilirsin.
 ve RLS'i gercek veri uzerinde dener. Migration'larin uygulandigi bir
 veritabanina karsi calistirilir.
 
-`scripts/e2e-test.mjs` sınıf ve öğrenci ekleme akışını gerçek tarayıcıda
-dener (33 kontrol). `scripts/behavior-ui-test.mjs` ders başlatma, +/- puan ve
-sarı/kırmızı kart kurallarını dener (23 kontrol). Çalıştırma adımları
-dosyaların başındadır. İkisi de veri yazar; üretim veritabanına karşı
-çalıştırılmaz.
+Üç arayüz testi vardır, hepsi gerçek tarayıcıda çalışır:
 
-## Kart ve puan kuralları
+- `scripts/e2e-test.mjs` — sınıf ve öğrenci ekleme (33 kontrol)
+- `scripts/template-ui-test.mjs` — şablonlar, elle not, şablon değişimi (25 kontrol)
+- `scripts/behavior-ui-test.mjs` — kart ve ceza kuralları (24 kontrol)
 
-Kurallar tek modülde toplanmıştır: `src/lib/behavior.ts`. Puan sabitleri de
-oradadır (başlangıç 90, PLUS +1, MINUS -5).
+Çalıştırma adımları dosyaların başındadır. Hepsi veri yazar; üretim
+veritabanına karşı çalıştırılmaz.
 
-Bir ders içinde öğrencinin ilk kural ihlali sarı kart ve uyarıdır, puana
-dokunmaz. Aynı ders içindeki tekrar eden ihlaller kırmızı kart ve MINUS
-üretir. Kart durumu her zaman yalnızca aktif dersin kayıtlarına bakılarak
-hesaplanır; bu yüzden sarı kart sonraki derse taşınmaz. Sıfırlama diye bir
-yazma işlemi yoktur, geçmiş kayıtlara dokunulmaz.
+## Davranış şablonları
 
-`Student.performanceScore` bir önbellektir. Her davranış kaydından sonra
-loglardan yeniden toplanarak yazılır, artırma/azaltma yapılmaz.
+Öğretmen hangi sistemi kullandığını `Teacher.behaviorTemplate` ile seçer;
+ayarlar sayfasından değiştirilir ve tüm sınıflarında geçerlidir. Kurallar tek
+modülde toplanmıştır: `src/lib/behavior.ts`.
+
+**Basit (varsayılan).** Yalnızca artı ve eksi vardır, kart yoktur. Kayıtlar
+nötrdür, performans notunu değiştirmez. Notu öğretmen öğrenci sayfasından
+elle girer.
+
+**Kart sistemi.** Yıldız +1 puandır. Bir ders içinde öğrencinin ilk kural
+ihlali sarı kart ve uyarıdır, puana dokunmaz; tekrar eden ihlaller kırmızı
+kart ve MINUS üretir. Kart durumu yalnızca aktif dersin kayıtlarına bakılarak
+hesaplanır, bu yüzden sarı kart sonraki derse taşınmaz. Sıfırlama diye bir
+yazma işlemi yoktur.
+
+Şablon değiştirmek geçmiş kayıtları silmez. Kart sisteminde
+`Student.performanceScore` bir önbellektir: her kayıttan sonra loglardan
+yeniden toplanarak yazılır, artırma/azaltma yapılmaz.
 
 Ders yönetimi ekranı henüz yok. Geçici kural `src/lib/current-lesson.ts`
 içindedir: bir sınıfın en son açılmış dersi aktif derstir. Gerçek ders ekranı
