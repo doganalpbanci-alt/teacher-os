@@ -11,8 +11,8 @@ export const KART_PUAN = 0;
 // Basit şablonda her kayıt nötrdür.
 export const NOTR_PUAN = 0;
 
-// Basit şablonda artı/eksi, kart şablonunda artı/ihlal kullanılır.
-export type Eylem = "PLUS" | "MINUS" | "IHLAL";
+// Basit şablonda artı/eksi; kart şablonunda yıldız, uyarı ve doğrudan kart.
+export type Eylem = "PLUS" | "MINUS" | "IHLAL" | "SARI_KART" | "KIRMIZI_KART";
 export type KartDurumu = "SARI" | "KIRMIZI";
 
 // Kural ihlali sayılan kayıt türleri. Kart durumu bunlara bakılarak bulunur.
@@ -20,8 +20,12 @@ const IHLAL_TURLERI = ["YELLOW_CARD", "RED_CARD"] as const;
 
 const SABLON_EYLEMLERI: Record<BehaviorTemplate, readonly Eylem[]> = {
   SIMPLE: ["PLUS", "MINUS"],
-  CARD: ["PLUS", "IHLAL"],
+  CARD: ["PLUS", "IHLAL", "SARI_KART", "KIRMIZI_KART"],
 };
+
+// Sarı üstüne sarı kırmızı demektir: hem uyarı düğmesi hem doğrudan sarı,
+// derste zaten kart varsa kırmızıya çıkar.
+const YUKSELEN_EYLEMLER: readonly Eylem[] = ["IHLAL", "SARI_KART"];
 
 export class DavranisHatasi extends Error {}
 
@@ -134,12 +138,24 @@ export async function davranisKaydet(
       return;
     }
 
+    // Kırmızı kart iki kayıt yazar: kartın kendisi ve cezası olan MINUS.
+    const kirmiziYaz = () =>
+      tx.behaviorLog.createMany({
+        data: [
+          { ...ortak, type: "RED_CARD", points: KART_PUAN },
+          { ...ortak, type: "MINUS", points: MINUS_PUAN },
+        ],
+      });
+
     if (eylem === "PLUS") {
       await tx.behaviorLog.create({
         data: { ...ortak, type: "PLUS", points: PLUS_PUAN },
       });
-    } else {
-      const oncekiIhlal = await tx.behaviorLog.count({
+    } else if (eylem === "KIRMIZI_KART") {
+      // Doğrudan kırmızı: derste kart olup olmadığına bakılmaz.
+      await kirmiziYaz();
+    } else if (YUKSELEN_EYLEMLER.includes(eylem)) {
+      const oncekiKart = await tx.behaviorLog.count({
         where: {
           studentId: ogrenciId,
           lessonId: dersId,
@@ -147,17 +163,12 @@ export async function davranisKaydet(
         },
       });
 
-      if (oncekiIhlal === 0) {
+      if (oncekiKart === 0) {
         await tx.behaviorLog.create({
           data: { ...ortak, type: "YELLOW_CARD", points: KART_PUAN },
         });
       } else {
-        await tx.behaviorLog.createMany({
-          data: [
-            { ...ortak, type: "RED_CARD", points: KART_PUAN },
-            { ...ortak, type: "MINUS", points: MINUS_PUAN },
-          ],
-        });
+        await kirmiziYaz();
       }
     }
 

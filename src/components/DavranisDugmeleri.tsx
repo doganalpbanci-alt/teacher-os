@@ -17,6 +17,8 @@ const DUGMELER: Record<
   CARD: [
     { deger: "PLUS", yazi: "★", etiket: "Yıldız ver", sinif: "d-yildiz" },
     { deger: "IHLAL", yazi: "!", etiket: "Uyarı ver", sinif: "d-uyari" },
+    { deger: "SARI_KART", yazi: "", etiket: "Sarı kart ver", sinif: "d-sari" },
+    { deger: "KIRMIZI_KART", yazi: "", etiket: "Kırmızı kart ver", sinif: "d-kirmizi" },
   ],
 };
 

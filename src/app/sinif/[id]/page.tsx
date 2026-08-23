@@ -10,6 +10,8 @@ import { DavranisDugmeleri } from "@/components/DavranisDugmeleri";
 
 export const dynamic = "force-dynamic";
 
+// Kart isim yanında sembolle gösterilir. Yazı yalnızca ekran okuyucular ve
+// testler için, görünmez biçimde durur.
 const KART_ETIKETI: Record<KartDurumu, { yazi: string; sinif: string }> = {
   SARI: { yazi: "Sarı kart", sinif: "kart-sari" },
   KIRMIZI: { yazi: "Kırmızı kart", sinif: "kart-kirmizi" },
@@ -96,8 +98,11 @@ export default async function SinifSayfasi({
                     </Link>
                     <span className="satir-sag">
                       {kart && (
-                        <span className={`kart-rozet ${KART_ETIKETI[kart].sinif}`}>
-                          {KART_ETIKETI[kart].yazi}
+                        <span
+                          className={`kart-sembol ${KART_ETIKETI[kart].sinif}`}
+                          title={KART_ETIKETI[kart].yazi}
+                        >
+                          <span className="gorunmez">{KART_ETIKETI[kart].yazi}</span>
                         </span>
                       )}
                       {!kartSistemi && (
