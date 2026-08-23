@@ -162,6 +162,9 @@ performans puanı, öğrenci geçmişi, teneffüs cezası ve kronometre.
 
 **Kurulum tamamlandı** — canlıda hesap mevcut, `/kurulum` kapalı.
 
+v0.1 canlıda gerçek kullanımla doğrulandı: kırmızı kart ceza üretiyor, ⏱
+rozeti çıkıyor ve kronometre çalışıyor.
+
 **Sırada:** `ROADMAP.md` v0.2 — ders yönetimi (ders geçmişi, ders bazlı
 takip) ve arayüz tasarımı. Arayüz şu ana kadar bilerek sade tutuldu.
 

@@ -15,6 +15,8 @@ Durum işaretleri: `✓` tamam · `◐` kısmen · boş = yapılmadı.
 Ayrıca tamamlandı: giriş sistemi ve öğretmen bazlı veri ayrımı, davranış
 şablonları (basit / kart sistemi).
 
+v0.1 canlıda doğrulandı. Kalan tek eksik gerçek ders yönetimi; o da v0.2'de.
+
 ## v0.2 — Ders Yönetimi
 - Ders geçmişi
 - Ders bazlı takip
