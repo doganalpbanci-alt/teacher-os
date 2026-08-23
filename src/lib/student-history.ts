@@ -27,10 +27,11 @@ export type Ozet = {
 
 /**
  * Kırmızı kart iki satır yazar: RED_CARD (0 puan) ve yanındaki MINUS (-5).
- * İkisi aynı işlemde oluştuğu için zaman damgaları da aynıdır. Geçmişte tek
+ * İkisi aynı işlemde oluştuğu için zaman damgaları da aynıdır. Ekranda tek
  * bir "kırmızı kart -5" satırı olarak gösterilir; ham kayıtlara dokunulmaz.
+ * Öğrenci geçmişi ve ders detayı aynı kuralı kullanır.
  */
-function kirmiziKartlariBirlestir(kayitlar: GecmisKaydi[]): GecmisKaydi[] {
+export function kirmiziKartlariBirlestir(kayitlar: GecmisKaydi[]): GecmisKaydi[] {
   const eslesenMinusler = new Set<string>();
 
   for (const kart of kayitlar) {

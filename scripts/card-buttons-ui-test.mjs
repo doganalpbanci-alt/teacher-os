@@ -10,6 +10,7 @@
 //   4. node scripts/card-buttons-ui-test.mjs
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
+import { dersBaslat } from "./test-ders.mjs";
 
 const T = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
@@ -42,12 +43,6 @@ async function kart(ad) {
   if (s.includes("kart-sari")) return "SARI";
   return "YOK";
 }
-async function dersBaslat() {
-  const onceki = await sayfa.textContent("body");
-  await sayfa.getByRole("button", { name: "Yeni ders başlat" }).click();
-  await sayfa.waitForFunction((x) => document.body.innerText !== x, onceki, { timeout: 10000 });
-  await sayfa.waitForTimeout(400);
-}
 
 // --- Hazirlik: kart sistemi + sinif + ogrenciler ---
 console.log("\nA. Hazirlik");
@@ -73,7 +68,7 @@ ok("Uyari dugmesi KALDIRILDI", (await satir("Ali").getByRole("button", { name: "
 for (const e of ["Yıldız ver", "Sarı kart ver", "Kırmızı kart ver"]) {
   ok(`"${e}" dugmesi var`, await satir("Ali").getByRole("button", { name: e }).isVisible());
 }
-await dersBaslat();
+await dersBaslat(sayfa);
 
 // --- B: Dogrudan sari ---
 console.log("\nB. Dogrudan sari kart");
@@ -109,7 +104,7 @@ ok("Yildiz kart vermedi", (await kart("Sude")) === "YOK");
 
 // --- G: Yeni derste sifirlanma ---
 console.log("\nG. Yeni ders");
-await dersBaslat();
+await dersBaslat(sayfa);
 ok("Ali'nin karti sifirlandi", (await kart("Ali")) === "YOK", await kart("Ali"));
 ok("Ali'nin puani korundu", (await puan("Ali")) === 85, `puan=${await puan("Ali")}`);
 await bas("Ali", "Sarı kart ver");

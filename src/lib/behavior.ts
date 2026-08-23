@@ -99,13 +99,22 @@ export async function davranisKaydet(
   await prisma.$transaction(async (tx) => {
     const ders = await tx.lesson.findUnique({
       where: { id: dersId },
-      select: { classroomId: true, classroom: { select: { teacherId: true } } },
+      select: {
+        classroomId: true,
+        endedAt: true,
+        classroom: { select: { teacherId: true } },
+      },
     });
     if (!ders) throw new DavranisHatasi("Ders bulunamadı.");
     // Baska bir ogretmenin dersine kayit yazilamaz. Kontrol en alt katmanda
     // yapilir ki hicbir cagri yolu bunu atlayamasin.
     if (ders.classroom.teacherId !== ogretmenId) {
       throw new DavranisHatasi("Bu ders size ait değil.");
+    }
+    // Bitmis ders gecmistir; sonradan kayit eklenirse kart kurallari ve ceza
+    // sayaci gecmise dogru degisir. Ayni sebeple bu kontrol de burada durur.
+    if (ders.endedAt) {
+      throw new DavranisHatasi("Bu ders bitmiş. Kayıt için yeni ders başlatın.");
     }
 
     const ogrenci = await tx.student.findUnique({

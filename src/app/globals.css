@@ -195,6 +195,18 @@ a.satir:hover .satir-ad {
   cursor: default;
 }
 
+/* Ders bitirme geri alinamaz; digerlerinden ayrilsin diye vurgulu. */
+.ders-dugme.ders-bitir {
+  border-color: var(--hata);
+  color: var(--hata);
+}
+
+.rozet.ders-suruyor {
+  border-color: var(--basari);
+  color: var(--basari);
+  font-weight: 600;
+}
+
 .davranis {
   display: flex;
   align-items: center;

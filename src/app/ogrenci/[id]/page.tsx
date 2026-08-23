@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { BehaviorType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
-import { dersTarihiYazisi } from "@/lib/current-lesson";
+import { dersTarihiYazisi, saatYazisi } from "@/lib/lesson";
 import { ogrenciGecmisi, ogrenciOzeti } from "@/lib/student-history";
 import { ogrenciCezalari } from "@/lib/penalty";
 import { NotFormu } from "@/components/NotFormu";
@@ -18,14 +18,6 @@ const TUR_YAZISI: Record<BehaviorType, { yazi: string; sinif: string }> = {
   YELLOW_CARD: { yazi: "Sarı kart", sinif: "g-sari" },
   RED_CARD: { yazi: "Kırmızı kart", sinif: "g-kirmizi" },
 };
-
-function saatYazisi(zaman: Date): string {
-  return new Intl.DateTimeFormat("tr-TR", {
-    timeZone: "Europe/Istanbul",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(zaman);
-}
 
 export default async function OgrenciSayfasi({
   params,

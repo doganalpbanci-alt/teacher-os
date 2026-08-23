@@ -9,6 +9,7 @@
 //   4. node scripts/template-ui-test.mjs
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
+import { dersBaslat } from "./test-ders.mjs";
 
 const TEMEL = "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
@@ -64,8 +65,7 @@ ok("Sayimlar goruluyor", (await satirMetni("Deniz")).includes("0 artı · 0 eksi
 
 // --- B: Basit sistemde kayit ---
 console.log("\nB. Basit sistemde kayit");
-await sayfa.getByRole("button", { name: "Yeni ders başlat" }).click();
-await sayfa.waitForFunction(() => document.body.innerText.includes("Aktif ders:"), null, { timeout: 10000 });
+await dersBaslat(sayfa, "Aktif ders:");
 await bas("Deniz", "Artı ver");
 ok("Arti sayildi", (await satirMetni("Deniz")).includes("1 artı"));
 ok("Puan DEGISMEDI", (await puan("Deniz")) === 90, `puan=${await puan("Deniz")}`);

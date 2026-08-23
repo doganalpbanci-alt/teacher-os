@@ -10,6 +10,7 @@
 import { execSync } from "node:child_process";
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
+import { dersBaslat } from "./test-ders.mjs";
 
 const T = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 const SQL_KOMUTU = process.env.SQL_KOMUTU ?? 'psql "$DATABASE_URL" -q -tA';
@@ -39,12 +40,6 @@ async function bas(ad, etiket) {
   }, [ad, onceki], { timeout: 10000 });
   await sayfa.waitForTimeout(400);
 }
-async function dersBaslat() {
-  const o = await sayfa.textContent("body");
-  await sayfa.getByRole("button", { name: "Yeni ders başlat" }).click();
-  await sayfa.waitForFunction((x) => document.body.innerText !== x, o, { timeout: 10000 });
-  await sayfa.waitForTimeout(400);
-}
 const cezaSaniye = (ad) =>
   sql(`SELECT COALESCE((SELECT p.seconds FROM "BreakPenalty" p
        JOIN "Student" s ON s.id=p."studentId"
@@ -68,7 +63,7 @@ for (const [a, b] of [["Arda", "Bir"], ["Berk", "Iki"]]) {
   await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
   await sayfa.waitForFunction((x) => document.body.innerText.includes(x), a, { timeout: 10000 });
 }
-await dersBaslat();
+await dersBaslat(sayfa);
 ok("Baslangicta ceza yok", (await rozet("Arda").count()) === 0);
 
 // --- B: Sari kart ceza uretmiyor ---
@@ -135,17 +130,17 @@ ok("Yenilemeden sonra kaldigi yerden devam", /2:\d{2}/.test(yenidenMetin), yenid
 console.log("\nH. Erken bitirme");
 await rozet("Arda").click();
 await sayfa.waitForSelector(".ceza-panel", { timeout: 5000 });
-await sayfa.getByRole("button", { name: "Bitir" }).click();
+await sayfa.getByRole("button", { name: "Bitir", exact: true }).click();
 await sayfa.waitForTimeout(1800);
 ok("Ceza kapandi", cezaSaniye("Arda") === "-1", `saniye=${cezaSaniye("Arda")}`);
 ok("Rozet kayboldu", (await rozet("Arda").count()) === 0);
 
 // --- I: Temiz ders sayaci sifirliyor ---
 console.log("\nI. Temiz ders sonrasi sayac");
-await dersBaslat();  // Arda bu derste kart almayacak: temiz ders
+await dersBaslat(sayfa);  // Arda bu derste kart almayacak: temiz ders
 await bas("Berk", "Kırmızı kart ver");
 ok("Berk'in ilki 2 dakika", cezaSaniye("Berk") === "120", `saniye=${cezaSaniye("Berk")}`);
-await dersBaslat();
+await dersBaslat(sayfa);
 await bas("Arda", "Kırmızı kart ver");
 ok("Arda temiz dersten sonra YINE 2 dakika", cezaSaniye("Arda") === "120", `saniye=${cezaSaniye("Arda")}`);
 

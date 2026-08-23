@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
-import { aktifDersiGetir, dersTarihiYazisi } from "@/lib/current-lesson";
+import { aktifDersiGetir, dersTarihiYazisi } from "@/lib/lesson";
 import { dersKartDurumlari, ogrenciSayimlari, type KartDurumu } from "@/lib/behavior";
 import { OgrenciFormu } from "@/components/OgrenciFormu";
-import { DersBaslatFormu } from "@/components/DersBaslatFormu";
+import { DersKontrolu } from "@/components/DersKontrolu";
 import { DavranisDugmeleri } from "@/components/DavranisDugmeleri";
 import { CezaKontrolu } from "@/components/CezaKontrolu";
 import { bekleyenCezalar } from "@/lib/penalty";
@@ -79,8 +79,11 @@ export default async function SinifSayfasi({
           ) : (
             <span className="soluk">Aktif ders yok. Kayıt için ders başlatın.</span>
           )}
-          <DersBaslatFormu sinifId={sinif.id} />
+          <DersKontrolu sinifId={sinif.id} aktifDersId={aktifDers?.id ?? null} />
         </div>
+        <Link className="baglanti" href={`/sinif/${sinif.id}/dersler`}>
+          Ders geçmişi →
+        </Link>
       </section>
 
       <main className="kart">

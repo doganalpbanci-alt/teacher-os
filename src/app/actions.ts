@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import type { FormState } from "@/lib/form-state";
-import { dersBaslat } from "@/lib/current-lesson";
+import { dersBaslat, dersBitir, DersHatasi } from "@/lib/lesson";
 import { davranisKaydet, eylemGecerliMi, DavranisHatasi } from "@/lib/behavior";
 
 const AD_SINIRI = 60;
@@ -132,11 +132,34 @@ export async function yeniDersBaslat(
     });
     if (!sinif) return hata(onceki, "Sınıf bulunamadı.", {});
     await dersBaslat(sinifId);
-  } catch {
+  } catch (error) {
+    if (error instanceof DersHatasi) return hata(onceki, error.message, {});
     return hata(onceki, "Ders başlatılamadı. Veritabanına ulaşılamıyor olabilir.", {});
   }
 
   revalidatePath(`/sinif/${sinifId}`);
+  return basarili(onceki);
+}
+
+export async function dersiBitir(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const dersId = metin(formData.get("dersId"));
+  const sinifId = metin(formData.get("sinifId"));
+  if (!dersId) return hata(onceki, "Ders bilgisi eksik.", {});
+
+  try {
+    // Sahiplik dersBitir icinde sorgunun parcasi; baskasinin dersi
+    // "bulunamadi" doner.
+    const ogretmen = await getCurrentTeacher();
+    await dersBitir(dersId, ogretmen.id);
+  } catch (error) {
+    if (error instanceof DersHatasi) return hata(onceki, error.message, {});
+    return hata(onceki, "Ders bitirilemedi. Veritabanına ulaşılamıyor olabilir.", {});
+  }
+
+  if (sinifId) revalidatePath(`/sinif/${sinifId}`);
   return basarili(onceki);
 }
 

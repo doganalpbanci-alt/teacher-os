@@ -152,6 +152,20 @@ gösterir, en yeni ders en üstte. Kırmızı kart veritabanında iki satırdır
 (`RED_CARD` ve yanındaki `MINUS`); geçmişte tek bir satır olarak gösterilir,
 ham kayıtlara dokunulmaz. Dönem toplamlarında da bu MINUS iki kez sayılmaz.
 
-Ders yönetimi ekranı henüz yok. Geçici kural `src/lib/current-lesson.ts`
-içindedir: bir sınıfın en son açılmış dersi aktif derstir. Gerçek ders ekranı
-geldiğinde yalnızca o dosya değişir.
+## Ders yönetimi
+
+Kurallar `src/lib/lesson.ts` içindedir. Bir sınıfın bitmemiş dersi
+(`Lesson.endedAt` boş) aktif derstir; sınıfın aynı anda tek dersi olur, süren
+ders bitmeden yenisi başlatılamaz. Sınıf sayfasında duruma göre "Yeni ders
+başlat" ya da "Dersi bitir" görünür.
+
+Ders bitmesi kaydı kapatır: bitmiş derse yeni davranış kaydı yazılamaz. Bu
+kontrol `behavior.ts` içinde, kaydın yazıldığı en alt katmandadır; hiçbir
+çağrı yolu atlayamaz. Kart durumu yalnızca aktif dersten okunduğu için ders
+bitirmek sarı kartı da doğal olarak kapatır.
+
+`/sinif/[id]/dersler` o sınıfın derslerini en yeniden eskiye listeler: günün
+kaçıncı dersi olduğu, bitiş saati ya da "Sürüyor" rozeti ve dersin kayıt
+sayıları. `/sinif/[id]/dersler/[dersId]` tek bir dersin kayıtlarını öğrenciye
+göre gruplanmış gösterir. İki adres de sahipliği sorgunun parçası olarak
+kontrol eder; başkasının dersi 404 döner.

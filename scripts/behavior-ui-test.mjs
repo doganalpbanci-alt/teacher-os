@@ -9,6 +9,7 @@
 //   4. node scripts/behavior-ui-test.mjs
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
+import { dersBaslat } from "./test-ders.mjs";
 
 const TEMEL = "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
@@ -91,8 +92,7 @@ ok("Eksi dugmesi pasif", await satir("Ela").getByRole("button", { name: "Sarı k
 
 // --- C: 1. ders ---
 console.log("\nC. Birinci ders");
-await sayfa.getByRole("button", { name: "Yeni ders başlat" }).click();
-await sayfa.waitForFunction(() => document.body.innerText.includes("Aktif ders:"), null, { timeout: 10000 });
+await dersBaslat(sayfa, "Aktif ders:");
 ok("Ders basladi", (await sayfa.textContent("body")).includes("1. ders"));
 ok("Arti dugmesi aktif", !(await satir("Ela").getByRole("button", { name: "Yıldız ver" }).isDisabled()));
 
@@ -116,8 +116,7 @@ ok("Diger ogrenci etkilenmedi", (await puan("Bora")) === 90 && (await kart("Bora
 
 // --- D: 2. ders (ayni gun) ---
 console.log("\nD. Ayni gun ikinci ders");
-await sayfa.getByRole("button", { name: "Yeni ders başlat" }).click();
-await sayfa.waitForFunction(() => document.body.innerText.includes("2. ders"), null, { timeout: 10000 });
+await dersBaslat(sayfa, "2. ders");
 ok("Ayni gun ikinci ders acildi", (await sayfa.textContent("body")).includes("2. ders"));
 ok("Sari/kirmizi kart sifirlandi", (await kart("Ela")) === "YOK", await kart("Ela"));
 ok("Puan korundu (gecmis silinmedi)", (await puan("Ela")) === 81, `puan=${await puan("Ela")}`);

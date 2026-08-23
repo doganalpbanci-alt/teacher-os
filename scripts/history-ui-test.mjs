@@ -9,6 +9,7 @@
 //   4. node scripts/history-ui-test.mjs
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
+import { dersBaslat } from "./test-ders.mjs";
 const TEMEL = "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
 function ok(ad, kosul, ayrinti = "") {
@@ -63,8 +64,7 @@ ok("Bos gecmis mesaji", (await gecmisMetni()).includes("henüz kayıt yok"));
 // --- B: Basit sistemde gecmis ---
 console.log("\nB. Basit sistemde kayitlar");
 await sayfa.goBack({ waitUntil: "networkidle" });
-await sayfa.getByRole("button", { name: "Yeni ders başlat" }).click();
-await sayfa.waitForFunction(() => document.body.innerText.includes("Aktif ders:"), null, { timeout: 10000 });
+await dersBaslat(sayfa, "Aktif ders:");
 await bas("Naz", "Artı ver");
 await bas("Naz", "Artı ver");
 await bas("Naz", "Eksi ver");
@@ -110,8 +110,7 @@ ok("Basit donemin kayitlari duruyor", (g.match(/Artı/g) || []).length >= 3, g.s
 // --- E: Ders gruplama ---
 console.log("\nE. Ders gruplama");
 await sayfa.goBack({ waitUntil: "networkidle" });
-await sayfa.getByRole("button", { name: "Yeni ders başlat" }).click();
-await sayfa.waitForFunction(() => document.body.innerText.includes("2. ders"), null, { timeout: 10000 });
+await dersBaslat(sayfa, "2. ders");
 await bas("Naz", "Yıldız ver");
 await sayfa.getByRole("link", { name: /Naz Er/ }).click();
 await sayfa.getByRole("heading", { name: "Naz Er" }).waitFor();

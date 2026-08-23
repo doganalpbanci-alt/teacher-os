@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 23 Ağustos 2026 · `main` = `a6f4cf6`
+Son güncelleme: 23 Ağustos 2026 · `main` = `3544bb6`
 
 ---
 
@@ -54,16 +54,22 @@ Prisma **6.19.3'te sabit**. Prisma 7 `url`/`directUrl` alanlarını
 
 ---
 
-## Uygulanmış migration'lar (4)
+## Migration'lar (5)
 
 ```
-20260821214524_init                  tablolar
+20260821214524_init                    tablolar
 20260822105533_harden_history_and_rls  RESTRICT silme kuralları + RLS
-20260822235800_behavior_template     Teacher.behaviorTemplate + puan kısıtı gevşetildi
-20260823144543_break_penalty         BreakPenalty tablosu
+20260822235800_behavior_template       Teacher.behaviorTemplate + puan kısıtı gevşetildi
+20260823144543_break_penalty           BreakPenalty tablosu
+20260823174546_lesson_ended_at         Lesson.endedAt + eski dersler kapatıldı   ← BEKLİYOR
 ```
 
-Dördü de Supabase'de uygulandı ve `verify-state.sql` ile doğrulandı.
+İlk dördü Supabase'de uygulandı ve `verify-state.sql` ile doğrulandı.
+
+**Beşincisi henüz uygulanmadı.** `prisma/pending-sql-editor.sql` içeriği
+Supabase SQL Editor'de çalıştırılmadan `main`'e merge edilmemeli; uygulama
+olmayan bir sütunu arar ve kırılır. Migration mevcut derslerin hepsini
+kapatır, yani öğretmen ilk kullanımda "Yeni ders başlat" der.
 
 ---
 
@@ -75,7 +81,7 @@ src/lib/
   session.ts          imzalı oturum çerezi (jose)
   auth.ts             parola hash (bcryptjs), oturum aç/kapat
   current-teacher.ts  oturumdaki öğretmen; yoksa /giris'e yönlendirir
-  current-lesson.ts   GEÇİCİ: en son açılan ders aktiftir
+  lesson.ts           aktif ders, ders başlat/bitir, ders geçmişi ve detayı
   behavior.ts         davranış kuralları + puan sabitleri (tek modül)
   penalty.ts          teneffüs cezası kuralları + kronometre durumu
   student-history.ts  öğrenci geçmişi ve dönem toplamları
@@ -84,6 +90,7 @@ src/lib/
 src/app/
   page.tsx            sınıf listesi
   sinif/[id]/         sınıf detayı: ders, davranış düğmeleri, ceza rozeti
+  sinif/[id]/dersler/ ders geçmişi ve tek dersin kayıtları
   ogrenci/[id]/       öğrenci: özet, not girme, geçmiş, cezalar
   ayarlar/            davranış şablonu seçimi
   giris/ kurulum/     oturum ekranları
@@ -100,16 +107,17 @@ src/app/
 - **Düğme gizlemek yetki kontrolü değildir.** Hangi eylemin geçerli olduğu
   sunucuda öğretmenin şablonundan okunur.
 
-### Bilinen geçici çözüm
-`current-lesson.ts` — ders yönetimi ekranı yok, "en son açılan ders aktif"
-kuralı geçerli. Gerçek ders ekranı (ROADMAP v0.2) geldiğinde **yalnızca bu
-dosya** değişmeli.
+### Ders kuralı
+Bir sınıfın bitmemiş dersi (`Lesson.endedAt` boş) aktif derstir. Sınıfın aynı
+anda tek dersi olur; süren ders bitmeden yenisi başlatılamaz ve bitmiş derse
+kayıt yazılamaz. Bu kontroller `lesson.ts` ve `behavior.ts` içinde, kaydın
+yazıldığı en alt katmandadır.
 
 ---
 
 ## Testler
 
-Yedi arayüz testi, gerçek tarayıcıda (Playwright), toplam **170 kontrol**.
+Sekiz arayüz testi, gerçek tarayıcıda (Playwright), toplam **207 kontrol**.
 Hepsi geçiyor.
 
 ```
@@ -120,7 +128,11 @@ scripts/history-ui-test.mjs      öğrenci geçmişi                  16
 scripts/auth-ui-test.mjs         giriş ve veri ayrımı             26
 scripts/card-buttons-ui-test.mjs kart şablonunun üç düğmesi       24
 scripts/penalty-ui-test.mjs      teneffüs cezası ve kronometre    22
+scripts/lesson-ui-test.mjs       ders başlat/bitir, geçmiş, detay 37
 ```
+
+`test-oturum.mjs` ve `test-ders.mjs` testlerin ortak adımlarıdır (giriş ve
+ders başlatma); ayrı test değildirler.
 
 ### Çalıştırma (bulut oturumunda)
 
@@ -148,8 +160,8 @@ export SQL_KOMUTU='su postgres -c "'$PG_BIN'/psql -h 127.0.0.1 -p 15432 -U postg
 node scripts/<test>.mjs
 ```
 
-`auth-ui-test` ve `penalty-ui-test` doğrudan SQL yazar; `SQL_KOMUTU`
-tanımlı olmalı. Testler veri yazar — **üretim veritabanına karşı
+`auth-ui-test`, `penalty-ui-test` ve `lesson-ui-test` doğrudan SQL yazar;
+`SQL_KOMUTU` tanımlı olmalı. Testler veri yazar — **üretim veritabanına karşı
 çalıştırılmaz.**
 
 ---
@@ -158,15 +170,17 @@ tanımlı olmalı. Testler veri yazar — **üretim veritabanına karşı
 
 **Bitti:** veritabanı temeli, giriş sistemi ve veri ayrımı, sınıf/öğrenci
 yönetimi, davranış şablonları (basit +/− ve kart sistemi), sarı/kırmızı kart,
-performans puanı, öğrenci geçmişi, teneffüs cezası ve kronometre.
+performans puanı, öğrenci geçmişi, teneffüs cezası ve kronometre, ders
+yönetimi (başlat/bitir, ders geçmişi, ders detayı).
 
 **Kurulum tamamlandı** — canlıda hesap mevcut, `/kurulum` kapalı.
 
 v0.1 canlıda gerçek kullanımla doğrulandı: kırmızı kart ceza üretiyor, ⏱
 rozeti çıkıyor ve kronometre çalışıyor.
 
-**Sırada:** `ROADMAP.md` v0.2 — ders yönetimi (ders geçmişi, ders bazlı
-takip) ve arayüz tasarımı. Arayüz şu ana kadar bilerek sade tutuldu.
+**Sırada:** beşinci migration'ın Supabase'de çalıştırılması, sonra ders
+yönetiminin canlıda doğrulanması. Ardından v0.2'nin kalanı: kullanım deneyimi
+ve arayüz tasarımı. Arayüz şu ana kadar bilerek sade tutuldu.
 
 ---
 

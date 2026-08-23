@@ -5,7 +5,7 @@ Gelişim yönü ve ana versiyonlar. Detaylı görev listesi değildir.
 Durum işaretleri: `✓` tamam · `◐` kısmen · boş = yapılmadı.
 
 ## v0.1 — Core / Gerçek kullanım
-- ◐ Ders modu *(geçici kural: en son açılan ders aktiftir)*
+- ✓ Ders modu
 - ✓ Öğrenci +/− sistemi
 - ✓ Sarı/kırmızı kart
 - ✓ Performans puanı
@@ -15,11 +15,12 @@ Durum işaretleri: `✓` tamam · `◐` kısmen · boş = yapılmadı.
 Ayrıca tamamlandı: giriş sistemi ve öğretmen bazlı veri ayrımı, davranış
 şablonları (basit / kart sistemi).
 
-v0.1 canlıda doğrulandı. Kalan tek eksik gerçek ders yönetimi; o da v0.2'de.
+v0.1 canlıda doğrulandı.
 
 ## v0.2 — Ders Yönetimi
-- Ders geçmişi
-- Ders bazlı takip
+- ✓ Ders başlatma ve bitirme *(bir sınıfın aynı anda tek dersi olur)*
+- ✓ Ders geçmişi
+- ✓ Ders bazlı takip *(tek dersin kayıtları)*
 - Kullanım deneyimi iyileştirmeleri *(arayüz tasarımı dahil)*
 
 ## v0.3 — Ödev
