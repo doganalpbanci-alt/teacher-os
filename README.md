@@ -3,6 +3,9 @@
 Ingilizce ogretmenleri icin ogrenci, sinif, ders, odev, performans ve davranis
 takip paneli. Next.js 15 (App Router) + TypeScript + Prisma + Supabase.
 
+Projeye yeni basliyorsan sirasiyla: `HANDOFF.md` (mevcut durum),
+`CLAUDE.md` (kurallar), `ROADMAP.md` (yon).
+
 ## Uygulamayi calistirma
 
 ```
