@@ -8,6 +8,7 @@
 //   3. npm install --no-save playwright
 //   4. node scripts/history-ui-test.mjs
 import { chromium } from "playwright";
+import { oturumHazirla } from "./test-oturum.mjs";
 const TEMEL = "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
 function ok(ad, kosul, ayrinti = "") {
@@ -20,6 +21,9 @@ const tarayici = await chromium.launch(
     : {},
 );
 const sayfa = await tarayici.newPage();
+
+// Uygulama giris istiyor; once hesap kurulur ya da girilir.
+await oturumHazirla(sayfa, TEMEL);
 function satir(ad) { return sayfa.locator("li").filter({ hasText: ad }); }
 async function bas(ad, etiket) {
   const o = await satir(ad).evaluate((e) => e.innerText);

@@ -87,9 +87,13 @@ export async function ogrenciEkle(
   }
 
   try {
-    // Sınıf silinmiş ya da id elle değiştirilmiş olabilir. Doğrudan create
-    // denenirse ham foreign key hatası döner; önce kontrol edilir.
-    const sinif = await prisma.classroom.findUnique({ where: { id: sinifId } });
+    // Sınıf silinmiş, id elle değiştirilmiş ya da başka bir öğretmene ait
+    // olabilir. Sahiplik sorguya katılır; başkasının sınıfı "bulunamadı"
+    // sayılır, "var ama senin değil" demek bile bilgi sızdırır.
+    const ogretmen = await getCurrentTeacher();
+    const sinif = await prisma.classroom.findFirst({
+      where: { id: sinifId, teacherId: ogretmen.id },
+    });
     if (!sinif) return hata(onceki, "Sınıf bulunamadı.", girilen);
 
     await prisma.student.create({
@@ -122,7 +126,10 @@ export async function yeniDersBaslat(
   if (!sinifId) return hata(onceki, "Sınıf bilgisi eksik.", {});
 
   try {
-    const sinif = await prisma.classroom.findUnique({ where: { id: sinifId } });
+    const ogretmen = await getCurrentTeacher();
+    const sinif = await prisma.classroom.findFirst({
+      where: { id: sinifId, teacherId: ogretmen.id },
+    });
     if (!sinif) return hata(onceki, "Sınıf bulunamadı.", {});
     await dersBaslat(sinifId);
   } catch {
@@ -150,7 +157,13 @@ export async function davranisKaydiOlustur(
     if (!eylemGecerliMi(ogretmen.behaviorTemplate, tur)) {
       return hata(onceki, "Geçersiz davranış türü.", {});
     }
-    await davranisKaydet(ogrenciId, dersId, tur, ogretmen.behaviorTemplate);
+    await davranisKaydet(
+      ogrenciId,
+      dersId,
+      tur,
+      ogretmen.behaviorTemplate,
+      ogretmen.id,
+    );
   } catch (error) {
     if (error instanceof DavranisHatasi) return hata(onceki, error.message, {});
     return hata(onceki, "Kayıt eklenemedi. Veritabanına ulaşılamıyor olabilir.", {});
@@ -182,6 +195,14 @@ export async function performansNotuKaydet(
   }
 
   try {
+    const ogretmen = await getCurrentTeacher();
+    // Ogrenci, ogretmenin bir sinifina bagli olmali.
+    const ogrenci = await prisma.student.findFirst({
+      where: { id: ogrenciId, classroom: { teacherId: ogretmen.id } },
+      select: { id: true },
+    });
+    if (!ogrenci) return hata(onceki, "Öğrenci bulunamadı.", girilen);
+
     await prisma.student.update({
       where: { id: ogrenciId },
       data: { performanceScore: deger },

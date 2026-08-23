@@ -22,8 +22,11 @@ export default async function SinifSayfasi({
 }) {
   const { id } = await params;
 
-  const sinif = await prisma.classroom.findUnique({
-    where: { id },
+  const ogretmen = await getCurrentTeacher();
+
+  // Sahiplik sorgunun parcasi: baskasinin sinifi 404 doner.
+  const sinif = await prisma.classroom.findFirst({
+    where: { id, teacherId: ogretmen.id },
     select: {
       id: true,
       name: true,
@@ -42,7 +45,6 @@ export default async function SinifSayfasi({
 
   if (!sinif) notFound();
 
-  const ogretmen = await getCurrentTeacher();
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
   const aktifDers = await aktifDersiGetir(sinif.id);
 

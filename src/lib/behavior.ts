@@ -88,6 +88,7 @@ export async function davranisKaydet(
   dersId: string,
   eylem: Eylem,
   sablon: BehaviorTemplate,
+  ogretmenId: string,
 ): Promise<void> {
   if (!eylemGecerliMi(sablon, eylem)) {
     throw new DavranisHatasi("Bu davranış türü seçili sistemde kullanılmıyor.");
@@ -99,6 +100,11 @@ export async function davranisKaydet(
       select: { classroomId: true, classroom: { select: { teacherId: true } } },
     });
     if (!ders) throw new DavranisHatasi("Ders bulunamadı.");
+    // Baska bir ogretmenin dersine kayit yazilamaz. Kontrol en alt katmanda
+    // yapilir ki hicbir cagri yolu bunu atlayamasin.
+    if (ders.classroom.teacherId !== ogretmenId) {
+      throw new DavranisHatasi("Bu ders size ait değil.");
+    }
 
     const ogrenci = await tx.student.findUnique({
       where: { id: ogrenciId },
@@ -113,7 +119,7 @@ export async function davranisKaydet(
       studentId: ogrenciId,
       lessonId: dersId,
       classroomId: ders.classroomId,
-      teacherId: ders.classroom.teacherId,
+      teacherId: ogretmenId,
     };
 
     if (sablon === "SIMPLE") {

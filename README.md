@@ -87,9 +87,25 @@ veritabanina karsi calistirilir.
 - `scripts/template-ui-test.mjs` — şablonlar, elle not, şablon değişimi (25 kontrol)
 - `scripts/behavior-ui-test.mjs` — kart kuralları (24 kontrol)
 - `scripts/history-ui-test.mjs` — öğrenci geçmişi ve dönem toplamları (16 kontrol)
+- `scripts/auth-ui-test.mjs` — giriş sistemi ve veri ayrımı (26 kontrol)
 
 Çalıştırma adımları dosyaların başındadır. Hepsi veri yazar; üretim
 veritabanına karşı çalıştırılmaz.
+
+## Giriş sistemi
+
+Oturum imzalı bir çerezde taşınır (`jose`), parolalar `bcryptjs` ile
+hash'lenir. Veritabanında oturum tablosu yoktur. `SESSION_SECRET` ortam
+değişkeni zorunludur; eksikse uygulama zayıf bir varsayılana düşmez, hata
+verir.
+
+Kurulum bir kez yapılır: hesap yokken `/kurulum` açılır, sonrasında kapanır.
+Kurulum yeni öğretmen oluşturmak yerine, giriş sistemi öncesinde oluşmuş
+geçici kaydı devralır — sınıflar ve tüm geçmiş ona bağlıdır.
+
+Veri ayrımı sorgunun parçasıdır: sınıf ve öğrenci sorguları `teacherId`
+şartını taşır, başkasına ait kayıt 404 döner. Aynı kontrol server action'larda
+da vardır; formdaki gizli alanı değiştirmek yetki kazandırmaz.
 
 ## Davranış şablonları
 

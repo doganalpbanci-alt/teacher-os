@@ -8,6 +8,7 @@
 //   3. npm install --no-save playwright
 //   4. node scripts/behavior-ui-test.mjs
 import { chromium } from "playwright";
+import { oturumHazirla } from "./test-oturum.mjs";
 
 const TEMEL = "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
@@ -23,6 +24,9 @@ const tarayici = await chromium.launch(
     : {},
 );
 const sayfa = await tarayici.newPage();
+
+// Uygulama giris istiyor; once hesap kurulur ya da girilir.
+await oturumHazirla(sayfa, TEMEL);
 
 // Bir ogrencinin satirini bulur.
 function satir(ad) {

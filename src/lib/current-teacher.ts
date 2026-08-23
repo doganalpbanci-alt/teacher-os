@@ -1,34 +1,24 @@
-import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import type { Teacher } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { kurulmusMu, oturumdakiOgretmenId } from "@/lib/auth";
 
-// GEÇİCİ: giriş sistemi henüz yok. Uygulama tek öğretmenle çalışıyor.
-//
-// Giriş sistemi eklendiğinde SADECE bu dosya değişir: fonksiyon oturumdaki
-// öğretmeni döndürür, sayfalar ve server action'lar aynı kalır. Geçici çözüm
-// bilerek tek noktada toplanmıştır.
-const TEK_OGRETMEN_EPOSTA = "ogretmen@teacher-os.local";
-const TEK_OGRETMEN_AD = "Öğretmen";
-
-// Parola alanı şemada zorunlu. Giriş sistemi gelene kadar buraya geçerli bir
-// hash yazılmaz; bu değer hiçbir parolayla eşleşmez, yani bu kayıtla giriş
-// yapılamaz.
-const GIRIS_KAPALI = "!giris-sistemi-yok";
-
+/**
+ * Oturumdaki öğretmen. Oturum yoksa, çerez geçersizse ya da kayıt silinmişse
+ * giriş sayfasına yönlendirir; yani çağıran taraf her zaman gerçek bir
+ * öğretmen elde eder.
+ *
+ * Faz 3'ten önce burada geçici tek öğretmen çözümü vardı. Söz verildiği gibi
+ * yalnızca bu dosya değişti; sayfalar ve server action'lar aynı fonksiyonu
+ * çağırmaya devam ediyor.
+ */
 export async function getCurrentTeacher(): Promise<Teacher> {
-  const mevcut = await prisma.teacher.findUnique({
-    where: { email: TEK_OGRETMEN_EPOSTA },
-  });
-  if (mevcut) return mevcut;
+  const id = await oturumdakiOgretmenId();
+  if (!id) redirect("/giris");
 
-  // İlk açılışta oluşturulur. Aynı anda gelen iki istek yarışırsa email
-  // benzersizliği ikincisini reddeder; upsert bu durumu sessizce çözer.
-  return prisma.teacher.upsert({
-    where: { email: TEK_OGRETMEN_EPOSTA },
-    update: {},
-    create: {
-      email: TEK_OGRETMEN_EPOSTA,
-      name: TEK_OGRETMEN_AD,
-      passwordHash: GIRIS_KAPALI,
-    },
-  });
+  const ogretmen = await prisma.teacher.findUnique({ where: { id } });
+  // Kurulumu tamamlanmamış bir kayda ait jeton geçerli sayılmaz.
+  if (!ogretmen || !kurulmusMu(ogretmen.passwordHash)) redirect("/giris");
+
+  return ogretmen;
 }

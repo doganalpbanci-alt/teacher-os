@@ -44,8 +44,12 @@ Uygulama tek öğretmenin kişisel aracı olarak başladı, artık başka öğre
 de kullanabileceği şekilde ilerliyor. Varsayılan davranış herkes için sade
 olmalı; kişiye özel kurallar şablon olarak eklenir, koda gömülmez.
 
-Şu an giriş sistemi yoktur ve uygulama internete açıktır. Gerçek öğrenci ve
-veli bilgisi giriş sistemi tamamlanmadan girilmemeli.
+Giriş sistemi vardır: her sayfa oturum ister ve her öğretmen yalnızca kendi
+verisini görür. Sahiplik kontrolü sorgunun parçasıdır, ayrı bir kontrol
+katmanı değil; başkasına ait kayıt "bulunamadı" sayılır.
+
+Yeni bir id alan her sorgu ve her server action, kaydın oturumdaki öğretmene
+ait olduğunu doğrulamalıdır. Bu kural unutulursa veri ayrımı sessizce delinir.
 
 ## Gelecek
 Mimari ileride Exam, PDF processing, AI assistant, reporting, smartboard ve gamification eklenmesine uygun olmalı. Bunları MVP'ye gereksiz yere dahil etme.

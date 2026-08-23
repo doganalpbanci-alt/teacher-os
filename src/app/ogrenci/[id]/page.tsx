@@ -33,8 +33,11 @@ export default async function OgrenciSayfasi({
 }) {
   const { id } = await params;
 
-  const ogrenci = await prisma.student.findUnique({
-    where: { id },
+  const ogretmen = await getCurrentTeacher();
+
+  // Ogrenci, ogretmenin bir sinifina bagli degilse 404 doner.
+  const ogrenci = await prisma.student.findFirst({
+    where: { id, classroom: { teacherId: ogretmen.id } },
     select: {
       id: true,
       firstName: true,
@@ -48,7 +51,6 @@ export default async function OgrenciSayfasi({
 
   if (!ogrenci) notFound();
 
-  const ogretmen = await getCurrentTeacher();
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
   const ozet = await ogrenciOzeti(ogrenci.id);
   const gecmis = await ogrenciGecmisi(ogrenci.id);

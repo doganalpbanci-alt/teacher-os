@@ -403,3 +403,22 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   font-weight: 600;
   color: var(--soluk);
 }
+
+/* Oturum */
+.basi-sag {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.cikis {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--soluk);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+.cikis:hover { color: var(--hata); text-decoration: underline; }
