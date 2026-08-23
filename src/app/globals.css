@@ -375,3 +375,31 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 .sablon-formu > button:disabled { opacity: 0.6; cursor: default; }
 
 .basari { margin: 0; color: var(--basari); font-size: 0.875rem; }
+
+/* Öğrenci geçmişi */
+.gecmis {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+}
+
+.gecmis-baslik {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--soluk);
+  text-transform: none;
+}
+
+.gecmis-tur { font-weight: 500; }
+.gecmis-tur.g-arti { color: var(--basari); }
+.gecmis-tur.g-eksi { color: var(--hata); }
+.gecmis-tur.g-sari { color: #7a5b00; }
+.gecmis-tur.g-kirmizi { color: #8c1414; }
+
+.gecmis-puan {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--soluk);
+}

@@ -85,7 +85,8 @@ veritabanina karsi calistirilir.
 
 - `scripts/e2e-test.mjs` — sınıf ve öğrenci ekleme (33 kontrol)
 - `scripts/template-ui-test.mjs` — şablonlar, elle not, şablon değişimi (25 kontrol)
-- `scripts/behavior-ui-test.mjs` — kart ve ceza kuralları (24 kontrol)
+- `scripts/behavior-ui-test.mjs` — kart kuralları (24 kontrol)
+- `scripts/history-ui-test.mjs` — öğrenci geçmişi ve dönem toplamları (16 kontrol)
 
 Çalıştırma adımları dosyaların başındadır. Hepsi veri yazar; üretim
 veritabanına karşı çalıştırılmaz.
@@ -109,6 +110,13 @@ yazma işlemi yoktur.
 Şablon değiştirmek geçmiş kayıtları silmez. Kart sisteminde
 `Student.performanceScore` bir önbellektir: her kayıttan sonra loglardan
 yeniden toplanarak yazılır, artırma/azaltma yapılmaz.
+
+## Öğrenci geçmişi
+
+`/ogrenci/[id]` öğrencinin bütün kayıtlarını derslere göre gruplanmış olarak
+gösterir, en yeni ders en üstte. Kırmızı kart veritabanında iki satırdır
+(`RED_CARD` ve yanındaki `MINUS`); geçmişte tek bir satır olarak gösterilir,
+ham kayıtlara dokunulmaz. Dönem toplamlarında da bu MINUS iki kez sayılmaz.
 
 Ders yönetimi ekranı henüz yok. Geçici kural `src/lib/current-lesson.ts`
 içindedir: bir sınıfın en son açılmış dersi aktif derstir. Gerçek ders ekranı

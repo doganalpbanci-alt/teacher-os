@@ -1,11 +1,30 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { BehaviorType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
-import { ogrenciSayimlari } from "@/lib/behavior";
+import { dersTarihiYazisi } from "@/lib/current-lesson";
+import { ogrenciGecmisi, ogrenciOzeti } from "@/lib/student-history";
 import { NotFormu } from "@/components/NotFormu";
 
 export const dynamic = "force-dynamic";
+
+// Kayıt türlerinin ekrandaki karşılığı. Basit sistemde kart kaydı oluşmaz,
+// ama şablon değiştirilmişse geçmişte durabilir; bu yüzden hepsi tanımlı.
+const TUR_YAZISI: Record<BehaviorType, { yazi: string; sinif: string }> = {
+  PLUS: { yazi: "Artı", sinif: "g-arti" },
+  MINUS: { yazi: "Eksi", sinif: "g-eksi" },
+  YELLOW_CARD: { yazi: "Sarı kart", sinif: "g-sari" },
+  RED_CARD: { yazi: "Kırmızı kart", sinif: "g-kirmizi" },
+};
+
+function saatYazisi(zaman: Date): string {
+  return new Intl.DateTimeFormat("tr-TR", {
+    timeZone: "Europe/Istanbul",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(zaman);
+}
 
 export default async function OgrenciSayfasi({
   params,
@@ -31,14 +50,27 @@ export default async function OgrenciSayfasi({
 
   const ogretmen = await getCurrentTeacher();
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
-  const sayim = (await ogrenciSayimlari([ogrenci.id])).get(ogrenci.id) ?? {
-    arti: 0,
-    eksi: 0,
-  };
+  const ozet = await ogrenciOzeti(ogrenci.id);
+  const gecmis = await ogrenciGecmisi(ogrenci.id);
+
+  // Basit sistemde kartlar gündemde değil; kart sisteminde yıldız/kart öne çıkar.
+  const olcumler = kartSistemi
+    ? [
+        { deger: ozet.arti, etiket: "yıldız" },
+        { deger: ozet.sariKart, etiket: "sarı kart" },
+        { deger: ozet.kirmiziKart, etiket: "kırmızı kart" },
+      ]
+    : [
+        { deger: ozet.arti, etiket: "artı" },
+        { deger: ozet.eksi, etiket: "eksi" },
+      ];
 
   return (
     <>
-      <Link className="geri" href={ogrenci.classroom ? `/sinif/${ogrenci.classroom.id}` : "/"}>
+      <Link
+        className="geri"
+        href={ogrenci.classroom ? `/sinif/${ogrenci.classroom.id}` : "/"}
+      >
         ← {ogrenci.classroom ? ogrenci.classroom.name : "Sınıflarım"}
       </Link>
 
@@ -53,14 +85,12 @@ export default async function OgrenciSayfasi({
         </p>
 
         <div className="olcum-satiri">
-          <div className="olcum">
-            <span className="olcum-deger">{sayim.arti}</span>
-            <span className="olcum-etiket">artı</span>
-          </div>
-          <div className="olcum">
-            <span className="olcum-deger">{sayim.eksi}</span>
-            <span className="olcum-etiket">eksi</span>
-          </div>
+          {olcumler.map((olcum) => (
+            <div className="olcum" key={olcum.etiket}>
+              <span className="olcum-deger">{olcum.deger}</span>
+              <span className="olcum-etiket">{olcum.etiket}</span>
+            </div>
+          ))}
           <div className="olcum">
             <span className="olcum-deger">{ogrenci.performanceScore}</span>
             <span className="olcum-etiket">performans notu</span>
@@ -79,8 +109,8 @@ export default async function OgrenciSayfasi({
         ) : (
           <>
             <p className="soluk">
-              Artı ve eksi sayılarına bakarak notu kendiniz belirlersiniz.
-              Uygulama bu değeri kendiliğinden değiştirmez.
+              Aşağıdaki geçmişe bakarak notu kendiniz belirlersiniz. Uygulama bu
+              değeri kendiliğinden değiştirmez.
             </p>
             <NotFormu ogrenciId={ogrenci.id} mevcutNot={ogrenci.performanceScore} />
           </>
@@ -89,10 +119,36 @@ export default async function OgrenciSayfasi({
 
       <section className="kart">
         <h2>Geçmiş</h2>
-        <p className="soluk">
-          Öğrencinin bütün artı, eksi ve kart kayıtları burada listelenecek.
-          Sıradaki adımda ekleniyor.
-        </p>
+        {gecmis.length === 0 ? (
+          <p className="soluk">Bu öğrenci için henüz kayıt yok.</p>
+        ) : (
+          <div className="gecmis">
+            {gecmis.map((grup) => (
+              <div className="gecmis-ders" key={grup.dersId}>
+                <h3 className="gecmis-baslik">{dersTarihiYazisi(grup.dersTarihi)}</h3>
+                <ul className="liste">
+                  {grup.kayitlar.map((kayit) => (
+                    <li key={kayit.id}>
+                      <div className="satir">
+                        <span className={`gecmis-tur ${TUR_YAZISI[kayit.tur].sinif}`}>
+                          {TUR_YAZISI[kayit.tur].yazi}
+                        </span>
+                        <span className="satir-sag">
+                          {kayit.puan !== 0 && (
+                            <span className="gecmis-puan">
+                              {kayit.puan > 0 ? `+${kayit.puan}` : kayit.puan}
+                            </span>
+                          )}
+                          <span className="rozet">{saatYazisi(kayit.zaman)}</span>
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </>
   );
