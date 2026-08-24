@@ -7,9 +7,11 @@
 //   2. npm run build && npm start
 //   3. npm install --no-save playwright
 //   4. node scripts/template-ui-test.mjs
+import { execSync } from "node:child_process";
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
 import { dersBaslat } from "./test-ders.mjs";
+import { ogrenciFormunuAc } from "./test-form.mjs";
 
 const TEMEL = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
@@ -40,10 +42,12 @@ async function bas(ad, etiket) {
     }, [ad, onceki], { timeout: 10000 });
   await sayfa.waitForTimeout(400);
 }
-async function puan(ad) {
-  const m = (await satirMetni(ad)).match(/(-?\d+) puan/);
-  return m ? Number(m[1]) : null;
-}
+// Performans puanı artık ders ekranında gösterilmiyor (ders sırasında karar
+// kartlara göre verilir), bu yüzden puan kaydın kendisinden okunur.
+const SQL_KOMUTU = process.env.SQL_KOMUTU ?? 'psql "$DATABASE_URL" -q -tA';
+const sql = (m) => execSync(SQL_KOMUTU, { input: m, shell: "/bin/bash" }).toString().trim();
+const puan = (ad) =>
+  Number(sql(`SELECT "performanceScore" FROM "Student" WHERE "firstName"='${ad}';`));
 
 // --- A: Varsayilan sablon ---
 console.log("\nA. Varsayilan sistem");
@@ -53,6 +57,7 @@ await sayfa.getByRole("button", { name: "Sınıf ekle" }).click();
 await sayfa.waitForFunction(() => document.body.innerText.includes("8-D"), null, { timeout: 10000 });
 await sayfa.getByRole("link", { name: /8-D/ }).click();
 await sayfa.getByRole("heading", { name: "8-D" }).waitFor();
+await ogrenciFormunuAc(sayfa);
 await sayfa.getByLabel("Ad", { exact: true }).fill("Deniz");
 await sayfa.getByLabel("Soyad").fill("Ak");
 await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
@@ -65,14 +70,14 @@ ok("Sayimlar goruluyor", (await satirMetni("Deniz")).includes("0 artı · 0 eksi
 
 // --- B: Basit sistemde kayit ---
 console.log("\nB. Basit sistemde kayit");
-await dersBaslat(sayfa, "Aktif ders:");
+await dersBaslat(sayfa, ". ders");
 await bas("Deniz", "Artı ver");
 ok("Arti sayildi", (await satirMetni("Deniz")).includes("1 artı"));
-ok("Puan DEGISMEDI", (await puan("Deniz")) === 90, `puan=${await puan("Deniz")}`);
+ok("Puan DEGISMEDI", (puan("Deniz")) === 90, `puan=${puan("Deniz")}`);
 await bas("Deniz", "Eksi ver");
 await bas("Deniz", "Eksi ver");
 ok("Eksiler sayildi", (await satirMetni("Deniz")).includes("2 eksi"));
-ok("Puan hala 90", (await puan("Deniz")) === 90, `puan=${await puan("Deniz")}`);
+ok("Puan hala 90", (puan("Deniz")) === 90, `puan=${puan("Deniz")}`);
 ok("Kart rozeti yok", !(await satirMetni("Deniz")).includes("kart"));
 
 // --- C: Elle not girme ---
@@ -121,7 +126,7 @@ await sayfa.getByRole("heading", { name: "8-D" }).waitFor();
 ok("Yildiz dugmesi geldi", await satir("Deniz").getByRole("button", { name: "Yıldız ver" }).isVisible());
 ok("Sari kart dugmesi geldi", await satir("Deniz").getByRole("button", { name: "Sarı kart ver" }).isVisible());
 ok("Arti dugmesi gitti", (await satir("Deniz").getByRole("button", { name: "Artı ver" }).count()) === 0);
-ok("Elle girilen not korundu", (await puan("Deniz")) === 74, `puan=${await puan("Deniz")}`);
+ok("Elle girilen not korundu", (puan("Deniz")) === 74, `puan=${puan("Deniz")}`);
 
 // --- E: Kart kurallari hala calisiyor ---
 console.log("\nE. Kart kurallari");

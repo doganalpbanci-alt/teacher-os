@@ -7,9 +7,12 @@
 //   2. npm run build && npm start
 //   3. npm install --no-save playwright
 //   4. node scripts/history-ui-test.mjs
+import { execSync } from "node:child_process";
 import { chromium } from "playwright";
+import { kayitBekleyici } from "./test-kayit.mjs";
 import { oturumHazirla } from "./test-oturum.mjs";
 import { dersBaslat } from "./test-ders.mjs";
+import { ogrenciFormunuAc } from "./test-form.mjs";
 const TEMEL = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
 function ok(ad, kosul, ayrinti = "") {
@@ -26,14 +29,11 @@ const sayfa = await tarayici.newPage();
 // Uygulama giris istiyor; once hesap kurulur ya da girilir.
 await oturumHazirla(sayfa, TEMEL);
 function satir(ad) { return sayfa.locator("li").filter({ hasText: ad }); }
+const SQL_KOMUTU = process.env.SQL_KOMUTU ?? 'psql "$DATABASE_URL" -q -tA';
+const sql = (m) => execSync(SQL_KOMUTU, { input: m, shell: "/bin/bash" }).toString().trim();
+const kayitBekle = kayitBekleyici(sql, sayfa);
 async function bas(ad, etiket) {
-  const o = await satir(ad).evaluate((e) => e.innerText);
-  await satir(ad).getByRole("button", { name: etiket }).click();
-  await sayfa.waitForFunction(([n, x]) => {
-    const e = [...document.querySelectorAll("li")].find((q) => q.innerText.includes(n));
-    return e && e.innerText !== x;
-  }, [ad, o], { timeout: 10000 });
-  await sayfa.waitForTimeout(350);
+  await kayitBekle(() => satir(ad).getByRole("button", { name: etiket }).click());
 }
 async function ozet() {
   // Her olcum "deger" + "etiket" seklinde iki ayri eleman; birlestirip okunur.
@@ -53,6 +53,7 @@ await sayfa.getByRole("button", { name: "Sınıf ekle" }).click();
 await sayfa.waitForFunction(() => document.body.innerText.includes("10-B"), null, { timeout: 10000 });
 await sayfa.getByRole("link", { name: /10-B/ }).click();
 await sayfa.getByRole("heading", { name: "10-B" }).waitFor();
+await ogrenciFormunuAc(sayfa);
 await sayfa.getByLabel("Ad", { exact: true }).fill("Naz");
 await sayfa.getByLabel("Soyad").fill("Er");
 await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
@@ -64,7 +65,7 @@ ok("Bos gecmis mesaji", (await gecmisMetni()).includes("henüz kayıt yok"));
 // --- B: Basit sistemde gecmis ---
 console.log("\nB. Basit sistemde kayitlar");
 await sayfa.goBack({ waitUntil: "networkidle" });
-await dersBaslat(sayfa, "Aktif ders:");
+await dersBaslat(sayfa, ". ders");
 await bas("Naz", "Artı ver");
 await bas("Naz", "Artı ver");
 await bas("Naz", "Eksi ver");

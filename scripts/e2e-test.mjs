@@ -11,6 +11,7 @@
 // her Vercel derlemesine yük bindirmesin.
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
+import { ogrenciFormunuAc } from "./test-form.mjs";
 
 const TEMEL = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
@@ -122,6 +123,7 @@ const sinifUrl = sayfa.url();
 
 // --- E: Ogrenci ekleme ---
 console.log("\nE. Ogrenci ekleme");
+await ogrenciFormunuAc(sayfa);
 await sayfa.getByLabel("Ad", { exact: true }).fill("Zeynep");
 await sayfa.getByLabel("Soyad").fill("Arslan");
 await sayfa.getByLabel(/Veli adı/).fill("Fatma Arslan");
@@ -130,21 +132,27 @@ await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
 await metinBekle(sayfa, "Zeynep");
 let govde = await sayfa.textContent("body");
 ok("Ogrenci listede", govde.includes("Zeynep Arslan"));
-ok("Baslangic puani 90", govde.includes("90 puan"));
-ok("Ogrenci sayisi 1", govde.includes("1 öğrenci"));
+// Puan ders ekraninda gosterilmez; baslangic degeri behavior-ui-test'te
+// kaydin kendisinden dogrulanir.
+ok("Puan ders ekraninda YOK", !govde.includes("puan"));
+ok("Ogrenci sayisi 1", (await sayfa.locator(".ogrenci").count()) === 1);
 ok("Form temizlendi", (await sayfa.getByLabel("Ad", { exact: true }).inputValue()) === "");
+
+await ogrenciFormunuAc(sayfa);
 
 await sayfa.getByLabel("Ad", { exact: true }).fill("Mert");
 await sayfa.getByLabel("Soyad").fill("Yildiz");
 await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
 await metinBekle(sayfa, "Mert");
 ok("Velisiz ogrenci eklendi", true);
-ok("Ogrenci sayisi 2", (await sayfa.textContent("body")).includes("2 öğrenci"));
+ok("Ogrenci sayisi 2", (await sayfa.locator(".ogrenci").count()) === 2);
 
 // --- F: Ogrenci formu dogrulamasi ---
 console.log("\nF. Ogrenci formu dogrulamasi");
 await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
 await hataBekle(sayfa, "Bos ad reddedildi", "Öğrenci adı boş olamaz.");
+
+await ogrenciFormunuAc(sayfa);
 
 await sayfa.getByLabel("Ad", { exact: true }).fill("Ali");
 await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
@@ -176,6 +184,7 @@ ok("Turkce 404 sayfasi", (await sayfa.textContent("body")).includes("Sayfa bulun
 // --- I: Turkce karakterler ---
 console.log("\nI. Turkce karakter kontrolu");
 await sayfa.goto(sinifUrl, { waitUntil: "networkidle" });
+await ogrenciFormunuAc(sayfa);
 await sayfa.getByLabel("Ad", { exact: true }).fill("Işıl");
 await sayfa.getByLabel("Soyad").fill("Çağlayan Öğüt");
 await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
@@ -187,7 +196,7 @@ console.log("\nJ. Kalicilik");
 await sayfa.reload({ waitUntil: "networkidle" });
 govde = await sayfa.textContent("body");
 ok("Yenilemeden sonra veriler duruyor", govde.includes("Zeynep Arslan") && govde.includes("Işıl"));
-ok("Ogrenci sayisi 3", govde.includes("3 öğrenci"));
+ok("Ogrenci sayisi 3", (await sayfa.locator(".ogrenci").count()) === 3);
 
 await tarayici.close();
 console.log(`\n=== SONUC: ${gecti} gecti, ${kaldi} kaldi ===`);

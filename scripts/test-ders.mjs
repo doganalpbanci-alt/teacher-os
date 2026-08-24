@@ -1,6 +1,6 @@
 // Testler için ortak ders adımı. Bir sınıfın aynı anda tek dersi olur:
 // süren ders varsa önce bitirilir, sonra yenisi başlatılır.
-export async function dersBaslat(sayfa, beklenen = "Aktif ders:") {
+export async function dersBaslat(sayfa, beklenen = ". ders") {
   const bitir = sayfa.getByRole("button", { name: "Dersi bitir" });
   if ((await bitir.count()) > 0) {
     await bitir.click();

@@ -12,25 +12,27 @@ import {
   type SatirDurumu,
 } from "@/lib/behavior-rules";
 
-// Kart isim yanında sembolle gösterilir. Yazı yalnızca ekran okuyucular ve
-// testler için, görünmez biçimde durur.
-const KART_ETIKETI: Record<KartDurumu, { yazi: string; sinif: string }> = {
-  SARI: { yazi: "Sarı kart", sinif: "kart-sari" },
-  KIRMIZI: { yazi: "Kırmızı kart", sinif: "kart-kirmizi" },
+// Kart, satırın solundaki renkli şeritle gösterilir. Düğmeler de renkli
+// olduğu için "sahip olunan kart" ile "verilecek kart" birbirine benzemesin
+// diye ikisi ayrı biçimde durur. Yazı ekran okuyucular ve testler için.
+const KART_ETIKETI: Record<KartDurumu, string> = {
+  SARI: "Sarı kart",
+  KIRMIZI: "Kırmızı kart",
 };
 
 export type CezaOzeti = { id: string; kalanSaniye: number; calisiyor: boolean };
 
 /**
- * Bir öğrencinin sınıf listesindeki satırı.
+ * Bir öğrencinin ders ekranındaki satırı.
  *
  * Kayıt sunucuda yazılır ve sayfa tazelenir; bu bir gidiş dönüş sürer.
  * Öğretmen o sırada ekranda hiçbir değişiklik görmezse aynı düğmeye tekrar
  * basar. Bu yüzden sonuç, kural modülünden hesaplanıp basılır basılmaz
  * gösterilir; sunucudan gerçek değerler gelince onların üzerine yazılır.
  *
- * Teneffüs cezası rozeti iyimser gösterilmez: süresi öğrencinin geçmiş
- * derslerine bağlıdır, ekran onu bilemez.
+ * Performans puanı burada yoktur; öğrenci sayfasında görülür. Teneffüs
+ * cezası da iyimser gösterilmez: süresi öğrencinin geçmiş derslerine
+ * bağlıdır, ekran onu bilemez.
  */
 export function OgrenciSatiri({
   ogrenciId,
@@ -38,7 +40,6 @@ export function OgrenciSatiri({
   sinifId,
   dersId,
   sablon,
-  puan,
   kart,
   arti,
   eksi,
@@ -49,13 +50,12 @@ export function OgrenciSatiri({
   sinifId: string;
   dersId: string | null;
   sablon: BehaviorTemplate;
-  puan: number;
   kart?: KartDurumu;
   arti: number;
   eksi: number;
   ceza?: CezaOzeti;
 }) {
-  const sunucudan: SatirDurumu = { kart, puan, arti, eksi };
+  const sunucudan: SatirDurumu = { kart, arti, eksi };
   const [gorunen, iyimserUygula] = useOptimistic(
     sunucudan,
     (durum: SatirDurumu, eylem: Eylem) => eylemiUygula(durum, eylem, sablon),
@@ -64,24 +64,18 @@ export function OgrenciSatiri({
   const kartSistemi = sablon === "CARD";
 
   return (
-    <div className="satir">
-      <Link className="satir-ad baglanti" href={`/ogrenci/${ogrenciId}`}>
-        {ad}
-      </Link>
-      <span className="satir-sag">
-        {gorunen.kart && (
-          <span
-            className={`kart-sembol ${KART_ETIKETI[gorunen.kart].sinif}`}
-            title={KART_ETIKETI[gorunen.kart].yazi}
-          >
-            <span className="gorunmez">{KART_ETIKETI[gorunen.kart].yazi}</span>
-          </span>
-        )}
-        {!kartSistemi && (
-          <span className="rozet">
-            {gorunen.arti} artı · {gorunen.eksi} eksi
-          </span>
-        )}
+    <div
+      className={`ogrenci${gorunen.kart ? ` kart-${gorunen.kart === "SARI" ? "sari" : "kirmizi"}` : ""}`}
+    >
+      {/* Ceza rozeti adın altında durur: dar ekranda yan yana konsaydı ada
+          yer kalmaz ve isim kısalırdı. */}
+      <span className="ogrenci-sol">
+        <Link className="ogrenci-ad" href={`/ogrenci/${ogrenciId}`}>
+          {ad}
+          {gorunen.kart && (
+            <span className="gorunmez"> {KART_ETIKETI[gorunen.kart]}</span>
+          )}
+        </Link>
         {ceza && (
           <CezaKontrolu
             cezaId={ceza.id}
@@ -90,7 +84,14 @@ export function OgrenciSatiri({
             calisiyor={ceza.calisiyor}
           />
         )}
-        <span className="rozet">{gorunen.puan} puan</span>
+      </span>
+
+      <span className="ogrenci-sag">
+        {!kartSistemi && (
+          <span className="rozet">
+            {gorunen.arti} artı · {gorunen.eksi} eksi
+          </span>
+        )}
         <DavranisDugmeleri
           ogrenciId={ogrenciId}
           sinifId={sinifId}

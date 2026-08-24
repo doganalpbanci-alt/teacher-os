@@ -2,12 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
-import { aktifDersiGetir, dersTarihiYazisi } from "@/lib/lesson";
+import { aktifDersiGetir, dersKisaYazisi } from "@/lib/lesson";
 import { dersKartDurumlari, ogrenciSayimlari, type KartDurumu } from "@/lib/behavior";
 import { OgrenciFormu } from "@/components/OgrenciFormu";
 import { DersKontrolu } from "@/components/DersKontrolu";
 import { OgrenciSatiri, type CezaOzeti } from "@/components/OgrenciSatiri";
 import { bekleyenCezalar } from "@/lib/penalty";
+import { turkceSirala } from "@/lib/siralama";
 import type { Sayimlar } from "@/lib/behavior";
 
 export const dynamic = "force-dynamic";
@@ -29,15 +30,11 @@ export default async function SinifSayfasi({
       select: {
         id: true,
         name: true,
+        // Sıralama Türkçe alfabeye göre aşağıda yapılır; veritabanı
+        // sıralaması Ç, Ğ, İ gibi harfleri listenin sonuna atıyor.
         students: {
           where: { isActive: true },
-          orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            performanceScore: true,
-          },
+          select: { id: true, firstName: true, lastName: true },
         },
       },
     }),
@@ -47,7 +44,11 @@ export default async function SinifSayfasi({
   if (!sinif) notFound();
 
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
-  const ogrenciIdleri = sinif.students.map((o) => o.id);
+  const ogrenciler = turkceSirala(
+    sinif.students.map((o) => ({ id: o.id, ad: `${o.firstName} ${o.lastName}` })),
+    (o) => o.ad,
+  );
+  const ogrenciIdleri = ogrenciler.map((o) => o.id);
 
   // Kart durumu yalnızca aktif derse aittir; ders değişince sıfırdan başlar.
   // Basit sistemde not elle girildiği için artı/eksi sayıları öne çıkar,
@@ -68,43 +69,42 @@ export default async function SinifSayfasi({
         ← Sınıflarım
       </Link>
 
-      <section className="kart">
-        <div className="ders-bilgi">
-          {aktifDers ? (
+      <main className="kart ders-ekrani">
+        {/* Ders sırasında bakılan tek satır: hangi ders açık ve nasıl
+            bitirilir. Sınıf adı ve mevcut da buraya sığar. */}
+        <div className="ders-basi">
+          <div className="ders-basi-sol">
+            <h1>{sinif.name}</h1>
             <span className="soluk">
-              Aktif ders: {dersTarihiYazisi(aktifDers.tarih)} ({aktifDers.gunlukSira}. ders)
+              {aktifDers
+                ? `${aktifDers.gunlukSira}. ders · ${dersKisaYazisi(aktifDers.tarih)}`
+                : "Aktif ders yok"}
             </span>
-          ) : (
-            <span className="soluk">Aktif ders yok. Kayıt için ders başlatın.</span>
-          )}
-          <DersKontrolu sinifId={sinif.id} aktifDersId={aktifDers?.id ?? null} />
+          </div>
+          <div className="ders-basi-sag">
+            <Link className="baglanti" href={`/sinif/${sinif.id}/dersler`}>
+              Ders geçmişi →
+            </Link>
+            <DersKontrolu sinifId={sinif.id} aktifDersId={aktifDers?.id ?? null} />
+          </div>
         </div>
-        <Link className="baglanti" href={`/sinif/${sinif.id}/dersler`}>
-          Ders geçmişi →
-        </Link>
-      </section>
 
-      <main className="kart">
-        <h1>{sinif.name}</h1>
-        <p className="soluk">{sinif.students.length} öğrenci</p>
-
-        {sinif.students.length === 0 ? (
+        {ogrenciler.length === 0 ? (
           <p className="soluk">
             Bu sınıfta henüz öğrenci yok. Aşağıdaki formdan ekleyebilirsiniz.
           </p>
         ) : (
-          <ul className="liste">
-            {sinif.students.map((ogrenci) => {
+          <ul className="liste ogrenci-liste">
+            {ogrenciler.map((ogrenci) => {
               const sayim = sayimlar.get(ogrenci.id) ?? { arti: 0, eksi: 0 };
               return (
                 <li key={ogrenci.id}>
                   <OgrenciSatiri
                     ogrenciId={ogrenci.id}
-                    ad={`${ogrenci.firstName} ${ogrenci.lastName}`}
+                    ad={ogrenci.ad}
                     sinifId={sinif.id}
                     dersId={aktifDers?.id ?? null}
                     sablon={ogretmen.behaviorTemplate}
-                    puan={ogrenci.performanceScore}
                     kart={kartlar.get(ogrenci.id)}
                     arti={sayim.arti}
                     eksi={sayim.eksi}
@@ -117,10 +117,11 @@ export default async function SinifSayfasi({
         )}
       </main>
 
-      <section className="kart">
-        <h2>Yeni öğrenci</h2>
+      {/* Ders sırasında öğrenci eklenmez; form kapalı durur, istenince açılır. */}
+      <details className="kart katlanir">
+        <summary>Yeni öğrenci</summary>
         <OgrenciFormu sinifId={sinif.id} />
-      </section>
+      </details>
     </>
   );
 }

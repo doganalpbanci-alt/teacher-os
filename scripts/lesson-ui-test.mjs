@@ -10,6 +10,7 @@
 import { execSync } from "node:child_process";
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
+import { ogrenciFormunuAc } from "./test-form.mjs";
 
 const T = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 const SQL_KOMUTU = process.env.SQL_KOMUTU ?? 'psql "$DATABASE_URL" -q -tA';
@@ -53,6 +54,7 @@ await sayfa.getByRole("link", { name: /Ders-Test/ }).click();
 await sayfa.getByRole("heading", { name: "Ders-Test" }).waitFor();
 const sinifAdresi = sayfa.url();
 for (const [a, b] of [["Ada", "Bir"], ["Efe", "Iki"]]) {
+  await ogrenciFormunuAc(sayfa);
   await sayfa.getByLabel("Ad", { exact: true }).fill(a);
   await sayfa.getByLabel("Soyad").fill(b);
   await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
@@ -79,7 +81,7 @@ await sayfa.goBack({ waitUntil: "networkidle" });
 // --- C: Ders baslatma ---
 console.log("\nC. Ders baslatma");
 await sayfa.getByRole("button", { name: "Yeni ders başlat" }).click();
-await sayfa.waitForFunction(() => document.body.innerText.includes("Aktif ders:"), null, { timeout: 10000 });
+await sayfa.waitForFunction(() => document.body.innerText.includes("1. ders"), null, { timeout: 10000 });
 ok("Ders basladi", (await govde()).includes("1. ders"));
 ok("Bitir dugmesi geldi", (await sayfa.getByRole("button", { name: "Dersi bitir" }).count()) === 1);
 ok("Baslat dugmesi kalkti", (await sayfa.getByRole("button", { name: "Yeni ders başlat" }).count()) === 0);

@@ -9,8 +9,10 @@
 //   4. SQL_KOMUTU='psql "$DATABASE_URL" -q -tA' node scripts/penalty-ui-test.mjs
 import { execSync } from "node:child_process";
 import { chromium } from "playwright";
+import { kayitBekleyici } from "./test-kayit.mjs";
 import { oturumHazirla } from "./test-oturum.mjs";
 import { dersBaslat } from "./test-ders.mjs";
+import { ogrenciFormunuAc } from "./test-form.mjs";
 
 const T = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 const SQL_KOMUTU = process.env.SQL_KOMUTU ?? 'psql "$DATABASE_URL" -q -tA';
@@ -29,16 +31,11 @@ const sayfa = await tarayici.newPage();
 await oturumHazirla(sayfa, T);
 
 const satir = (ad) => sayfa.locator("li").filter({ hasText: ad });
+const kayitBekle = kayitBekleyici(sql, sayfa);
 const rozet = (ad) => satir(ad).getByRole("button", { name: /Teneffüs cezası/ });
 async function metin(ad) { return satir(ad).evaluate((e) => e.innerText); }
 async function bas(ad, etiket) {
-  const onceki = await metin(ad);
-  await satir(ad).getByRole("button", { name: etiket }).click();
-  await sayfa.waitForFunction(([n, x]) => {
-    const e = [...document.querySelectorAll("li")].find((q) => q.innerText.includes(n));
-    return e && e.innerText !== x;
-  }, [ad, onceki], { timeout: 10000 });
-  await sayfa.waitForTimeout(400);
+  await kayitBekle(() => satir(ad).getByRole("button", { name: etiket }).click());
 }
 const cezaSaniye = (ad) =>
   sql(`SELECT COALESCE((SELECT p.seconds FROM "BreakPenalty" p
@@ -58,6 +55,7 @@ await sayfa.waitForFunction(() => document.body.innerText.includes("Ceza-Test"),
 await sayfa.getByRole("link", { name: /Ceza-Test/ }).click();
 await sayfa.getByRole("heading", { name: "Ceza-Test" }).waitFor();
 for (const [a, b] of [["Arda", "Bir"], ["Berk", "Iki"]]) {
+  await ogrenciFormunuAc(sayfa);
   await sayfa.getByLabel("Ad", { exact: true }).fill(a);
   await sayfa.getByLabel("Soyad").fill(b);
   await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();

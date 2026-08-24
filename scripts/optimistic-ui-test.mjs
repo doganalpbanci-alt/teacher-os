@@ -14,6 +14,7 @@ import { execSync } from "node:child_process";
 import { chromium } from "playwright";
 import { oturumHazirla } from "./test-oturum.mjs";
 import { dersBaslat } from "./test-ders.mjs";
+import { ogrenciFormunuAc } from "./test-form.mjs";
 
 const T = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 const SQL_KOMUTU = process.env.SQL_KOMUTU ?? 'psql "$DATABASE_URL" -q -tA';
@@ -64,6 +65,7 @@ await sayfa.getByRole("button", { name: "Sınıf ekle" }).click();
 await sayfa.waitForFunction(() => document.body.innerText.includes("Iyimser-Test"), null, { timeout: 10000 });
 await sayfa.getByRole("link", { name: /Iyimser-Test/ }).click();
 await sayfa.getByRole("heading", { name: "Iyimser-Test" }).waitFor();
+await ogrenciFormunuAc(sayfa);
 await sayfa.getByLabel("Ad", { exact: true }).fill("Mert");
 await sayfa.getByLabel("Soyad").fill("Bir");
 await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
@@ -122,7 +124,7 @@ await satir("Mert").getByRole("button", { name: "Sarı kart ver" }).click();
 await sayfa.waitForTimeout(ERKEN_BAKIS);
 ok("Sari kart ANINDA gorundu",
    (await satir("Mert").locator(".kart-sari").count()) === 1);
-ok("Sari kart puana dokunmadi", (await satirMetni("Mert")).includes("90 puan"),
+ok("Puan ders ekraninda GOSTERILMIYOR", !(await satirMetni("Mert")).includes("puan"),
    await satirMetni("Mert"));
 
 // Ikinci ihlale basmadan once ilk kaydin yaniti beklenir: basislar siraya
@@ -142,8 +144,6 @@ await sayfa.waitForTimeout(ERKEN_BAKIS);
 ok("Ikinci ihlal ANINDA kirmiziya yukseldi",
    (await satir("Mert").locator(".kart-kirmizi").count()) === 1,
    await satirMetni("Mert"));
-ok("Kirmizi ANINDA -5 puan gosterdi", (await satirMetni("Mert")).includes("85 puan"),
-   await satirMetni("Mert"));
 
 // --- F: Sunucu ayni sonuca variyor ---
 console.log("\nF. Sunucu ayni sonuca variyor");
@@ -153,9 +153,15 @@ await sayfa.reload({ waitUntil: "networkidle" });
 const son = await satirMetni("Mert");
 ok("Yenilemeden sonra kirmizi kart duruyor",
    (await satir("Mert").locator(".kart-kirmizi").count()) === 1, son.replace(/\s+/g, " "));
-ok("Yenilemeden sonra puan 85", son.includes("85 puan"), son.replace(/\s+/g, " "));
 const puan = sql(`SELECT "performanceScore" FROM "Student" WHERE "firstName"='Mert';`);
-ok("Veritabaninda da 85", puan === "85", `puan=${puan}`);
+ok("Kirmizi kart -5 puan yazdi", puan === "85", `puan=${puan}`);
+
+// Puan ogrenci sayfasinda okunur; ders ekraninda degil.
+await satir("Mert").getByRole("link", { name: /Mert/ }).click();
+await sayfa.getByRole("heading", { name: "Mert Bir" }).waitFor();
+ok("Puan OGRENCI sayfasinda gorunuyor",
+   (await sayfa.textContent("body")).includes("85"),
+   (await sayfa.textContent("body")).replace(/\s+/g, " ").slice(0, 200));
 
 await tarayici.close();
 console.log(`\n=== SONUC: ${gecti} gecti, ${kaldi} kaldi ===`);

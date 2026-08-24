@@ -7,9 +7,12 @@
 //   2. npm run build && npm start
 //   3. npm install --no-save playwright
 //   4. node scripts/behavior-ui-test.mjs
+import { execSync } from "node:child_process";
 import { chromium } from "playwright";
+import { kayitBekleyici } from "./test-kayit.mjs";
 import { oturumHazirla } from "./test-oturum.mjs";
 import { dersBaslat } from "./test-ders.mjs";
+import { ogrenciFormunuAc } from "./test-form.mjs";
 
 const TEMEL = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 let gecti = 0, kaldi = 0;
@@ -29,13 +32,16 @@ const sayfa = await tarayici.newPage();
 // Uygulama giris istiyor; once hesap kurulur ya da girilir.
 await oturumHazirla(sayfa, TEMEL);
 
+// Performans puanı artık ders ekranında gösterilmiyor (ders sırasında karar
+// kartlara göre verilir), bu yüzden puan kaydın kendisinden okunur.
+const SQL_KOMUTU = process.env.SQL_KOMUTU ?? 'psql "$DATABASE_URL" -q -tA';
+const sql = (m) => execSync(SQL_KOMUTU, { input: m, shell: "/bin/bash" }).toString().trim();
+const puan = (ad) =>
+  Number(sql(`SELECT "performanceScore" FROM "Student" WHERE "firstName"='${ad}';`));
+
 // Bir ogrencinin satirini bulur.
 function satir(ad) {
   return sayfa.locator("li").filter({ hasText: ad });
-}
-async function puan(ad) {
-  const m = (await satir(ad).textContent()).match(/(-?\d+) puan/);
-  return m ? Number(m[1]) : null;
 }
 async function kart(ad) {
   const t = await satir(ad).textContent();
@@ -43,21 +49,13 @@ async function kart(ad) {
   if (t.includes("Sarı kart")) return "SARI";
   return "YOK";
 }
+const kayitBekle = kayitBekleyici(sql, sayfa);
 async function bas(ad, tur) {
-  // Onceki degeri de innerText ile alinir; textContent ile karsilastirilirsa
-  // ikisi bastan farkli oldugu icin bekleme aninda gecer.
-  const oncekiMetin = await satir(ad).evaluate((el) => el.innerText);
-  await satir(ad).getByRole("button", { name: tur === "PLUS" ? "Yıldız ver" : "Sarı kart ver" }).click();
-  await sayfa.waitForFunction(
-    ([isim, eski]) => {
-      const li = [...document.querySelectorAll("li")].find((e) => e.innerText.includes(isim));
-      return li && li.innerText !== eski;
-    },
-    [ad, oncekiMetin],
-    { timeout: 10000 },
+  await kayitBekle(() =>
+    satir(ad)
+      .getByRole("button", { name: tur === "PLUS" ? "Yıldız ver" : "Sarı kart ver" })
+      .click(),
   );
-  // Ikinci bir render daha gelebilir (sunucu agaci); durulmasi beklenir.
-  await sayfa.waitForTimeout(400);
 }
 
 // --- Hazirlik ---
@@ -76,13 +74,14 @@ await sayfa.waitForFunction(() => document.body.innerText.includes("7-C"), null,
 await sayfa.getByRole("link", { name: /7-C/ }).click();
 await sayfa.getByRole("heading", { name: "7-C" }).waitFor();
 for (const [ad, soyad] of [["Ela", "Kaya"], ["Bora", "Sen"]]) {
+  await ogrenciFormunuAc(sayfa);
   await sayfa.getByLabel("Ad", { exact: true }).fill(ad);
   await sayfa.getByLabel("Soyad").fill(soyad);
   await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
   await sayfa.waitForFunction((a) => document.body.innerText.includes(a), ad, { timeout: 10000 });
 }
-ok("Iki ogrenci eklendi", (await sayfa.textContent("body")).includes("2 öğrenci"));
-ok("Baslangic puani 90", (await puan("Ela")) === 90);
+ok("Iki ogrenci eklendi", (await sayfa.locator(".ogrenci").count()) === 2);
+ok("Baslangic puani 90", (puan("Ela")) === 90);
 
 // --- B: Ders yokken ---
 console.log("\nB. Ders baslatilmadan");
@@ -92,44 +91,44 @@ ok("Eksi dugmesi pasif", await satir("Ela").getByRole("button", { name: "Sarı k
 
 // --- C: 1. ders ---
 console.log("\nC. Birinci ders");
-await dersBaslat(sayfa, "Aktif ders:");
+await dersBaslat(sayfa, ". ders");
 ok("Ders basladi", (await sayfa.textContent("body")).includes("1. ders"));
 ok("Arti dugmesi aktif", !(await satir("Ela").getByRole("button", { name: "Yıldız ver" }).isDisabled()));
 
 await bas("Ela", "PLUS");
-ok("PLUS puani 1 artirdi", (await puan("Ela")) === 91, `puan=${await puan("Ela")}`);
+ok("PLUS puani 1 artirdi", (puan("Ela")) === 91, `puan=${puan("Ela")}`);
 ok("PLUS kart vermedi", (await kart("Ela")) === "YOK");
 
 await bas("Ela", "IHLAL");
 ok("Ilk ihlal sari kart verdi", (await kart("Ela")) === "SARI", await kart("Ela"));
-ok("Ilk ihlal puani DUSURMEDI", (await puan("Ela")) === 91, `puan=${await puan("Ela")}`);
+ok("Ilk ihlal puani DUSURMEDI", (puan("Ela")) === 91, `puan=${puan("Ela")}`);
 
 await bas("Ela", "IHLAL");
 ok("Ikinci ihlal kirmizi kart verdi", (await kart("Ela")) === "KIRMIZI", await kart("Ela"));
-ok("Ikinci ihlal -5 puan", (await puan("Ela")) === 86, `puan=${await puan("Ela")}`);
+ok("Ikinci ihlal -5 puan", (puan("Ela")) === 86, `puan=${puan("Ela")}`);
 
 await bas("Ela", "IHLAL");
-ok("Ucuncu ihlal yine -5", (await puan("Ela")) === 81, `puan=${await puan("Ela")}`);
+ok("Ucuncu ihlal yine -5", (puan("Ela")) === 81, `puan=${puan("Ela")}`);
 ok("Kart kirmizi kaldi", (await kart("Ela")) === "KIRMIZI");
 
-ok("Diger ogrenci etkilenmedi", (await puan("Bora")) === 90 && (await kart("Bora")) === "YOK");
+ok("Diger ogrenci etkilenmedi", (puan("Bora")) === 90 && (await kart("Bora")) === "YOK");
 
 // --- D: 2. ders (ayni gun) ---
 console.log("\nD. Ayni gun ikinci ders");
 await dersBaslat(sayfa, "2. ders");
 ok("Ayni gun ikinci ders acildi", (await sayfa.textContent("body")).includes("2. ders"));
 ok("Sari/kirmizi kart sifirlandi", (await kart("Ela")) === "YOK", await kart("Ela"));
-ok("Puan korundu (gecmis silinmedi)", (await puan("Ela")) === 81, `puan=${await puan("Ela")}`);
+ok("Puan korundu (gecmis silinmedi)", (puan("Ela")) === 81, `puan=${puan("Ela")}`);
 
 await bas("Ela", "IHLAL");
 ok("Yeni derste ilk ihlal yine SARI", (await kart("Ela")) === "SARI", await kart("Ela"));
-ok("Yeni derste ilk ihlal puan dusurmedi", (await puan("Ela")) === 81, `puan=${await puan("Ela")}`);
+ok("Yeni derste ilk ihlal puan dusurmedi", (puan("Ela")) === 81, `puan=${puan("Ela")}`);
 
 // --- E: Kalicilik ---
 console.log("\nE. Kalicilik");
 await sayfa.reload({ waitUntil: "networkidle" });
 ok("Yenilemeden sonra kart duruyor", (await kart("Ela")) === "SARI");
-ok("Yenilemeden sonra puan duruyor", (await puan("Ela")) === 81);
+ok("Yenilemeden sonra puan duruyor", (puan("Ela")) === 81);
 
 await tarayici.close();
 console.log(`\n=== SONUC: ${gecti} gecti, ${kaldi} kaldi ===`);

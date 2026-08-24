@@ -27,18 +27,20 @@ export function eylemGecerliMi(sablon: BehaviorTemplate, eylem: string): eylem i
   return (SABLON_EYLEMLERI[sablon] as readonly string[]).includes(eylem);
 }
 
-/** Bir öğrencinin satırında görünen durum. */
+/**
+ * Bir öğrencinin ders ekranındaki satırında görünen durum. Performans puanı
+ * burada yoktur: ders sırasında karar kartlara ve sayılara göre verilir,
+ * puan öğrenci sayfasında okunur.
+ */
 export type SatirDurumu = {
   kart?: KartDurumu;
-  puan: number;
   arti: number;
   eksi: number;
 };
 
 /**
  * Bir eylemin satırda görünen sonucu. Sunucudaki kayıt da aynı kuralı izler:
- * sarı üstüne sarı kırmızıdır, kırmızı -5 puan getirir, basit şablonda
- * kayıtlar puana dokunmaz.
+ * sarı üstüne sarı kırmızıdır.
  *
  * Teneffüs cezası burada hesaplanmaz: süresi öğrencinin geçmiş derslerine
  * bağlıdır, ekran onu bilemez. Ceza rozeti sunucudan gelir.
@@ -55,18 +57,11 @@ export function eylemiUygula(
       : { ...durum, eksi: durum.eksi + 1 };
   }
 
-  if (eylem === "PLUS") {
-    return { ...durum, arti: durum.arti + 1, puan: durum.puan + PLUS_PUAN };
-  }
+  if (eylem === "PLUS") return { ...durum, arti: durum.arti + 1 };
 
   // Sarı üstüne sarı kırmızı demektir: derste zaten kart varsa yükselir.
   const kirmizi = eylem === "KIRMIZI_KART" || durum.kart !== undefined;
   if (!kirmizi) return { ...durum, kart: "SARI" };
 
-  return {
-    ...durum,
-    kart: "KIRMIZI",
-    eksi: durum.eksi + 1,
-    puan: durum.puan + MINUS_PUAN,
-  };
+  return { ...durum, kart: "KIRMIZI", eksi: durum.eksi + 1 };
 }

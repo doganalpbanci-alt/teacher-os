@@ -169,14 +169,91 @@ a.satir:hover .satir-ad {
   font-size: 0.8125rem;
 }
 
-/* Ders ve davranış */
-.ders-bilgi {
+/* Ders ekranı: telefonda sığar, akıllı tahtada büyür. Ölçüler tek yerden,
+   böylece üç boyutta da aynı düzen ölçeklenir. */
+:root {
+  --dugme: 2.75rem;   /* dokunma hedefi: telefonda parmak, tahtada el */
+  --ad-boy: 1rem;
+}
+
+.ders-basi {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.ders-basi h1 {
+  margin: 0;
+}
+
+.ders-basi-sol {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.ders-basi-sag {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+/* Katlanır bölüm: ders sırasında yer kaplamasın. */
+.katlanir > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.katlanir[open] > summary {
+  margin-bottom: 0.75rem;
+}
+
+/* Öğrenci satırı: ad solda, eylem sağda; kart durumu soldaki şeritte. */
+.ogrenci {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0 0.375rem 0.75rem;
+  border-left: 4px solid transparent;
+}
+
+.ogrenci.kart-sari { border-left-color: #f2c230; background: #fffaeb; }
+.ogrenci.kart-kirmizi { border-left-color: #d33a2c; background: #fdf3f2; }
+
+.ogrenci-sol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.ogrenci-ad {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ad-boy);
+  font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ogrenci-ad:hover {
+  color: var(--vurgu);
+  text-decoration: underline;
+}
+
+.ogrenci-sag {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  flex-shrink: 0;
 }
 
 .ders-dugme {
@@ -474,9 +551,41 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 .davranis .d-sari::after { background: #f2c230; }
 .davranis .d-kirmizi::after { background: #d33a2c; }
 
-/* Dört düğme dar ekranda alta sarsın */
-.davranis { flex-wrap: wrap; justify-content: flex-end; }
-.davranis button { width: 2rem; height: 2rem; font-size: 1rem; }
+/* Düğmeler dokunma hedefi kadar; yanlış öğrenciye basılmasın diye
+   aralarında belirgin boşluk var. */
+.davranis { flex-wrap: nowrap; justify-content: flex-end; gap: 0.5rem; }
+.davranis button {
+  width: var(--dugme);
+  height: var(--dugme);
+  font-size: calc(var(--dugme) * 0.42);
+}
+.davranis .d-sari::after,
+.davranis .d-kirmizi::after {
+  width: calc(var(--dugme) * 0.36);
+  height: calc(var(--dugme) * 0.5);
+}
+
+/* Akıllı tahta: sınıfın arkasından okunacak ve parmakla basılacak. Sütun
+   genişler, yazı ve düğmeler büyür, sınıf tek ekrana iki sütunda sığar. */
+@media (min-width: 1280px) {
+  :root { --dugme: 3.5rem; --ad-boy: 1.375rem; }
+  .sayfa { max-width: 76rem; }
+  h1 { font-size: 2rem; }
+  .kart { padding: 1.75rem; }
+  .soluk { font-size: 1.0625rem; }
+  .rozet { font-size: 1rem; }
+
+  /* İki sütun, sütun sütun dolar: öğretmen ismi ararken sol sütunu
+     yukarıdan aşağı okur. Satır satır dolduran bir ızgara alfabeyi
+     soldan sağa kırardı (Ayşe sol, Berk sağ, Ceren sol...). */
+  .ogrenci-liste {
+    columns: 2;
+    column-gap: 2.5rem;
+  }
+  .ogrenci-liste li {
+    break-inside: avoid;
+  }
+}
 
 /* Teneffüs cezası */
 .ceza { position: relative; flex-shrink: 0; }
@@ -503,7 +612,9 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 .ceza-panel {
   position: absolute;
   top: calc(100% + 0.375rem);
-  right: 0;
+  /* Rozet satırın solunda durur; panel de soldan sağa açılır, yoksa dar
+     ekranda görünüm alanının dışına taşar. */
+  left: 0;
   z-index: 10;
   display: grid;
   gap: 0.5rem;

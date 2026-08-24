@@ -15,6 +15,7 @@
 import { execSync } from "node:child_process";
 import bcrypt from "bcryptjs";
 import { chromium } from "playwright";
+import { ogrenciFormunuAc } from "./test-form.mjs";
 
 const T = process.env.TEMEL_ADRES ?? "http://127.0.0.1:3000";
 // SQL calistirma komutu; stdin'den SQL okur.
@@ -161,6 +162,7 @@ ok("Baskasinin ogrenci adresi 404", y.status() === 404, `durum=${y.status()}`);
 // --- G: Sunucu tarafi yetki ---
 console.log("\nG. Form kurcalayarak yetki asma denemesi");
 await s2.goto(`${T}/sinif/c-ikinci`, { waitUntil: "networkidle" });
+await ogrenciFormunuAc(s2);
 await s2.getByLabel("Ad", { exact: true }).fill("Sizinti");
 await s2.getByLabel("Soyad").fill("Denemesi");
 // Sayfada iki form da sinifId tasiyor; ogrenci formundaki degistirilir.

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { turkceSirala } from "@/lib/siralama";
 import type { GecmisKaydi } from "@/lib/student-history";
 import { kirmiziKartlariBirlestir } from "@/lib/student-history";
 
@@ -44,6 +45,18 @@ export function dersTarihiYazisi(tarih: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(tarih);
+}
+
+/**
+ * Ders ekranındaki kısa yazı. Ders bugünse saat yeter; tarihi tekrar etmek
+ * dar ekranda yer harcar. Dün açılıp bitirilmemiş bir ders varsa tarih
+ * görünür, çünkü o zaman bilgi taşır.
+ */
+export function dersKisaYazisi(tarih: Date): string {
+  const bugun = gunAnahtari(new Date());
+  return gunAnahtari(tarih) === bugun
+    ? saatYazisi(tarih)
+    : dersTarihiYazisi(tarih);
 }
 
 export function saatYazisi(zaman: Date): string {
@@ -267,8 +280,12 @@ export async function dersDetayi(
 
   return {
     ders: ozet,
-    ogrenciler: [...ogrenciler.values()]
-      .map((grup) => ({ ...grup, kayitlar: kirmiziKartlariBirlestir(grup.kayitlar) }))
-      .sort((a, b) => a.ad.localeCompare(b.ad, "tr")),
+    ogrenciler: turkceSirala(
+      [...ogrenciler.values()].map((grup) => ({
+        ...grup,
+        kayitlar: kirmiziKartlariBirlestir(grup.kayitlar),
+      })),
+      (grup) => grup.ad,
+    ),
   };
 }
