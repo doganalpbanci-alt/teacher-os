@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 24 Ağustos 2026 · `main` = `4937610`
+Son güncelleme: 24 Ağustos 2026 · `main` = `37c55c3` (bu notun kendisi)
 
 ---
 
