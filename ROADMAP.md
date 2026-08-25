@@ -26,15 +26,28 @@ v0.1 canlıda doğrulandı.
 v0.2 tamamlandı ve canlıda kullanımda.
 
 ## v0.3 — Ödev
-- Ödev oluşturma
-- Öğrenci bazlı takip
-- Ödev geçmişi
+- ✓ Ödev oluşturma *(çoklu sınıf ve tek tek öğrenci seçimi, başlangıç ve
+  son teslim tarihi, geçmişe dönük verilebilir)*
+- ✓ Öğrenci bazlı takip *(tek tek ve sınıf bazında toplu işaretleme)*
+- ✓ Ödev geçmişi *(öğrenci sayfasında, sınıfta ve ödevler sekmesinde)*
+
+Ayrıca tamamlandı: ödevler kendi üst sekmesinde, düzenleme, arşivleme ve
+silme, ödev kopyalama, öğrenci ve sınıf bazlı ödev istatistikleri, "süresi
+geçti" göstergesi, ana sayfada günlük gündem paneli ve sekme sayacı.
+
+Mimari karar: ödev bir sınıfa değil öğretmene aittir; kime verildiği teslim
+kayıtlarından türetilir. Ayrıntısı `HANDOFF.md`'de.
+
+v0.3 canlıda kullanımda.
 
 ## v0.4 — Sınav & Akademik Takip
 - Sınav sonuçları
 - Sınıf ortalamaları
 - Öğrenci gelişimi
 - Grafikler
+
+Not: `Exam` tablosu şu an `classroomId`'ye bağlı. Ödevde çözülen "tek sınıfa
+bağlılık" sorusu burada da çıkacak; aynı karar baştan verilmeli.
 
 ## v0.5 — Veli İletişimi
 - Veli bilgileri
