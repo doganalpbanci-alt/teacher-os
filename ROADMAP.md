@@ -21,7 +21,9 @@ v0.1 canlıda doğrulandı.
 - ✓ Ders başlatma ve bitirme *(bir sınıfın aynı anda tek dersi olur)*
 - ✓ Ders geçmişi
 - ✓ Ders bazlı takip *(tek dersin kayıtları)*
-- Kullanım deneyimi iyileştirmeleri *(arayüz tasarımı dahil)*
+- ✓ Kullanım deneyimi iyileştirmeleri *(telefon ve akıllı tahta düzeni)*
+
+v0.2 tamamlandı ve canlıda kullanımda.
 
 ## v0.3 — Ödev
 - Ödev oluşturma

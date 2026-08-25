@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 23 Ağustos 2026 · `main` = `3544bb6`
+Son güncelleme: 24 Ağustos 2026 · `main` = `4937610`
 
 ---
 
@@ -61,15 +61,11 @@ Prisma **6.19.3'te sabit**. Prisma 7 `url`/`directUrl` alanlarını
 20260822105533_harden_history_and_rls  RESTRICT silme kuralları + RLS
 20260822235800_behavior_template       Teacher.behaviorTemplate + puan kısıtı gevşetildi
 20260823144543_break_penalty           BreakPenalty tablosu
-20260823174546_lesson_ended_at         Lesson.endedAt + eski dersler kapatıldı   ← BEKLİYOR
+20260823174546_lesson_ended_at         Lesson.endedAt + eski dersler kapatıldı
 ```
 
-İlk dördü Supabase'de uygulandı ve `verify-state.sql` ile doğrulandı.
-
-**Beşincisi henüz uygulanmadı.** `prisma/pending-sql-editor.sql` içeriği
-Supabase SQL Editor'de çalıştırılmadan `main`'e merge edilmemeli; uygulama
-olmayan bir sütunu arar ve kırılır. Migration mevcut derslerin hepsini
-kapatır, yani öğretmen ilk kullanımda "Yeni ders başlat" der.
+Beşi de Supabase'de uygulandı ve `verify-state.sql` ile doğrulandı
+(19 satır, hepsi TAMAM). Bekleyen migration yok.
 
 ---
 
@@ -82,10 +78,19 @@ src/lib/
   auth.ts             parola hash (bcryptjs), oturum aç/kapat
   current-teacher.ts  oturumdaki öğretmen; yoksa /giris'e yönlendirir
   lesson.ts           aktif ders, ders başlat/bitir, ders geçmişi ve detayı
-  behavior.ts         davranış kuralları + puan sabitleri (tek modül)
+  behavior.ts         davranış kaydını yazan taraf (veritabanına dokunur)
+  behavior-rules.ts   şablon kurallarının veritabanısız kısmı; ekran da bunu
+                      kullanır, böylece kural iki yere kopyalanmaz
   penalty.ts          teneffüs cezası kuralları + kronometre durumu
   student-history.ts  öğrenci geçmişi ve dönem toplamları
+  siralama.ts         Türkçe alfabe sıralaması
   form-state.ts       form durumu tipi
+
+src/components/
+  OgrenciSatiri.tsx   ders ekranındaki öğrenci satırı; iyimser güncelleme
+  DavranisDugmeleri.tsx  şablona göre düğmeler, gönderimler sıraya girer
+  DersKontrolu.tsx    duruma göre "Yeni ders başlat" ya da "Dersi bitir"
+  CezaKontrolu.tsx    ceza rozeti + kronometre paneli
 
 src/app/
   page.tsx            sınıf listesi
@@ -107,6 +112,18 @@ src/app/
 - **Düğme gizlemek yetki kontrolü değildir.** Hangi eylemin geçerli olduğu
   sunucuda öğretmenin şablonundan okunur.
 
+### Ders ekranı
+Ders sırasında kullanılan cihaz telefon ya da akıllı tahtadır. Düzen tek
+ama üç boyuta ölçeklenir (`globals.css`): telefonda başlık tek satır,
+tahtada (≥1280px) sütun genişler, yazı ve düğmeler büyür, sınıf iki sütuna
+dikey akar. Dokunma hedefi en az 44px.
+
+Performans puanı ders ekranında **gösterilmez**; öğrenci sayfasında görülür.
+Ders sırasında karar kartlardan ve sayılardan verilir.
+
+Öğrencinin sahip olduğu kart satırın kendisidir (renkli şerit + zemin);
+düğmeler ayrı durur. İkisi birbirine benzerse liste bir bakışta okunmaz.
+
 ### Ders kuralı
 Bir sınıfın bitmemiş dersi (`Lesson.endedAt` boş) aktif derstir. Sınıfın aynı
 anda tek dersi olur; süren ders bitmeden yenisi başlatılamaz ve bitmiş derse
@@ -117,7 +134,7 @@ yazıldığı en alt katmandadır.
 
 ## Testler
 
-Sekiz arayüz testi, gerçek tarayıcıda (Playwright), toplam **207 kontrol**.
+On arayüz testi, gerçek tarayıcıda (Playwright), toplam **233 kontrol**.
 Hepsi geçiyor.
 
 ```
@@ -129,10 +146,17 @@ scripts/auth-ui-test.mjs         giriş ve veri ayrımı             26
 scripts/card-buttons-ui-test.mjs kart şablonunun üç düğmesi       24
 scripts/penalty-ui-test.mjs      teneffüs cezası ve kronometre    22
 scripts/lesson-ui-test.mjs       ders başlat/bitir, geçmiş, detay 37
+scripts/optimistic-ui-test.mjs   iyimser güncelleme                13
+scripts/layout-ui-test.mjs       telefon/tahta düzeni, sıralama    13
 ```
 
-`test-oturum.mjs` ve `test-ders.mjs` testlerin ortak adımlarıdır (giriş ve
-ders başlatma); ayrı test değildirler.
+`test-oturum.mjs`, `test-ders.mjs`, `test-form.mjs` ve `test-kayit.mjs`
+testlerin ortak adımlarıdır (giriş, ders başlatma, katlı öğrenci formunu
+açma, kaydın veritabanına düşmesini bekleme); ayrı test değildirler.
+
+`test-kayit.mjs` neden var: kart şablonunda satırın görünür metni artık
+değişmiyor (puan kalktı, kart renkle gösteriliyor), bu yüzden testler
+"metin değişti" yerine kaydın yazıldığını bekler.
 
 ### Çalıştırma (bulut oturumunda)
 
@@ -160,8 +184,8 @@ export SQL_KOMUTU='su postgres -c "'$PG_BIN'/psql -h 127.0.0.1 -p 15432 -U postg
 node scripts/<test>.mjs
 ```
 
-`auth-ui-test`, `penalty-ui-test` ve `lesson-ui-test` doğrudan SQL yazar;
-`SQL_KOMUTU` tanımlı olmalı. Testler veri yazar — **üretim veritabanına karşı
+Testlerin çoğu SQL okur ya da yazar; `SQL_KOMUTU` her zaman tanımlı olmalı.
+Puan ders ekranında gösterilmediği için testler puanı kayıttan okur. Testler veri yazar — **üretim veritabanına karşı
 çalıştırılmaz.**
 
 ---
@@ -171,16 +195,26 @@ node scripts/<test>.mjs
 **Bitti:** veritabanı temeli, giriş sistemi ve veri ayrımı, sınıf/öğrenci
 yönetimi, davranış şablonları (basit +/− ve kart sistemi), sarı/kırmızı kart,
 performans puanı, öğrenci geçmişi, teneffüs cezası ve kronometre, ders
-yönetimi (başlat/bitir, ders geçmişi, ders detayı).
+yönetimi (başlat/bitir, ders geçmişi, ders detayı), ders ekranının telefon
+ve akıllı tahta için yeniden düzenlenmesi.
+
+**Hız:** Vercel fonksiyonları `vercel.json` ile `dub1`'de (Dublin) çalışır —
+veritabanıyla aynı bölge. Varsayılan `iad1` (Washington) her sorguyu
+Atlantik'ten geçiriyordu. Sayfalardaki bağımsız sorgular `Promise.all` ile
+paralel gider. Davranış düğmeleri sunucuyu beklemeden ekranı günceller.
 
 **Kurulum tamamlandı** — canlıda hesap mevcut, `/kurulum` kapalı.
 
 v0.1 canlıda gerçek kullanımla doğrulandı: kırmızı kart ceza üretiyor, ⏱
 rozeti çıkıyor ve kronometre çalışıyor.
 
-**Sırada:** beşinci migration'ın Supabase'de çalıştırılması, sonra ders
-yönetiminin canlıda doğrulanması. Ardından v0.2'nin kalanı: kullanım deneyimi
-ve arayüz tasarımı. Arayüz şu ana kadar bilerek sade tutuldu.
+v0.2 tamamlandı. **Sırada:** `ROADMAP.md` v0.3 — ödev (oluşturma, öğrenci
+bazlı takip, ödev geçmişi). Şemada `Assignment` ve `Submission` tabloları
+hazır bekliyor.
+
+Açık kalan küçük soru: kart şablonunda ders sırasında öğrencinin birikimi
+görünmüyor (puan kaldırıldı, yıldız sayısı hiç yoktu). Öğretmen isterse
+"bu derste kaç yıldız" sayacı eklenebilir.
 
 ---
 
@@ -191,4 +225,13 @@ test et → kısa rapor ver.** Kullanıcı Türkçe konuşur ve onay almadan iş
 yapılmasını istemez. Kritik değişikliklerde önce neden ve çözüm anlatılır.
 
 Kullanıcı tablet üzerinden çalışır; yerel bilgisayarı yoktur. Doğrulama
-canlı deployment üzerinden yapılır.
+canlı deployment üzerinden yapılır. Ders sırasında uygulamayı telefondan
+ya da akıllı tahtadan kullanır (tabletten değil).
+
+### Bu ortamın iki tuzağı
+- **Vercel bazen `main` push'unu kaçırıyor.** Deployment listesinde commit
+  yalnızca Preview olarak görünüp Production eski sürümde kalabiliyor.
+  Çözüm: Vercel → Deployments → ilgili satır → **Promote to Production**.
+- **Yerel PostgreSQL test sırasında düşebiliyor.** Testler açıklanamayan
+  şekilde zaman aşımına uğrarsa önce `pg_ctl status` bak, gerekirse yeniden
+  başlat.
