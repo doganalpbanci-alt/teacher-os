@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import { SablonFormu } from "@/components/SablonFormu";
+import { UstMenu } from "@/components/UstMenu";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +9,7 @@ export default async function AyarlarSayfasi() {
 
   return (
     <>
-      <Link className="geri" href="/">
-        ← Sınıflarım
-      </Link>
+      <UstMenu aktif="ayarlar" />
 
       <main className="kart">
         <h1>Ayarlar</h1>

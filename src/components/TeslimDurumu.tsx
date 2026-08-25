@@ -2,9 +2,11 @@
 
 import { useActionState } from "react";
 import type { SubmissionStatus } from "@prisma/client";
-import { teslimDurumuGuncelle } from "@/app/actions";
+import { teslimDurumuGuncelle } from "@/app/odev-actions";
 import { BOS_FORM } from "@/lib/form-state";
 
+// Durumlar bilerek bu sırada: ders başında en sık basılan "Yapıldı" ilk
+// sırada, "Bekliyor" (geri alma) en sonda.
 const SECENEKLER: { deger: SubmissionStatus; yazi: string }[] = [
   { deger: "DONE", yazi: "Yapıldı" },
   { deger: "LATE", yazi: "Geç" },
@@ -14,12 +16,10 @@ const SECENEKLER: { deger: SubmissionStatus; yazi: string }[] = [
 
 export function TeslimDurumu({
   submissionId,
-  sinifId,
   odevId,
   durum,
 }: {
   submissionId: string;
-  sinifId: string;
   odevId: string;
   durum: SubmissionStatus;
 }) {
@@ -28,7 +28,6 @@ export function TeslimDurumu({
   return (
     <form className="teslim-durum" action={gonder}>
       <input type="hidden" name="submissionId" value={submissionId} />
-      <input type="hidden" name="sinifId" value={sinifId} />
       <input type="hidden" name="odevId" value={odevId} />
       {SECENEKLER.map((secenek) => (
         <button
@@ -38,6 +37,7 @@ export function TeslimDurumu({
           value={secenek.deger}
           className={`t-${secenek.deger.toLowerCase()}${durum === secenek.deger ? " secili" : ""}`}
           disabled={bekliyor}
+          aria-pressed={durum === secenek.deger}
         >
           {secenek.yazi}
         </button>

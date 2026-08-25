@@ -1,13 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { SubmissionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import type { FormState } from "@/lib/form-state";
 import { dersBaslat, dersBitir, DersHatasi } from "@/lib/lesson";
 import { davranisKaydet, eylemGecerliMi, DavranisHatasi } from "@/lib/behavior";
-import { odevOlustur, teslimGuncelle, OdevHatasi } from "@/lib/assignment";
 
 const AD_SINIRI = 60;
 const TELEFON_SINIRI = 30;
@@ -356,76 +354,4 @@ export async function cezaGuncelle(
     deneme: onceki.deneme + 1,
     degerler: { kalanSaniye: String(kalanSaniye), calisiyor: calisiyor ? "1" : "0" },
   };
-}
-
-const ODEV_BASLIK_SINIRI = 120;
-const ODEV_ACIKLAMA_SINIRI = 500;
-
-export async function yeniOdevOlustur(
-  onceki: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const sinifId = metin(formData.get("sinifId"));
-  const title = metin(formData.get("title"));
-  const description = metin(formData.get("description"));
-  const dueDateHam = metin(formData.get("dueDate"));
-
-  const girilen = { title, description, dueDate: dueDateHam };
-
-  if (!sinifId) return hata(onceki, "Sınıf bilgisi eksik.", girilen);
-  if (!title) return hata(onceki, "Ödev başlığı boş olamaz.", girilen);
-  if (title.length > ODEV_BASLIK_SINIRI) {
-    return hata(onceki, `Başlık en fazla ${ODEV_BASLIK_SINIRI} karakter olabilir.`, girilen);
-  }
-  if (description.length > ODEV_ACIKLAMA_SINIRI) {
-    return hata(onceki, `Açıklama en fazla ${ODEV_ACIKLAMA_SINIRI} karakter olabilir.`, girilen);
-  }
-
-  let dueDate: Date | null = null;
-  if (dueDateHam) {
-    const deger = new Date(dueDateHam);
-    if (Number.isNaN(deger.getTime())) {
-      return hata(onceki, "Son teslim tarihi geçersiz.", girilen);
-    }
-    dueDate = deger;
-  }
-
-  try {
-    const ogretmen = await getCurrentTeacher();
-    await odevOlustur(sinifId, ogretmen.id, title, bosIseNull(description), dueDate);
-  } catch (error) {
-    if (error instanceof OdevHatasi) return hata(onceki, error.message, girilen);
-    return hata(onceki, "Ödev kaydedilemedi. Veritabanına ulaşılamıyor olabilir.", girilen);
-  }
-
-  revalidatePath(`/sinif/${sinifId}/odevler`);
-  return basarili(onceki);
-}
-
-const TESLIM_DURUMLARI = ["PENDING", "DONE", "MISSING", "LATE"] as const;
-
-export async function teslimDurumuGuncelle(
-  onceki: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const submissionId = metin(formData.get("submissionId"));
-  const durum = metin(formData.get("durum"));
-  const sinifId = metin(formData.get("sinifId"));
-  const odevId = metin(formData.get("odevId"));
-
-  if (!submissionId) return hata(onceki, "Teslim bilgisi eksik.", {});
-  if (!TESLIM_DURUMLARI.includes(durum as (typeof TESLIM_DURUMLARI)[number])) {
-    return hata(onceki, "Geçersiz durum.", {});
-  }
-
-  try {
-    const ogretmen = await getCurrentTeacher();
-    await teslimGuncelle(submissionId, ogretmen.id, durum as SubmissionStatus);
-  } catch (error) {
-    if (error instanceof OdevHatasi) return hata(onceki, error.message, {});
-    return hata(onceki, "Durum güncellenemedi. Veritabanına ulaşılamıyor olabilir.", {});
-  }
-
-  if (sinifId && odevId) revalidatePath(`/sinif/${sinifId}/odevler/${odevId}`);
-  return basarili(onceki);
 }

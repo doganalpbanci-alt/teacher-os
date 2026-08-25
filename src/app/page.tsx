@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import { SinifFormu } from "@/components/SinifFormu";
-import { CikisDugmesi } from "@/components/CikisDugmesi";
+import { UstMenu } from "@/components/UstMenu";
 
 // Her istekte veritabanına gidilir; build sırasında önceden üretilmez.
 export const dynamic = "force-dynamic";
@@ -45,15 +45,11 @@ export default async function AnaSayfa() {
 
   return (
     <>
+      <UstMenu aktif="siniflar" />
+
       <main className="kart">
         <div className="sayfa-basi">
           <h1>Sınıflarım</h1>
-          <span className="basi-sag">
-            <Link className="baglanti" href="/ayarlar">
-              Ayarlar
-            </Link>
-            <CikisDugmesi />
-          </span>
         </div>
         {sonuc.siniflar.length === 0 ? (
           <p className="soluk">

@@ -6,7 +6,11 @@ import { getCurrentTeacher } from "@/lib/current-teacher";
 import { dersTarihiYazisi, saatYazisi } from "@/lib/lesson";
 import { ogrenciGecmisi, ogrenciOzeti } from "@/lib/student-history";
 import { ogrenciCezalari } from "@/lib/penalty";
-import { ogrenciOdevleri, odevTarihiYazisi } from "@/lib/assignment";
+import {
+  ogrenciOdevleri,
+  ogrenciOdevIstatistigi,
+  odevTarihiYazisi,
+} from "@/lib/assignment";
 import { NotFormu } from "@/components/NotFormu";
 import type { SubmissionStatus } from "@prisma/client";
 
@@ -57,11 +61,12 @@ export default async function OgrenciSayfasi({
   // Dördü de aynı öğrenciye bakar, birbirini beklemez.
   // Teneffüs cezaları yalnızca kart sisteminde oluşur; basit sisteme geçilse
   // bile geçmişte kalanlar gösterilir.
-  const [ozet, gecmis, cezalar, odevler] = await Promise.all([
+  const [ozet, gecmis, cezalar, odevler, odevOzeti] = await Promise.all([
     ogrenciOzeti(ogrenci.id),
     ogrenciGecmisi(ogrenci.id),
     ogrenciCezalari(ogrenci.id),
     ogrenciOdevleri(ogrenci.id, ogretmen.id),
+    ogrenciOdevIstatistigi(ogrenci.id, ogretmen.id),
   ]);
 
   // Basit sistemde kartlar gündemde değil; kart sisteminde yıldız/kart öne çıkar.
@@ -102,6 +107,14 @@ export default async function OgrenciSayfasi({
               <span className="olcum-etiket">{olcum.etiket}</span>
             </div>
           ))}
+          {/* Ödev verilmemiş öğrencide %0 yanıltıcı olurdu; ölçüm ancak
+              en az bir ödev varsa görünür. */}
+          {odevOzeti.toplam > 0 && (
+            <div className="olcum">
+              <span className="olcum-deger">%{odevOzeti.oran}</span>
+              <span className="olcum-etiket">ödev</span>
+            </div>
+          )}
           <div className="olcum">
             <span className="olcum-deger">{ogrenci.performanceScore}</span>
             <span className="olcum-etiket">performans notu</span>
@@ -130,25 +143,29 @@ export default async function OgrenciSayfasi({
 
       {odevler.length > 0 && (
         <section className="kart">
-          <h2>Ödevler</h2>
+          <div className="sayfa-basi">
+            <h2>Ödevler</h2>
+            <span className="rozet">
+              {odevOzeti.done + odevOzeti.late}/{odevOzeti.toplam} · %{odevOzeti.oran}
+            </span>
+          </div>
           <ul className="liste">
             {odevler.map((odev) => (
               <li key={odev.odevId}>
-                <Link
-                  className="satir baglanti"
-                  href={`/sinif/${odev.classroomId}/odevler/${odev.odevId}`}
-                >
+                <Link className="satir" href={`/odevler/${odev.odevId}`}>
                   <span className="satir-ad">
                     {odev.baslik}
                     {odev.dueDate && (
-                      <span className="soluk">
-                        {" "}
-                        · son teslim {odevTarihiYazisi(odev.dueDate)}
+                      <span className="soluk odev-tarih">
+                        son teslim {odevTarihiYazisi(odev.dueDate)}
                       </span>
                     )}
                   </span>
-                  <span className={`teslim-rozet t-${odev.status.toLowerCase()}`}>
-                    {TESLIM_YAZISI[odev.status]}
+                  <span className="satir-sag">
+                    {odev.gecikti && <span className="rozet gecikti">Süresi geçti</span>}
+                    <span className={`teslim-rozet t-${odev.status.toLowerCase()}`}>
+                      {TESLIM_YAZISI[odev.status]}
+                    </span>
                   </span>
                 </Link>
               </li>

@@ -55,6 +55,7 @@ model Teacher {
 
   classrooms     Classroom[]
   behaviorLogs   BehaviorLog[]
+  assignments    Assignment[]
   parentMessages ParentMessage[]
 }
 
@@ -68,7 +69,6 @@ model Classroom {
   teacher      Teacher       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   students     Student[]
   lessons      Lesson[]
-  assignments  Assignment[]
   exams        Exam[]
   behaviorLogs BehaviorLog[]
 
@@ -177,18 +177,35 @@ model BehaviorLog {
 
 // ---------- Ödev ----------
 
+/// Odev bir sinifa degil ogretmene aittir: ayni odev birden fazla sinifa ve
+/// tek tek secilen ogrencilere verilebilir. Kime verildigi Submission
+/// satirlarinda yazilidir; sinif uyeligi oradan turetilir, ayrica tutulmaz.
 model Assignment {
   id          String    @id @default(cuid())
-  classroomId String
+  teacherId   String
   title       String
   description String?
-  dueDate     DateTime?
-  createdAt   DateTime  @default(now())
 
-  classroom   Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  /// Odevin verildigi tarih. Gecmise donuk odev girilebilir, bu yuzden
+  /// ileri/geri sinir yoktur. Bos birakilabilir.
+  startDate DateTime?
+
+  /// Son teslim tarihi. Gectiginde durum KENDILIGINDEN degismez; yalnizca
+  /// ekranda "suresi gecti" olarak isaretlenir. Durumu ogretmen girer.
+  dueDate DateTime?
+
+  /// Arsivlenen odev listelerde gorunmez, kayitlari durur. Hicbir ogrenci
+  /// isaretlenmemis odevler bunun yerine gercekten silinebilir.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Restrict: teslim gecmisi olan odev, ogretmen silinerek yok edilemez.
+  teacher     Teacher      @relation(fields: [teacherId], references: [id], onDelete: Restrict)
   submissions Submission[]
 
-  @@index([classroomId])
+  @@index([teacherId, createdAt])
 }
 
 model Submission {

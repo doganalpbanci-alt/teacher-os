@@ -747,3 +747,196 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 .teslim-rozet.t-missing { background: #fbdcdc; color: #8c1414; }
 .teslim-rozet.t-late { background: #fff3e0; color: #b06a00; }
 .teslim-rozet.t-pending { background: #eef0f3; color: var(--soluk); }
+
+/* Üst menü: uygulamanın ana bölümleri */
+.ust-menu {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ust-menu-baglantilar {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.ust-sekme {
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--soluk);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.ust-sekme:hover { background: var(--kart); color: var(--metin); }
+
+.ust-sekme.secili {
+  background: var(--kart);
+  border: 1px solid var(--cizgi);
+  color: var(--metin);
+}
+
+/* Ödev listesi filtreleri */
+.filtre-satiri {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+}
+
+.filtre {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 999px;
+  color: var(--soluk);
+  text-decoration: none;
+  font-size: 0.8125rem;
+}
+
+.filtre:hover { color: var(--metin); }
+.filtre.secili { border-color: var(--vurgu); color: var(--vurgu); font-weight: 600; }
+
+/* Ödev satırı: başlık altında tarih, sağda oran. Yalnızca ödev satırlarını
+   etkiler; .satir-ad genelinde ders geçmişi gibi tek satırlık yerlerde
+   kullanılıyor ve orada bozulmamalı. */
+.odev-tarih { display: block; font-size: 0.8125rem; }
+
+.oran {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.rozet.gecikti {
+  border: 1px solid var(--hata);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  color: var(--hata);
+  font-weight: 600;
+}
+
+.satir-gecikti { border-left: 3px solid var(--hata); padding-left: 0.625rem; }
+
+.odev-icerik {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem;
+  background: var(--zemin);
+  border-radius: 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Ödev formu alanları */
+.odev-formu .alan { display: grid; gap: 0.375rem; }
+
+.alan-etiket {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Hedef seçimi: sınıf başlığı + öğrenciler */
+.hedef {
+  display: grid;
+  gap: 0.625rem;
+  max-height: 24rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+}
+
+.hedef-sinif {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+}
+
+.hedef-basi {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.hedef-ad { flex: 1; font-weight: 600; }
+.hedef-bos { margin: 0.5rem 0 0; }
+
+.hedef-ogrenciler {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--cizgi);
+}
+
+.hedef-ogrenci {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* Dokunma hedefi: tablette ve telefonda yanlis isme basilmasin. */
+  min-height: 2.25rem;
+  padding: 0 0.25rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.9375rem;
+}
+
+.hedef-ogrenci:hover { background: var(--zemin); }
+.hedef-ogrenci input { width: 1.125rem; height: 1.125rem; flex-shrink: 0; }
+.hedef-ogrenci.kaybolacak { background: #fdf3f2; }
+
+.kaybolacak-not {
+  font-size: 0.6875rem;
+  color: var(--hata);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Toplu işaretleme */
+.toplu {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0.5rem 0 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--cizgi);
+}
+
+.toplu button {
+  padding: 0.3rem 0.625rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 999px;
+  background: var(--kart);
+  color: var(--metin);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.toplu button:disabled { opacity: 0.6; cursor: default; }
+.toplu button.t-done:hover { border-color: var(--basari); color: var(--basari); }
+.toplu button.t-missing:hover { border-color: var(--hata); color: var(--hata); }
+
+/* Ödev yönetim düğmeleri */
+.odev-islemler {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cizgi);
+}
+
+.odev-islemler form { margin: 0; }
+.odev-islemler a.ders-dugme { text-decoration: none; display: inline-block; }

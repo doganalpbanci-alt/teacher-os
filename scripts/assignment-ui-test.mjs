@@ -1,5 +1,5 @@
-// Ödev modülü testi: ödev oluşturma, öğrenci bazlı teslim kaydı, öğrenci
-// sayfasındaki ödev geçmişi, sahiplik ve geriye dönük ekleme yapılmaması.
+// Ödev modülü testi: ödevler sekmesi, çoklu sınıf/öğrenci atama, tarihler,
+// işaretleme, toplu işaretleme, "süresi geçti" rozeti ve sahiplik.
 //
 // Çalıştırmadan önce:
 //   1. Migration'ları uygulanmış BOŞ bir veritabanı hazırla ve DATABASE_URL'i
@@ -29,127 +29,222 @@ const baglam = await tarayici.newContext();
 const sayfa = await baglam.newPage();
 await oturumHazirla(sayfa, T);
 
-const govde = () => sayfa.textContent("body");
-const submissionSayisi = () => sql(`SELECT count(*) FROM "Submission";`);
-const assignmentSayisi = () => sql(`SELECT count(*) FROM "Assignment";`);
+// innerText, textContent degil: textContent Next.js'in sayfaya gomdugu RSC
+// veri script'ini de dondurur ve ekranda OLMAYAN isimler orada gecer.
+// "su ogrenci listede yok" gibi kontroller o zaman sessizce yaniltir.
+const govde = () => sayfa.innerText("body");
+const say = (tablo) => sql(`SELECT count(*) FROM "${tablo}";`);
 
-// --- A: Hazirlik ---
-console.log("\nA. Hazirlik");
-await sayfa.goto(T, { waitUntil: "networkidle" });
-await sayfa.getByLabel("Sınıf adı").fill("Odev-Test");
-await sayfa.getByRole("button", { name: "Sınıf ekle" }).click();
-await sayfa.waitForFunction(() => document.body.innerText.includes("Odev-Test"), null, { timeout: 10000 });
-await sayfa.getByRole("link", { name: /Odev-Test/ }).click();
-await sayfa.getByRole("heading", { name: "Odev-Test" }).waitFor();
-const sinifAdresi = sayfa.url();
-for (const [a, b] of [["Ada", "Bir"], ["Efe", "Iki"]]) {
-  await ogrenciFormunuAc(sayfa);
-  await sayfa.getByLabel("Ad", { exact: true }).fill(a);
-  await sayfa.getByLabel("Soyad").fill(b);
-  await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
-  await sayfa.waitForFunction((x) => document.body.innerText.includes(x), a, { timeout: 10000 });
+// Gecmis ve gelecek tarihler: "suresi gecti" kurali bugune gore calisiyor.
+const gun = (fark) => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + fark);
+  return d.toISOString().slice(0, 10);
+};
+
+async function sinifKur(ad, ogrenciler) {
+  await sayfa.goto(T, { waitUntil: "networkidle" });
+  await sayfa.getByLabel("Sınıf adı").fill(ad);
+  await sayfa.getByRole("button", { name: "Sınıf ekle" }).click();
+  await sayfa.waitForFunction((x) => document.body.innerText.includes(x), ad, { timeout: 10000 });
+  await sayfa.getByRole("link", { name: new RegExp(ad) }).click();
+  await sayfa.getByRole("heading", { name: ad }).waitFor();
+  const adres = sayfa.url();
+  for (const [a, b] of ogrenciler) {
+    await ogrenciFormunuAc(sayfa);
+    await sayfa.getByLabel("Ad", { exact: true }).fill(a);
+    await sayfa.getByLabel("Soyad").fill(b);
+    await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
+    await sayfa.waitForFunction((x) => document.body.innerText.includes(x), a, { timeout: 10000 });
+  }
+  return adres;
 }
-ok("Baslangicta odev yok", assignmentSayisi() === "0", `odev=${assignmentSayisi()}`);
 
-// --- B: Bos liste ---
-console.log("\nB. Bos liste");
-await sayfa.getByRole("link", { name: /Ödevler/ }).click();
+// --- A: Hazirlik, iki sinif ---
+console.log("\nA. Hazirlik");
+const sinifA = await sinifKur("Odev-5A", [["Ada", "Bir"], ["Efe", "Iki"]]);
+const sinifB = await sinifKur("Odev-6B", [["Mert", "Uc"], ["Zeynep", "Dort"]]);
+ok("Iki sinif ve dort ogrenci kuruldu", say("Student") === "4", `ogrenci=${say("Student")}`);
+ok("Baslangicta odev yok", say("Assignment") === "0", `odev=${say("Assignment")}`);
+
+// --- B: Ust menu ---
+console.log("\nB. Ust menu");
+await sayfa.goto(T, { waitUntil: "networkidle" });
+ok("Odevler sekmesi var", (await sayfa.getByRole("link", { name: "Ödevler" }).count()) >= 1);
+await sayfa.getByRole("link", { name: "Ödevler", exact: true }).click();
 await sayfa.getByRole("heading", { name: "Ödevler" }).waitFor();
-ok("Bos liste mesaji", (await govde()).includes("henüz ödev yok"));
+ok("Odevler sayfasi acildi", sayfa.url().includes("/odevler"));
+ok("Bos liste mesaji", (await govde()).includes("Henüz ödev yok"));
 
-// --- C: Odev olusturma ---
-console.log("\nC. Odev olusturma");
-await sayfa.locator("summary").filter({ hasText: "Yeni ödev" }).click();
+// --- C: Coklu sinif atamasi ---
+console.log("\nC. Coklu sinif atamasi");
+await sayfa.getByRole("link", { name: /Yeni ödev/ }).click();
+await sayfa.getByRole("heading", { name: "Yeni ödev" }).waitFor();
+ok("Iki sinif da secicide", (await govde()).includes("Odev-5A") && (await govde()).includes("Odev-6B"));
+ok("Hedef secilmeden kaydedilemez",
+   await sayfa.getByRole("button", { name: "Ödevi ver" }).isDisabled());
+
 await sayfa.getByLabel("Ödev başlığı").fill("Unit 4 workbook");
-await sayfa.getByLabel("Açıklama").fill("Sayfa 12-14");
-await sayfa.getByLabel("Son teslim tarihi").fill("2026-09-01");
-await sayfa.getByRole("button", { name: "Ödev ekle" }).click();
-await sayfa.waitForFunction(() => document.body.innerText.includes("Unit 4 workbook"), null, { timeout: 10000 });
-ok("Odev listede", (await govde()).includes("Unit 4 workbook"));
-ok("Veritabaninda bir odev var", assignmentSayisi() === "1", `odev=${assignmentSayisi()}`);
-ok("Iki ogrenciye teslim kaydi acildi", submissionSayisi() === "2", `teslim=${submissionSayisi()}`);
-const listeSatiri = sayfa.locator(".liste li").filter({ hasText: "Unit 4 workbook" });
-ok("Baslangicta ikisi de bekliyor", (await listeSatiri.innerText()).includes("2 bekliyor"),
-   await listeSatiri.innerText());
+await sayfa.getByLabel("Ödev içeriği ve açıklama").fill("Sayfa 12-14 tamamlanacak");
+await sayfa.getByLabel("Başlangıç tarihi").fill(gun(-3));
+await sayfa.getByLabel("Son teslim tarihi").fill(gun(4));
 
-// --- D: Odev detayi ve durum guncelleme ---
-console.log("\nD. Odev detayi ve durum guncelleme");
-await listeSatiri.click();
-await sayfa.getByRole("heading", { name: "Unit 4 workbook" }).waitFor();
-ok("Aciklama gorunuyor", (await govde()).includes("Sayfa 12-14"));
-ok("Son teslim tarihi gorunuyor", (await govde()).includes("1 Eylül 2026"));
+// 5A'nin tamami + 6B'den yalnizca Mert: toplu ve tek tek secim birlikte.
+const sinifKutusu = (ad) =>
+  sayfa.locator("fieldset").filter({ hasText: ad }).locator("input[type=checkbox]").first();
+await sinifKutusu("Odev-5A").check();
+await sayfa.locator("label").filter({ hasText: "Mert Uc" }).locator("input").check();
+ok("Uc ogrenci secili", (await govde()).includes("3 öğrenci"));
 
-const adaSatiri = sayfa.locator(".liste li").filter({ hasText: "Ada" });
-const efeSatiri = sayfa.locator(".liste li").filter({ hasText: "Efe" });
+await sayfa.getByRole("button", { name: "Ödevi ver" }).click();
+await sayfa.waitForFunction(() => document.body.innerText.includes("tamamlanma"), null, { timeout: 15000 });
+ok("Odev detayina yonlendirildi", /\/odevler\/[a-z0-9]+$/.test(sayfa.url()), sayfa.url());
+const odevAdresi = sayfa.url();
+ok("Bir odev olustu", say("Assignment") === "1", `odev=${say("Assignment")}`);
+ok("Uc teslim kaydi acildi", say("Submission") === "3", `teslim=${say("Submission")}`);
+ok("Icerik gorunuyor", (await govde()).includes("Sayfa 12-14"));
+
+// --- D: Sinifa gore gruplama ---
+console.log("\nD. Sinifa gore gruplama");
+ok("Iki sinif basligi var", (await sayfa.locator("section.kart").count()) === 2,
+   String(await sayfa.locator("section.kart").count()));
+const grup5A = sayfa.locator("section.kart").filter({ hasText: "Odev-5A" });
+const grup6B = sayfa.locator("section.kart").filter({ hasText: "Odev-6B" });
+ok("5A grubunda iki ogrenci", (await grup5A.locator(".liste li").count()) === 2);
+ok("6B grubunda tek ogrenci", (await grup6B.locator(".liste li").count()) === 1);
+ok("Secilmeyen ogrenci YOK", !(await govde()).includes("Zeynep Dort"));
+
+// --- E: Tek tek isaretleme ---
+console.log("\nE. Tek tek isaretleme");
+const adaSatiri = grup5A.locator("li").filter({ hasText: "Ada" });
 await adaSatiri.getByRole("button", { name: "Yapıldı" }).click();
 await sayfa.waitForFunction(() => {
   const li = [...document.querySelectorAll("li")].find((e) => e.innerText.includes("Ada"));
   return li && li.querySelector("button.secili.t-done");
 }, null, { timeout: 10000 });
-ok("Ada yapildi olarak isaretlendi", await adaSatiri.locator("button.secili.t-done").isVisible());
+ok("Ada Yapildi isaretlendi", await adaSatiri.locator("button.secili.t-done").isVisible());
+ok("Veritabanina yazildi",
+   sql(`SELECT count(*) FROM "Submission" WHERE status='DONE';`) === "1");
 
-await efeSatiri.getByRole("button", { name: "Eksik" }).click();
+// --- F: Toplu isaretleme ---
+console.log("\nF. Toplu isaretleme");
+// 5A'nin tamamini Eksik yap: Ada'nin DONE'i da degismeli, 6B'ye dokunulmamali.
+await grup5A.locator("form.toplu").getByRole("button", { name: "Eksik" }).click();
 await sayfa.waitForFunction(() => {
-  const li = [...document.querySelectorAll("li")].find((e) => e.innerText.includes("Efe"));
-  return li && li.querySelector("button.secili.t-missing");
+  const bolum = [...document.querySelectorAll("section")].find((s) => s.innerText.includes("Odev-5A"));
+  return bolum && bolum.querySelectorAll("button.secili.t-missing").length === 2;
 }, null, { timeout: 10000 });
-ok("Efe eksik olarak isaretlendi", await efeSatiri.locator("button.secili.t-missing").isVisible());
+ok("5A'nin tamami Eksik", sql(`SELECT count(*) FROM "Submission" WHERE status='MISSING';`) === "2",
+   `eksik=${sql(`SELECT count(*) FROM "Submission" WHERE status='MISSING';`)}`);
+ok("6B'ye dokunulmadi",
+   sql(`SELECT count(*) FROM "Submission" WHERE status='PENDING';`) === "1",
+   `bekliyor=${sql(`SELECT count(*) FROM "Submission" WHERE status='PENDING';`)}`);
 
-const durumlar = () => sql(`SELECT "status" FROM "Submission" ORDER BY "status";`);
-ok("Veritabaninda durumlar dogru", durumlar() === "DONE\nMISSING", durumlar());
+// --- G: Oran hesabi ---
+console.log("\nG. Oran hesabi");
+await sayfa.reload({ waitUntil: "networkidle" });
+// 3 ogrenciden 0'i tamamladi -> %0
+ok("Tamamlanma %0", (await govde()).includes("%0"), (await govde()).replace(/\s+/g, " ").slice(0, 200));
+await grup6B.locator("li").filter({ hasText: "Mert" }).getByRole("button", { name: "Yapıldı" }).click();
+await sayfa.waitForFunction(() => {
+  const li = [...document.querySelectorAll("li")].find((e) => e.innerText.includes("Mert"));
+  return li && li.querySelector("button.secili.t-done");
+}, null, { timeout: 10000 });
+await sayfa.reload({ waitUntil: "networkidle" });
+// 3 ogrenciden 1'i tamamladi -> %33
+ok("Tamamlanma %33", (await govde()).includes("%33"), (await govde()).replace(/\s+/g, " ").slice(0, 200));
 
-// --- E: Liste sayimlari guncellendi ---
-console.log("\nE. Liste sayimlari guncellendi");
+// --- H: Suresi gecti rozeti ---
+console.log("\nH. Suresi gecti rozeti");
+await sayfa.goto(`${odevAdresi}/duzenle`, { waitUntil: "networkidle" });
+await sayfa.getByLabel("Son teslim tarihi").fill(gun(-1));
+await sayfa.getByRole("button", { name: "Değişiklikleri kaydet" }).click();
+await sayfa.waitForFunction(() => document.body.innerText.includes("tamamlanma"), null, { timeout: 15000 });
+
+// Su an herkes isaretli. Kural: tarih gecse de bekleyen kimse yoksa odev
+// gundemde degildir, rozet CIKMAZ.
+ok("Herkes isaretliyken rozet YOK", !(await govde()).includes("Süresi geçti"),
+   (await govde()).replace(/\s+/g, " ").slice(0, 160));
+await sayfa.goto(`${T}/odevler?filtre=gecikmis`, { waitUntil: "networkidle" });
+ok("Herkes isaretliyken gecikmis filtresinde YOK", !(await govde()).includes("Unit 4 workbook"));
+
+// Bir ogrenciyi Bekliyor'a cevir: artik bekleyen var, rozet cikmali.
+await sayfa.goto(odevAdresi, { waitUntil: "networkidle" });
+await sayfa.locator("li").filter({ hasText: "Ada" })
+  .getByRole("button", { name: "Bekliyor" }).click();
+await sayfa.waitForFunction(() => {
+  const li = [...document.querySelectorAll("li")].find((e) => e.innerText.includes("Ada"));
+  return li && li.querySelector("button.secili.t-pending");
+}, null, { timeout: 10000 });
+await sayfa.reload({ waitUntil: "networkidle" });
+ok("Bekleyen olunca rozet cikti", (await govde()).includes("Süresi geçti"));
+ok("Gecikmis satir isaretli", (await sayfa.locator(".satir-gecikti").count()) === 1,
+   String(await sayfa.locator(".satir-gecikti").count()));
+ok("Durum KENDILIGINDEN degismedi",
+   sql(`SELECT count(*) FROM "Submission" WHERE status='MISSING';`) === "1",
+   `eksik=${sql(`SELECT count(*) FROM "Submission" WHERE status='MISSING';`)}`);
+
+await sayfa.goto(`${T}/odevler?filtre=gecikmis`, { waitUntil: "networkidle" });
+ok("Gecikmis filtresinde gorunuyor", (await govde()).includes("Unit 4 workbook"));
+
+// --- I: Sinif sekmesinden gorunum ---
+console.log("\nI. Sinif sekmesinden gorunum");
+await sayfa.goto(sinifA, { waitUntil: "networkidle" });
 await sayfa.getByRole("link", { name: /Ödevler/ }).click();
-await sayfa.getByRole("heading", { name: "Ödevler" }).waitFor();
-const guncelSatir = sayfa.locator(".liste li").filter({ hasText: "Unit 4 workbook" });
-ok("Sayimlar guncellendi", (await guncelSatir.innerText()).includes("1 yapıldı · 1 eksik"),
-   await guncelSatir.innerText());
+await sayfa.getByRole("heading", { name: /Odev-5A · Ödevler/ }).waitFor();
+ok("Sinif odev listesinde", (await govde()).includes("Unit 4 workbook"));
+// 5A'da iki ogrenci de MISSING -> %0. 6B'deki DONE buraya karismamali.
+const sinifOran = await sayfa.locator("main .olcum").first().innerText();
+ok("Sinif orani yalnizca kendi ogrencilerinden", sinifOran.includes("%0"), sinifOran);
+ok("Ogrenci dokumu var", (await govde()).includes("Öğrenci dökümü"));
 
-// --- F: Ogrenci sayfasinda odev gorunuyor ---
-console.log("\nF. Ogrenci sayfasinda odev gorunuyor");
-await sayfa.goto(sinifAdresi, { waitUntil: "networkidle" });
-await sayfa.locator("li").filter({ hasText: "Ada" }).getByRole("link", { name: "Ada Bir" }).click();
-await sayfa.getByRole("heading", { name: "Ada Bir" }).waitFor();
+await sayfa.goto(sinifB, { waitUntil: "networkidle" });
+await sayfa.getByRole("link", { name: /Ödevler/ }).click();
+await sayfa.getByRole("heading", { name: /Odev-6B · Ödevler/ }).waitFor();
+// 6B'de yalnizca Mert'e verildi ve o yapti -> %100
+ok("6B orani %100", (await sayfa.locator("main .olcum").first().innerText()).includes("%100"),
+   await sayfa.locator("main .olcum").first().innerText());
+ok("Odev verilmeyen ogrenci dokumde bos", (await govde()).includes("Zeynep Dort"));
+
+// --- J: Ogrenci sayfasi ---
+console.log("\nJ. Ogrenci sayfasi");
+await sayfa.goto(sinifB, { waitUntil: "networkidle" });
+await sayfa.locator("li").filter({ hasText: "Mert" }).getByRole("link", { name: "Mert Uc" }).click();
+await sayfa.getByRole("heading", { name: "Mert Uc" }).waitFor();
 ok("Odev bolumu var", (await govde()).includes("Unit 4 workbook"));
-ok("Durum yapildi gorunuyor", (await sayfa.locator(".teslim-rozet.t-done").innerText()) === "Yapıldı");
+ok("Ogrenci odev orani %100", (await govde()).includes("%100"));
+ok("Durum Yapildi", (await sayfa.locator(".teslim-rozet.t-done").innerText()) === "Yapıldı");
 
-// --- G: Sonradan eklenen ogrenciye eski odev acilmaz ---
-console.log("\nG. Sonradan eklenen ogrenciye eski odev acilmaz");
-await sayfa.goto(sinifAdresi, { waitUntil: "networkidle" });
-await ogrenciFormunuAc(sayfa);
-await sayfa.getByLabel("Ad", { exact: true }).fill("Mert");
-await sayfa.getByLabel("Soyad").fill("Uc");
-await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
-await sayfa.waitForFunction(() => document.body.innerText.includes("Mert"), null, { timeout: 10000 });
-ok("Teslim sayisi degismedi (yeni ogrenci eklenmedi)", submissionSayisi() === "2", `teslim=${submissionSayisi()}`);
-await sayfa.getByRole("link", { name: /Ödevler/ }).click();
-await sayfa.getByRole("link", { name: /Unit 4 workbook/ }).click();
-await sayfa.getByRole("heading", { name: "Unit 4 workbook" }).waitFor();
-ok("Mert listede yok", !(await govde()).includes("Mert Uc"));
+// Odev verilmemis ogrencide olcum gorunmemeli.
+await sayfa.goto(sinifB, { waitUntil: "networkidle" });
+await sayfa.locator("li").filter({ hasText: "Zeynep" }).getByRole("link", { name: "Zeynep Dort" }).click();
+await sayfa.getByRole("heading", { name: "Zeynep Dort" }).waitFor();
+ok("Odevsiz ogrencide odev bolumu yok", !(await govde()).includes("Unit 4 workbook"));
 
-// --- H: Sahiplik ---
-console.log("\nH. Sahiplik");
-let yanit = await sayfa.goto(`${sinifAdresi}/odevler/olmayan-odev`, { waitUntil: "networkidle" });
+// --- K: Sahiplik ---
+console.log("\nK. Sahiplik");
+let yanit = await sayfa.goto(`${T}/odevler/olmayan-odev`, { waitUntil: "networkidle" });
 ok("Olmayan odev 404", yanit.status() === 404, `durum=${yanit.status()}`);
+yanit = await sayfa.goto(`${T}/odevler/olmayan-odev/duzenle`, { waitUntil: "networkidle" });
+ok("Olmayan odev duzenleme 404", yanit.status() === 404, `durum=${yanit.status()}`);
 
-const odevAdresi = sayfa.url();
 sql(`
-INSERT INTO "Teacher" (id, email, name, "passwordHash", "createdAt")
-VALUES ('t-odev-yabanci', 'odev-yabanci@ornek.com', 'Yabancı', '!parola-yok', now());
+INSERT INTO "Teacher" (id, email, name, "passwordHash", "createdAt", "behaviorTemplate")
+VALUES ('t-yabanci', 'yabanci@ornek.com', 'Yabancı', '!parola-yok', now(), 'SIMPLE');
 INSERT INTO "Classroom" (id, "teacherId", name, "isActive", "createdAt")
-VALUES ('c-odev-yabanci', 't-odev-yabanci', 'Yabancı Sınıf', true, now());
+VALUES ('c-yabanci', 't-yabanci', 'Yabancı Sınıf', true, now());
+INSERT INTO "Assignment" (id, "teacherId", title, "isActive", "createdAt", "updatedAt")
+VALUES ('a-yabanci', 't-yabanci', 'Yabancı Ödev', true, now(), now());
 `);
-yanit = await sayfa.goto(`${T}/sinif/c-odev-yabanci/odevler`, { waitUntil: "networkidle" });
-ok("Baskasinin odev listesi 404", yanit.status() === 404, `durum=${yanit.status()}`);
+yanit = await sayfa.goto(`${T}/odevler/a-yabanci`, { waitUntil: "networkidle" });
+ok("Baskasinin odevi 404", yanit.status() === 404, `durum=${yanit.status()}`);
+yanit = await sayfa.goto(`${T}/odevler/a-yabanci/duzenle`, { waitUntil: "networkidle" });
+ok("Baskasinin odev duzenlemesi 404", yanit.status() === 404, `durum=${yanit.status()}`);
+yanit = await sayfa.goto(`${T}/sinif/c-yabanci/odevler`, { waitUntil: "networkidle" });
+ok("Baskasinin sinif odevleri 404", yanit.status() === 404, `durum=${yanit.status()}`);
 
-await sayfa.goto(sinifAdresi, { waitUntil: "networkidle" });
-await sayfa.getByRole("link", { name: /Ödevler/ }).click();
-await sayfa.getByRole("link", { name: /Unit 4 workbook/ }).click();
-await sayfa.getByRole("heading", { name: "Unit 4 workbook" }).waitFor();
-const gercekOdevId = sayfa.url().split("/").pop();
-yanit = await sayfa.goto(`${T}/sinif/c-odev-yabanci/odevler/${gercekOdevId}`, { waitUntil: "networkidle" });
-ok("Yanlis sinif altinda odev 404", yanit.status() === 404, `durum=${yanit.status()}`);
+await sayfa.goto(`${T}/odevler`, { waitUntil: "networkidle" });
+ok("Baskasinin odevi listede YOK", !(await govde()).includes("Yabancı Ödev"));
 
 await tarayici.close();
 console.log(`\n=== SONUC: ${gecti} gecti, ${kaldi} kaldi ===`);
