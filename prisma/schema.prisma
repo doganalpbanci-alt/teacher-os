@@ -56,6 +56,7 @@ model Teacher {
   classrooms     Classroom[]
   behaviorLogs   BehaviorLog[]
   assignments    Assignment[]
+  exams          Exam[]
   parentMessages ParentMessage[]
 }
 
@@ -69,7 +70,6 @@ model Classroom {
   teacher      Teacher       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   students     Student[]
   lessons      Lesson[]
-  exams        Exam[]
   behaviorLogs BehaviorLog[]
 
   @@index([teacherId])
@@ -226,25 +226,41 @@ model Submission {
 
 // ---------- Sınav ----------
 
+/// Sinav bir sinifa degil ogretmene aittir: ayni sinav birden fazla sinifa ve
+/// tek tek secilen ogrencilere verilebilir. Kime verildigi ExamResult
+/// satirlarinda yazilidir; sinif uyeligi oradan turetilir, ayrica tutulmaz.
+/// Odevdeki (Assignment) kararin aynisi; boylece ayni sinavin subeler arasi
+/// ortalamasi karsilastirilabilir.
 model Exam {
-  id          String   @id @default(cuid())
-  classroomId String
-  title       String
-  examDate    DateTime
-  maxScore    Float    @default(100)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  teacherId String
+  title     String
+  examDate  DateTime
 
-  classroom Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  results   ExamResult[]
+  /// Sinavin tam puani. Farkli tam puanli sinavlar ogrenci gelisimi
+  /// gorunumunde yuzdeye normalize edilebilsin diye sinav basina tutulur.
+  maxScore Float @default(100)
 
-  @@index([classroomId])
+  createdAt DateTime @default(now())
+
+  // Restrict: sonuc gecmisi olan sinav, ogretmen silinerek yok edilemez.
+  teacher Teacher      @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  results ExamResult[]
+
+  @@index([teacherId, examDate])
 }
 
 model ExamResult {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   examId    String
   studentId String
-  score     Float
+
+  /// Puan. Null ise sinav bu ogrenciye verilmis ama notu HENUZ GIRILMEMISTIR.
+  /// Odevdeki PENDING satirinin karsiligi: sinavin kime verildigi bu
+  /// satirlarda yazili oldugu icin, puan girilmeden once de bos duramaz.
+  /// Ortalamalar yalnizca girilmis puanlardan hesaplanir.
+  score Float?
+
   note      String?
   createdAt DateTime @default(now())
 

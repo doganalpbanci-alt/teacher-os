@@ -1,27 +1,30 @@
 -- Teacher OS - veritabani durum kontrolu
 -- Supabase SQL Editor'a yapistirip calistirin. Her satirda "TAMAM" bekleniyor.
 WITH k AS (
-  SELECT 1 s, 'Migration 1/7 · init' kontrol,
+  SELECT 1 s, 'Migration 1/8 · init' kontrol,
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260821214524_init'
        AND checksum='a47f4ba3092679ef4c671f9542a8dd076ee7f407cde95e65ace9b2bb91cafdc1') bulunan, '1' beklenen
-  UNION ALL SELECT 2, 'Migration 2/7 · koruma kurallari + RLS',
+  UNION ALL SELECT 2, 'Migration 2/8 · koruma kurallari + RLS',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260822105533_harden_history_and_rls'
        AND checksum='afcb1876314d16c32ff82d26aa7af9a82e3a8f0fa71bdc50da01790069cccff5'), '1'
-  UNION ALL SELECT 3, 'Migration 3/7 · davranis sablonu',
+  UNION ALL SELECT 3, 'Migration 3/8 · davranis sablonu',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260822235800_behavior_template'
        AND checksum='94375e958bda926bddd3ea6bb05d597ac74693c1ed9276c1187560ab021f56f7'), '1'
-  UNION ALL SELECT 3.5, 'Migration 4/7 · teneffus cezasi',
+  UNION ALL SELECT 3.5, 'Migration 4/8 · teneffus cezasi',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260823144543_break_penalty'
        AND checksum='ffa1b73b6d26d509c6e5e3ffb88b9a292630e24958019221a1ca8c6404a12199'), '1'
-  UNION ALL SELECT 3.6, 'Migration 5/7 · ders bitisi',
+  UNION ALL SELECT 3.6, 'Migration 5/8 · ders bitisi',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260823174546_lesson_ended_at'
        AND checksum='471a0d711809feadead51072c977097c2cfb9b1702cd0c572837d0295717f7ca'), '1'
-  UNION ALL SELECT 3.7, 'Migration 6/7 · odev modulu',
+  UNION ALL SELECT 3.7, 'Migration 6/8 · odev modulu',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260825152117_assignment_module'
        AND checksum='71bbf50cd7740dc8c769a9d227e7566eeb974c6968784b4ac2dbc5196f333289'), '1'
-  UNION ALL SELECT 3.8, 'Migration 7/7 · tek acik ders kisiti',
+  UNION ALL SELECT 3.8, 'Migration 7/8 · tek acik ders kisiti',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260825191157_lesson_single_open'
        AND checksum='558337ff70a7f297c44533d391affac5bb9ecaf83ad9d56cf13209d132da3473'), '1'
+  UNION ALL SELECT 3.9, 'Migration 8/8 · sinav ogretmene tasindi',
+    (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260825202845_exam_teacher_owned'
+       AND checksum='b0254569fef57ef205180b83d3f628f495c6a8758778c1a58469d5390a428f0d'), '1'
   UNION ALL SELECT 4, 'Fazladan/taninmayan migration kaydi',
     (SELECT coalesce(string_agg(migration_name,', '),'yok') FROM "_prisma_migrations"
        WHERE migration_name NOT IN ('20260821214524_init','20260822105533_harden_history_and_rls',
@@ -29,7 +32,8 @@ WITH k AS (
                                     '20260823144543_break_penalty',
                                     '20260823174546_lesson_ended_at',
                                     '20260825152117_assignment_module',
-                                    '20260825191157_lesson_single_open')), 'yok'
+                                    '20260825191157_lesson_single_open',
+                                    '20260825202845_exam_teacher_owned')), 'yok'
   UNION ALL SELECT 5, 'Geri alinmis migration',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE rolled_back_at IS NOT NULL OR finished_at IS NULL), '0'
   UNION ALL SELECT 6, 'Tablo sayisi',
@@ -41,7 +45,7 @@ WITH k AS (
     (SELECT count(*)::text FROM pg_indexes WHERE tablename='Lesson' AND indexdef ILIKE '%UNIQUE%'
        AND indexname NOT IN ('Lesson_pkey','Lesson_tek_acik_ders')), '0'
   UNION ALL SELECT 8, 'Gecmis korumasi (RESTRICT baglanti)',
-    (SELECT count(*)::text FROM pg_constraint WHERE contype='f' AND confdeltype='r'), '12'
+    (SELECT count(*)::text FROM pg_constraint WHERE contype='f' AND confdeltype='r'), '13'
   UNION ALL SELECT 9, 'Sinif arsivleme alani (isActive)',
     (SELECT count(*)::text FROM information_schema.columns WHERE table_name='Classroom' AND column_name='isActive'), '1'
   UNION ALL SELECT 10, 'Puan tutarlilik kisiti',
@@ -77,6 +81,17 @@ WITH k AS (
   UNION ALL SELECT 20, 'Odev tarih ve arsiv alanlari',
     (SELECT count(*)::text FROM information_schema.columns
        WHERE table_name='Assignment' AND column_name IN ('startDate','isActive','updatedAt')), '3'
+  UNION ALL SELECT 21, 'Sinav ogretmene bagli (Exam.teacherId)',
+    (SELECT count(*)::text FROM information_schema.columns
+       WHERE table_name='Exam' AND column_name='teacherId'), '1'
+  UNION ALL SELECT 22, 'Sinav artik tek sinifa bagli DEGIL (classroomId kalkti)',
+    (SELECT count(*)::text FROM information_schema.columns
+       WHERE table_name='Exam' AND column_name='classroomId'), '0'
+  -- Null puan = sinav verilmis ama notu henuz girilmemis. Odevdeki PENDING
+  -- satirinin karsiligi; sinavin kime verildigi bu satirlarda yazili.
+  UNION ALL SELECT 23, 'Sinav puani bos birakilabilir (score nullable)',
+    (SELECT is_nullable FROM information_schema.columns
+       WHERE table_name='ExamResult' AND column_name='score'), 'YES'
   UNION ALL SELECT 11, 'RLS acik tablo',
     (SELECT count(*)::text FROM pg_tables WHERE schemaname='public' AND tablename<>'_prisma_migrations' AND rowsecurity), '11'
 )
