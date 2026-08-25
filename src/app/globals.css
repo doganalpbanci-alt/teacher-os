@@ -940,3 +940,30 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 
 .odev-islemler form { margin: 0; }
 .odev-islemler a.ders-dugme { text-decoration: none; display: inline-block; }
+
+/* Günlük gündem: ana sayfada, sınıfların üstünde. Dikkat çekmeli ama
+   ekranı bağırmamalı — sol şerit yeter, zemin sakin kalır. */
+.gundem {
+  border-left: 4px solid var(--hata);
+}
+
+.gundem h2 { margin-bottom: 0; }
+
+/* Üst menüdeki sayaç */
+.ust-sekme { display: inline-flex; align-items: center; gap: 0.375rem; }
+
+.sekme-sayac {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--hata);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}

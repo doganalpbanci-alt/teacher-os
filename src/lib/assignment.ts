@@ -390,6 +390,70 @@ export async function ogretmenOdevleri(
   return odevler.map((odev) => ozetKur(odev, odev.submissions.map((s) => s.status)));
 }
 
+// ---------- Günlük gündem ----------
+
+/**
+ * Bugün ilgilenilmesi gereken ödevin koşulu. Üç şart birden:
+ * arşivlenmemiş, teslim günü gelmiş ya da geçmiş, ve hâlâ işaretlenmemiş
+ * öğrencisi var. Herkesi işaretlemişse öğretmenin yapacak işi kalmamıştır;
+ * tarihi geçse de gündeme düşmez. Tarihsiz ödev de düşmez, çünkü onun
+ * "bugün" diye bir vaktı yoktur.
+ */
+function gundemKosulu(ogretmenId: string) {
+  return {
+    teacherId: ogretmenId,
+    isActive: true,
+    dueDate: { lte: bugunSiniri() },
+    submissions: { some: { status: "PENDING" as const } },
+  };
+}
+
+export type Gundem = {
+  /** Teslim günü geçmiş, hâlâ bekleyen var. */
+  gecikmis: OdevOzeti[];
+  /** Teslim günü bugün. */
+  bugun: OdevOzeti[];
+};
+
+/**
+ * Öğretmenin bugün kontrol etmesi gereken ödevleri. Ana sayfada gösterilir;
+ * amacı öğretmenin derse girmeden önce tek bakışta ne bekliyor görmesidir.
+ */
+export async function gunlukGundem(ogretmenId: string): Promise<Gundem> {
+  const odevler = await prisma.assignment.findMany({
+    where: gundemKosulu(ogretmenId),
+    // Teslim günü en eski olan en üstte: en uzun bekleyen iş önce görünür.
+    orderBy: { dueDate: "asc" },
+    take: LISTE_SINIRI,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      startDate: true,
+      dueDate: true,
+      isActive: true,
+      submissions: { select: { status: true } },
+    },
+  });
+
+  const bugunAn = bugunSiniri().getTime();
+  const gecikmis: OdevOzeti[] = [];
+  const bugun: OdevOzeti[] = [];
+  for (const odev of odevler) {
+    const ozet = ozetKur(odev, odev.submissions.map((s) => s.status));
+    // dueDate koşuldan dolayı hep dolu; yine de tip için kontrol edilir.
+    if (ozet.dueDate && ozet.dueDate.getTime() < bugunAn) gecikmis.push(ozet);
+    else bugun.push(ozet);
+  }
+
+  return { gecikmis, bugun };
+}
+
+/** Gündemdeki ödev sayısı. Üst menüdeki sayaç için; listeyi çekmez. */
+export async function gundemSayisi(ogretmenId: string): Promise<number> {
+  return prisma.assignment.count({ where: gundemKosulu(ogretmenId) });
+}
+
 /**
  * Bir sınıfa verilmiş ödevler. Sayımlar YALNIZCA o sınıfın öğrencilerinden
  * hesaplanır; aynı ödev başka sınıfa da verilmişse oradaki durumlar bu

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import { SinifFormu } from "@/components/SinifFormu";
 import { UstMenu } from "@/components/UstMenu";
+import { GundemPaneli } from "@/components/GundemPaneli";
+import { gunlukGundem, type Gundem } from "@/lib/assignment";
 
 // Her istekte veritabanına gidilir; build sırasında önceden üretilmez.
 export const dynamic = "force-dynamic";
@@ -10,18 +12,22 @@ export const dynamic = "force-dynamic";
 type Sinif = { id: string; name: string; _count: { students: number } };
 
 type Sonuc =
-  | { ok: true; siniflar: Sinif[] }
+  | { ok: true; siniflar: Sinif[]; gundem: Gundem }
   | { ok: false; mesaj: string };
 
-async function siniflariGetir(): Promise<Sonuc> {
+async function anaSayfaVerisi(): Promise<Sonuc> {
   try {
     const ogretmen = await getCurrentTeacher();
-    const siniflar = await prisma.classroom.findMany({
-      where: { teacherId: ogretmen.id, isActive: true },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, _count: { select: { students: true } } },
-    });
-    return { ok: true, siniflar };
+    // Ikisi de ayni ogretmene bakar, birbirini beklemez.
+    const [siniflar, gundem] = await Promise.all([
+      prisma.classroom.findMany({
+        where: { teacherId: ogretmen.id, isActive: true },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true, _count: { select: { students: true } } },
+      }),
+      gunlukGundem(ogretmen.id),
+    ]);
+    return { ok: true, siniflar, gundem };
   } catch (error) {
     return {
       ok: false,
@@ -31,7 +37,7 @@ async function siniflariGetir(): Promise<Sonuc> {
 }
 
 export default async function AnaSayfa() {
-  const sonuc = await siniflariGetir();
+  const sonuc = await anaSayfaVerisi();
 
   if (!sonuc.ok) {
     return (
@@ -46,6 +52,10 @@ export default async function AnaSayfa() {
   return (
     <>
       <UstMenu aktif="siniflar" />
+
+      {/* Gündem sınıfların ÜSTÜNDE: derse girmeden önce görülmesi gereken
+          şey bu. Yapacak iş yoksa panel hiç çıkmaz, yer kaplamaz. */}
+      <GundemPaneli gundem={sonuc.gundem} />
 
       <main className="kart">
         <div className="sayfa-basi">
