@@ -3,7 +3,8 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 25 Ağustos 2026 · `main` = `baad251`
+Son güncelleme: 25 Ağustos 2026 · anlatılan kod durumu `main` = `baad251`
+(üstündeki commit'ler yalnızca bu notun kendisidir)
 
 ---
 
