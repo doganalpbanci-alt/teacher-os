@@ -125,6 +125,23 @@ a.satir:hover .satir-ad {
   outline-offset: -1px;
 }
 
+.form textarea {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 1rem;
+  background: var(--kart);
+  color: var(--metin);
+  resize: vertical;
+}
+
+.form textarea:focus {
+  outline: 2px solid var(--vurgu);
+  outline-offset: -1px;
+}
+
 .form button {
   padding: 0.625rem 1rem;
   border: none;
@@ -691,3 +708,42 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 .ceza-durum.ceza-tamamlandi { color: var(--basari); }
 .ceza-durum.ceza-suruyor { color: var(--hata); }
 .ceza-durum.ceza-bekliyor { color: var(--soluk); }
+
+/* Ödevler */
+.teslim-durum {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.teslim-durum button {
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 999px;
+  background: var(--kart);
+  color: var(--metin);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.teslim-durum button:disabled { opacity: 0.6; cursor: default; }
+
+.teslim-durum button.secili.t-done { border-color: var(--basari); background: #eaf6ef; color: var(--basari); font-weight: 600; }
+.teslim-durum button.secili.t-missing { border-color: var(--hata); background: #fdf3f2; color: var(--hata); font-weight: 600; }
+.teslim-durum button.secili.t-late { border-color: #b06a00; background: #fff3e0; color: #b06a00; font-weight: 600; }
+.teslim-durum button.secili.t-pending { border-color: var(--soluk); color: var(--soluk); font-weight: 600; }
+
+.teslim-rozet {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.teslim-rozet.t-done { background: #eaf6ef; color: var(--basari); }
+.teslim-rozet.t-missing { background: #fbdcdc; color: #8c1414; }
+.teslim-rozet.t-late { background: #fff3e0; color: #b06a00; }
+.teslim-rozet.t-pending { background: #eef0f3; color: var(--soluk); }

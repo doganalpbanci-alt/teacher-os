@@ -6,7 +6,9 @@ import { getCurrentTeacher } from "@/lib/current-teacher";
 import { dersTarihiYazisi, saatYazisi } from "@/lib/lesson";
 import { ogrenciGecmisi, ogrenciOzeti } from "@/lib/student-history";
 import { ogrenciCezalari } from "@/lib/penalty";
+import { ogrenciOdevleri, odevTarihiYazisi } from "@/lib/assignment";
 import { NotFormu } from "@/components/NotFormu";
+import type { SubmissionStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,13 @@ const TUR_YAZISI: Record<BehaviorType, { yazi: string; sinif: string }> = {
   MINUS: { yazi: "Eksi", sinif: "g-eksi" },
   YELLOW_CARD: { yazi: "Sarı kart", sinif: "g-sari" },
   RED_CARD: { yazi: "Kırmızı kart", sinif: "g-kirmizi" },
+};
+
+const TESLIM_YAZISI: Record<SubmissionStatus, string> = {
+  PENDING: "Bekliyor",
+  DONE: "Yapıldı",
+  MISSING: "Eksik",
+  LATE: "Geç",
 };
 
 export default async function OgrenciSayfasi({
@@ -45,13 +54,14 @@ export default async function OgrenciSayfasi({
   if (!ogrenci) notFound();
 
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
-  // Üçü de aynı öğrenciye bakar, birbirini beklemez.
+  // Dördü de aynı öğrenciye bakar, birbirini beklemez.
   // Teneffüs cezaları yalnızca kart sisteminde oluşur; basit sisteme geçilse
   // bile geçmişte kalanlar gösterilir.
-  const [ozet, gecmis, cezalar] = await Promise.all([
+  const [ozet, gecmis, cezalar, odevler] = await Promise.all([
     ogrenciOzeti(ogrenci.id),
     ogrenciGecmisi(ogrenci.id),
     ogrenciCezalari(ogrenci.id),
+    ogrenciOdevleri(ogrenci.id, ogretmen.id),
   ]);
 
   // Basit sistemde kartlar gündemde değil; kart sisteminde yıldız/kart öne çıkar.
@@ -117,6 +127,35 @@ export default async function OgrenciSayfasi({
           </>
         )}
       </section>
+
+      {odevler.length > 0 && (
+        <section className="kart">
+          <h2>Ödevler</h2>
+          <ul className="liste">
+            {odevler.map((odev) => (
+              <li key={odev.odevId}>
+                <Link
+                  className="satir baglanti"
+                  href={`/sinif/${odev.classroomId}/odevler/${odev.odevId}`}
+                >
+                  <span className="satir-ad">
+                    {odev.baslik}
+                    {odev.dueDate && (
+                      <span className="soluk">
+                        {" "}
+                        · son teslim {odevTarihiYazisi(odev.dueDate)}
+                      </span>
+                    )}
+                  </span>
+                  <span className={`teslim-rozet t-${odev.status.toLowerCase()}`}>
+                    {TESLIM_YAZISI[odev.status]}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {cezalar.length > 0 && (
         <section className="kart">
