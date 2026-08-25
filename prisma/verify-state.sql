@@ -1,16 +1,16 @@
 -- Teacher OS - veritabani durum kontrolu
 -- Supabase SQL Editor'a yapistirip calistirin. Her satirda "TAMAM" bekleniyor.
 WITH k AS (
-  SELECT 1 s, 'Migration 1/5 · init' kontrol,
+  SELECT 1 s, 'Migration 1/6 · init' kontrol,
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260821214524_init'
        AND checksum='a47f4ba3092679ef4c671f9542a8dd076ee7f407cde95e65ace9b2bb91cafdc1') bulunan, '1' beklenen
-  UNION ALL SELECT 2, 'Migration 2/5 · koruma kurallari + RLS',
+  UNION ALL SELECT 2, 'Migration 2/6 · koruma kurallari + RLS',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260822105533_harden_history_and_rls'
        AND checksum='afcb1876314d16c32ff82d26aa7af9a82e3a8f0fa71bdc50da01790069cccff5'), '1'
-  UNION ALL SELECT 3, 'Migration 3/5 · davranis sablonu',
+  UNION ALL SELECT 3, 'Migration 3/6 · davranis sablonu',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260822235800_behavior_template'
        AND checksum='94375e958bda926bddd3ea6bb05d597ac74693c1ed9276c1187560ab021f56f7'), '1'
-  UNION ALL SELECT 3.5, 'Migration 4/5 · teneffus cezasi',
+  UNION ALL SELECT 3.5, 'Migration 4/6 · teneffus cezasi',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260823144543_break_penalty'
        AND checksum='ffa1b73b6d26d509c6e5e3ffb88b9a292630e24958019221a1ca8c6404a12199'), '1'
   UNION ALL SELECT 3.6, 'Migration 5/6 · ders bitisi',
@@ -18,7 +18,7 @@ WITH k AS (
        AND checksum='471a0d711809feadead51072c977097c2cfb9b1702cd0c572837d0295717f7ca'), '1'
   UNION ALL SELECT 3.7, 'Migration 6/6 · odev modulu',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260825152117_assignment_module'
-       AND checksum='485d7dbcf673252987540cacfc282971523fb0563b36aa1a86248e77bc1e2d26'), '1'
+       AND checksum='71bbf50cd7740dc8c769a9d227e7566eeb974c6968784b4ac2dbc5196f333289'), '1'
   UNION ALL SELECT 4, 'Fazladan/taninmayan migration kaydi',
     (SELECT coalesce(string_agg(migration_name,', '),'yok') FROM "_prisma_migrations"
        WHERE migration_name NOT IN ('20260821214524_init','20260822105533_harden_history_and_rls',
