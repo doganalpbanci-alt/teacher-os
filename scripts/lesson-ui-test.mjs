@@ -102,6 +102,24 @@ ok("Ikinci ders ACILMADI", (await ikinci.textContent(".hata")).includes("süren 
    await ikinci.textContent(".hata"));
 ok("Veritabaninda tek ders", toplamDers() === "1", `ders=${toplamDers()}`);
 
+// Uygulama kontrolu atlansa bile veritabani ikinci acik dersi kabul etmemeli.
+// Kural iki katmanli: buradaki dogrudan INSERT, uygulamayi devre disi birakip
+// yalnizca veritabani garantisini sinar. Bu kisit olmadan telefon ve akilli
+// tahtadan ayni anda basmak iki ders aciyordu.
+// Hata mesajina degil sonuca bakilir: psql ifade hatasinda da 0 donebilir,
+// o yuzden "kayit olustu mu" sorusu tek guvenilir olcut.
+const sinifIdSql = sql(`SELECT "classroomId" FROM "Lesson" LIMIT 1;`);
+const yarismaOncesi = toplamDers();
+try {
+  sql(`INSERT INTO "Lesson" (id,"classroomId",date,"createdAt")
+       VALUES ('l-yarisma','${sinifIdSql}', now(), now());`);
+} catch {
+  // Kisit reddetti; beklenen.
+}
+ok("Veritabani ikinci acik dersi REDDETTI", toplamDers() === yarismaOncesi,
+   `once=${yarismaOncesi} sonra=${toplamDers()}`);
+ok("Yarisma sonrasi hala tek ders", toplamDers() === "1", `ders=${toplamDers()}`);
+
 // --- E: Ders bitirme ---
 console.log("\nE. Ders bitirme");
 // Ikinci sekme aktif dersi gorsun: bitirildikten sonra eskimis kayit denemesi

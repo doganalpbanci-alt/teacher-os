@@ -112,6 +112,13 @@ export async function aktifDersiGetir(
 /**
  * Yeni ders açar. Sınıfta süren bir ders varsa açmaz: aynı anda tek ders
  * kuralı burada korunur, yanlışlıkla çift kayıt oluşmaz.
+ *
+ * Kural iki katmanlı. Buradaki kontrol olağan durumu karşılar ve öğretmene
+ * anlaşılır bir mesaj verir. Ama kontrol ile yazma arasında atomiklik yok:
+ * iki istek aynı anda gelirse (telefon ve akıllı tahta aynı anda) ikisi de
+ * "açık ders yok" görüp iki kayıt açabilir. Bu gerçekten yaşandı. Asıl
+ * garanti veritabanındaki kısmi unique index'tir; ikinci yazma oradan
+ * döner ve aşağıda aynı mesaja çevrilir.
  */
 export async function dersBaslat(sinifId: string): Promise<void> {
   const acik = await prisma.lesson.findFirst({
@@ -120,7 +127,20 @@ export async function dersBaslat(sinifId: string): Promise<void> {
   });
   if (acik) throw new DersHatasi("Bu sınıfta süren bir ders var. Önce onu bitirin.");
 
-  await prisma.lesson.create({ data: { classroomId: sinifId, date: new Date() } });
+  try {
+    await prisma.lesson.create({ data: { classroomId: sinifId, date: new Date() } });
+  } catch (error) {
+    // P2002: unique kisit ihlali. Burada tek anlami var — bu sinifta zaten
+    // acik bir ders var, yarisi oteki istek kazandi.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      (error as { code?: string }).code === "P2002"
+    ) {
+      throw new DersHatasi("Bu sınıfta süren bir ders var. Önce onu bitirin.");
+    }
+    throw error;
+  }
 }
 
 /**

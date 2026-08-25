@@ -16,22 +16,30 @@ WITH k AS (
   UNION ALL SELECT 3.6, 'Migration 5/6 · ders bitisi',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260823174546_lesson_ended_at'
        AND checksum='471a0d711809feadead51072c977097c2cfb9b1702cd0c572837d0295717f7ca'), '1'
-  UNION ALL SELECT 3.7, 'Migration 6/6 · odev modulu',
+  UNION ALL SELECT 3.7, 'Migration 6/7 · odev modulu',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260825152117_assignment_module'
        AND checksum='71bbf50cd7740dc8c769a9d227e7566eeb974c6968784b4ac2dbc5196f333289'), '1'
+  UNION ALL SELECT 3.8, 'Migration 7/7 · tek acik ders kisiti',
+    (SELECT count(*)::text FROM "_prisma_migrations" WHERE migration_name='20260825191157_lesson_single_open'
+       AND checksum='558337ff70a7f297c44533d391affac5bb9ecaf83ad9d56cf13209d132da3473'), '1'
   UNION ALL SELECT 4, 'Fazladan/taninmayan migration kaydi',
     (SELECT coalesce(string_agg(migration_name,', '),'yok') FROM "_prisma_migrations"
        WHERE migration_name NOT IN ('20260821214524_init','20260822105533_harden_history_and_rls',
                                     '20260822235800_behavior_template',
                                     '20260823144543_break_penalty',
                                     '20260823174546_lesson_ended_at',
-                                    '20260825152117_assignment_module')), 'yok'
+                                    '20260825152117_assignment_module',
+                                    '20260825191157_lesson_single_open')), 'yok'
   UNION ALL SELECT 5, 'Geri alinmis migration',
     (SELECT count(*)::text FROM "_prisma_migrations" WHERE rolled_back_at IS NOT NULL OR finished_at IS NULL), '0'
   UNION ALL SELECT 6, 'Tablo sayisi',
     (SELECT count(*)::text FROM pg_tables WHERE schemaname='public' AND tablename<>'_prisma_migrations'), '11'
+  -- Ayni sinifa ayni gun birden fazla ders islenebilmeli. Tek acik ders
+  -- kisiti bunu engellemez (yalnizca bitmemis dersleri kapsar), o yuzden
+  -- bu sayimdan haric tutulur.
   UNION ALL SELECT 7, 'Ayni gune ikinci ders (kisit kalkti mi)',
-    (SELECT count(*)::text FROM pg_indexes WHERE tablename='Lesson' AND indexdef ILIKE '%UNIQUE%' AND indexname<>'Lesson_pkey'), '0'
+    (SELECT count(*)::text FROM pg_indexes WHERE tablename='Lesson' AND indexdef ILIKE '%UNIQUE%'
+       AND indexname NOT IN ('Lesson_pkey','Lesson_tek_acik_ders')), '0'
   UNION ALL SELECT 8, 'Gecmis korumasi (RESTRICT baglanti)',
     (SELECT count(*)::text FROM pg_constraint WHERE contype='f' AND confdeltype='r'), '12'
   UNION ALL SELECT 9, 'Sinif arsivleme alani (isActive)',
@@ -57,6 +65,9 @@ WITH k AS (
     (SELECT CASE WHEN count(*)=0 THEN 'tek' ELSE 'coklu' END FROM (
        SELECT "classroomId" FROM "Lesson" WHERE "endedAt" IS NULL
        GROUP BY "classroomId" HAVING count(*) > 1) x), 'tek'
+  UNION ALL SELECT 17.5, 'Tek acik ders artik veritabani garantisi',
+    (SELECT count(*)::text FROM pg_indexes
+       WHERE tablename='Lesson' AND indexname='Lesson_tek_acik_ders'), '1'
   UNION ALL SELECT 18, 'Odev ogretmene bagli (Assignment.teacherId)',
     (SELECT count(*)::text FROM information_schema.columns
        WHERE table_name='Assignment' AND column_name='teacherId'), '1'
