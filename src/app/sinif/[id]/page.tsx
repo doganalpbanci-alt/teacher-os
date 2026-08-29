@@ -85,6 +85,9 @@ export default async function SinifSayfasi({
             <Link className="baglanti" href={`/sinif/${sinif.id}/odevler`}>
               Ödevler →
             </Link>
+            <Link className="baglanti" href={`/sinif/${sinif.id}/sinavlar`}>
+              Sınavlar →
+            </Link>
             <Link className="baglanti" href={`/sinif/${sinif.id}/dersler`}>
               Ders geçmişi →
             </Link>

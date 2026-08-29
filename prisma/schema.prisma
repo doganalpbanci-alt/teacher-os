@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Uygulama calisma zamani: Supabase transaction pooler (port 6543).
   url       = env("DATABASE_URL")
   // Migration ve introspection: pooler DDL/advisory lock desteklemedigi icin
@@ -37,6 +37,21 @@ enum SubmissionStatus {
 enum MessageStatus {
   DRAFT
   SENT
+}
+
+/// Sinavin ne ise yaradigi. Resmi sinavlar karneye gider ve donem ortalamasi
+/// onlardan hesaplanir; deneme/tarama ayni ortalamaya karismaz. Ayrim ortalama
+/// ekranlarinin hangi kayitlara bakacagini belirler.
+enum ExamScope {
+  OFFICIAL
+  PRACTICE
+}
+
+/// Bir sinav bileseninin puani nasil giriliyor. SCORE: ogretmen dogrudan puan
+/// yazar. NET: dogru/yanlis sayisi girilir, net ve puan hesaplanir.
+enum ComponentEntry {
+  SCORE
+  NET
 }
 
 // ---------- Core ----------
@@ -181,7 +196,7 @@ model BehaviorLog {
 /// tek tek secilen ogrencilere verilebilir. Kime verildigi Submission
 /// satirlarinda yazilidir; sinif uyeligi oradan turetilir, ayrica tutulmaz.
 model Assignment {
-  id          String    @id @default(cuid())
+  id          String  @id @default(cuid())
   teacherId   String
   title       String
   description String?
@@ -237,17 +252,64 @@ model Exam {
   title     String
   examDate  DateTime
 
-  /// Sinavin tam puani. Farkli tam puanli sinavlar ogrenci gelisimi
-  /// gorunumunde yuzdeye normalize edilebilsin diye sinav basina tutulur.
+  /// Sinavin tam puani. Her sinav 100 uzerinden degildir (Oxford sinavlari
+  /// cogunlukla degil), bu yuzden sinav basina tutulur. Karsilastirma ve
+  /// gelisim gorunumu ham puani degil bunun uzerinden yuzdeyi kullanir.
   maxScore Float @default(100)
+
+  /// Karneye giren resmi sinav mi, deneme/tarama mi. Ortalamalar bu ayrimi
+  /// kullanir: tarama sinavi karne ortalamasina karismaz.
+  scope ExamScope @default(PRACTICE)
 
   createdAt DateTime @default(now())
 
   // Restrict: sonuc gecmisi olan sinav, ogretmen silinerek yok edilemez.
-  teacher Teacher      @relation(fields: [teacherId], references: [id], onDelete: Restrict)
-  results ExamResult[]
+  teacher    Teacher         @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  components ExamComponent[]
+  results    ExamResult[]
 
   @@index([teacherId, examDate])
+}
+
+/// Sinavin parcasi ve o parcanin agirligi. MEB sinavi uc bilesendir
+/// (Yazili %50, Listening %25, Speaking %25); tek puanli bir sinav tek
+/// bilesendir. Boylece dort ayri sinav modeli yazmak yerine tek mekanizma
+/// hepsini karsilar, ve "sinifin Listening ortalamasi" sorulabilir hale gelir.
+///
+/// Bilesenler sinavin TANIMIDIR, gecmis degil: sinav silinirse birlikte gider.
+model ExamComponent {
+  id     String @id @default(cuid())
+  examId String
+
+  /// "Yazili", "Listening", "Speaking", "Reading"...
+  name String
+
+  /// Bilesenin sinav notuna agirligi, yuzde. Bir sinavin bilesen agirliklari
+  /// toplam 100 etmelidir; kural exam-rules.ts icinde dogrulanir.
+  weight Float
+
+  /// Bilesenin kendi tam puani. Bilesenler farkli tam puanlarda olabilir,
+  /// bu yuzden agirlikli hesap ham puani degil yuzdeyi kullanir.
+  maxScore Float @default(100)
+
+  /// Puan dogrudan mi girilir, dogru/yanlistan mi hesaplanir.
+  entry ComponentEntry @default(SCORE)
+
+  /// NET modunda soru sayisi. Net -> puan cevriminde paydadir.
+  questionCount Int?
+
+  /// NET modunda kac yanlisin bir dogruyu goturdugu. 3 = "3 yanlis 1 dogru
+  /// goturur". Null ise yanlis puani etkilemez, yalnizca kayit icin tutulur.
+  wrongDivisor Int?
+
+  /// Ekranda ve not girme tablosunda sutun sirasi.
+  order Int @default(0)
+
+  // Cascade: bilesen sinavin tanimina aittir, ayri bir gecmis degil.
+  exam    Exam                  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  entries ExamResultComponent[]
+
+  @@index([examId, order])
 }
 
 model ExamResult {
@@ -255,11 +317,20 @@ model ExamResult {
   examId    String
   studentId String
 
-  /// Puan. Null ise sinav bu ogrenciye verilmis ama notu HENUZ GIRILMEMISTIR.
-  /// Odevdeki PENDING satirinin karsiligi: sinavin kime verildigi bu
-  /// satirlarda yazili oldugu icin, puan girilmeden once de bos duramaz.
-  /// Ortalamalar yalnizca girilmis puanlardan hesaplanir.
+  /// Sinavin bu ogrenci icin agirlikli sonucu, sinavin kendi tam puani
+  /// uzerinden. KAYNAK DEGIL, TURETILMIS DEGERDIR: gercek veri bilesen
+  /// girdileridir (ExamResultComponent), bu alan hizli erisim icin tutulan
+  /// cached value'dur -- Student.performanceScore ile ayni prensip.
+  ///
+  /// Null ise sinav bu ogrenciye verilmis ama notu HENUZ TAMAMLANMAMISTIR.
+  /// Odevdeki PENDING satirinin karsiligi. Bir bilesen bile eksikse puan
+  /// hesaplanmaz: yarim girilmis MEB sinavi yaniltici bir dusuk not
+  /// gostermesin. Ortalamalar yalnizca hesaplanmis puanlardan olusur.
   score Float?
+
+  /// Ogrenci sinava girmedi. Bos puandan farkidir: bos "henuz girilmedi",
+  /// bu "girmeyecek" demektir. Ortalamaya katilmaz ama sayilabilir.
+  isAbsent Boolean @default(false)
 
   note      String?
   createdAt DateTime @default(now())
@@ -268,8 +339,38 @@ model ExamResult {
   exam    Exam    @relation(fields: [examId], references: [id], onDelete: Restrict)
   student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
 
+  entries ExamResultComponent[]
+
   @@unique([examId, studentId])
   @@index([studentId])
+}
+
+/// Bir ogrencinin bir sinav bilesenindeki ham girdisi. Sinav notunun kaynagi
+/// budur; ExamResult.score bundan hesaplanir.
+///
+/// SCORE modunda `score`, NET modunda `correct`/`wrong`/`blank` dolar.
+model ExamResultComponent {
+  id          String @id @default(cuid())
+  resultId    String
+  componentId String
+
+  /// SCORE modunda girilen ham puan, bilesenin kendi tam puani uzerinden.
+  score Float?
+
+  /// NET modunda dogru/yanlis/bos sayilari. Net bunlardan hesaplanir,
+  /// ayrica saklanmaz: sonradan yanlis oraninin degismesi gecmis kayitlari
+  /// bozmasin diye turetilmis deger tutulmaz.
+  correct Int?
+  wrong   Int?
+  blank   Int?
+
+  // Cascade: girdi sonucun ve bilesenin parcasidir, ayri bir gecmis degil.
+  // Bilesen sinavdan cikarilirsa girdileri de gider; ekran once uyarir.
+  result    ExamResult    @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  component ExamComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@unique([resultId, componentId])
+  @@index([componentId])
 }
 
 // ---------- Veli ----------

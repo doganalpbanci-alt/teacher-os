@@ -95,6 +95,7 @@ export function OdevFormu({
           secili={secili}
           onDegis={setSecili}
           isaretliIdler={isaretliKume}
+          bosMesaj="Ödev verilebilecek öğrenci yok. Önce bir sınıf ve öğrenci ekleyin."
         />
       </div>
 

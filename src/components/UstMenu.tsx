@@ -13,7 +13,7 @@ import { gundemSayisi } from "@/lib/assignment";
 export async function UstMenu({
   aktif,
 }: {
-  aktif: "siniflar" | "odevler" | "ayarlar";
+  aktif: "siniflar" | "odevler" | "sinavlar" | "ayarlar";
 }) {
   const ogretmen = await getCurrentTeacher();
   const bekleyen = await gundemSayisi(ogretmen.id);
@@ -39,6 +39,13 @@ export async function UstMenu({
               {bekleyen}
             </span>
           )}
+        </Link>
+        <Link
+          className={`ust-sekme${aktif === "sinavlar" ? " secili" : ""}`}
+          href="/sinavlar"
+          aria-current={aktif === "sinavlar" ? "page" : undefined}
+        >
+          Sınavlar
         </Link>
         <Link
           className={`ust-sekme${aktif === "ayarlar" ? " secili" : ""}`}

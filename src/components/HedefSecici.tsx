@@ -3,9 +3,12 @@
 import { useEffect, useRef } from "react";
 import type { HedefSinif } from "@/lib/assignment";
 
-// Ödevin kime verileceğini seçtiren liste. Sınıf başlığındaki kutu o sınıfın
+// Bir işin kime verileceğini seçtiren liste. Sınıf başlığındaki kutu o sınıfın
 // tamamını seçer; öğrenciler ayrıca tek tek işaretlenebilir. Birden fazla
 // sınıf aynı anda seçilebilir.
+//
+// Ödev ve sınav aynı seçimi yapar, bu yüzden bileşen ikisine de hizmet eder;
+// yalnızca boş durum metni çağırandan gelir.
 //
 // Seçim durumu üstteki formda tutulur: form hem seçimi gönderecek hem de
 // kaç işaretli kaydın kaybolacağını yazacak, ikisi aynı veriye bakmalı.
@@ -42,12 +45,14 @@ export function HedefSecici({
   secili,
   onDegis,
   isaretliIdler,
+  bosMesaj = "Verilebilecek öğrenci yok. Önce bir sınıf ve öğrenci ekleyin.",
 }: {
   siniflar: HedefSinif[];
   secili: Set<string>;
   onDegis: (yeni: Set<string>) => void;
   /** Seçimden çıkarılırsa kaydı kaybolacak öğrenciler (yalnızca düzenlemede). */
   isaretliIdler: Set<string>;
+  bosMesaj?: string;
 }) {
   function ogrenciDegistir(id: string, isaretli: boolean) {
     const yeni = new Set(secili);
@@ -66,11 +71,7 @@ export function HedefSecici({
   }
 
   if (siniflar.length === 0) {
-    return (
-      <p className="soluk">
-        Ödev verilebilecek öğrenci yok. Önce bir sınıf ve öğrenci ekleyin.
-      </p>
-    );
+    return <p className="soluk">{bosMesaj}</p>;
   }
 
   return (

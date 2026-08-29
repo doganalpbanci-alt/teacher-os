@@ -11,6 +11,11 @@ import {
   ogrenciOdevIstatistigi,
   odevTarihiYazisi,
 } from "@/lib/assignment";
+import {
+  ogrenciSinavlari,
+  ogrenciDonemOzetleri,
+  sinavTarihiYazisi,
+} from "@/lib/exam";
 import { NotFormu } from "@/components/NotFormu";
 import type { SubmissionStatus } from "@prisma/client";
 
@@ -58,16 +63,19 @@ export default async function OgrenciSayfasi({
   if (!ogrenci) notFound();
 
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
-  // Dördü de aynı öğrenciye bakar, birbirini beklemez.
+  // Hepsi aynı öğrenciye bakar, birbirini beklemez.
   // Teneffüs cezaları yalnızca kart sisteminde oluşur; basit sisteme geçilse
   // bile geçmişte kalanlar gösterilir.
-  const [ozet, gecmis, cezalar, odevler, odevOzeti] = await Promise.all([
-    ogrenciOzeti(ogrenci.id),
-    ogrenciGecmisi(ogrenci.id),
-    ogrenciCezalari(ogrenci.id),
-    ogrenciOdevleri(ogrenci.id, ogretmen.id),
-    ogrenciOdevIstatistigi(ogrenci.id, ogretmen.id),
-  ]);
+  const [ozet, gecmis, cezalar, odevler, odevOzeti, sinavlar, donemler] =
+    await Promise.all([
+      ogrenciOzeti(ogrenci.id),
+      ogrenciGecmisi(ogrenci.id),
+      ogrenciCezalari(ogrenci.id),
+      ogrenciOdevleri(ogrenci.id, ogretmen.id),
+      ogrenciOdevIstatistigi(ogrenci.id, ogretmen.id),
+      ogrenciSinavlari(ogrenci.id, ogretmen.id),
+      ogrenciDonemOzetleri(ogrenci.id, ogretmen.id),
+    ]);
 
   // Basit sistemde kartlar gündemde değil; kart sisteminde yıldız/kart öne çıkar.
   const olcumler = kartSistemi
@@ -140,6 +148,81 @@ export default async function OgrenciSayfasi({
           </>
         )}
       </section>
+
+      {/* Dönem özeti: karneye giren ortalama ile deneme ortalaması AYRI.
+          İkisi tek sayıya karışırsa ikisi de anlamını yitirir. Dönem sınavın
+          tarihinden türetilir, ayrı bir tablo yoktur. */}
+      {donemler.length > 0 && (
+        <section className="kart">
+          <h2>Dönem özeti</h2>
+          <ul className="liste">
+            {donemler.map((donem) => (
+              <li
+                key={`${donem.donem.yil}-${donem.donem.sira}`}
+                className="satir satir-durgun"
+              >
+                <span className="satir-ad">{donem.donem.etiket}</span>
+                <span className="satir-sag">
+                  {donem.denemeSinavSayisi > 0 && (
+                    <span className="rozet">
+                      deneme %{donem.denemeOrtalama} · {donem.denemeSinavSayisi} sınav
+                    </span>
+                  )}
+                  {donem.resmiSinavSayisi > 0 ? (
+                    <span className="oran">
+                      karne %{donem.resmiOrtalama} · {donem.resmiSinavSayisi} sınav
+                    </span>
+                  ) : (
+                    <span className="soluk">karneye giren sınav yok</span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {sinavlar.length > 0 && (
+        <section className="kart">
+          <h2>Sınavlar</h2>
+          {/* Puan yüzdeyle birlikte yazılır: sınavlar farklı tam puanlarda
+              olduğu için gelişim ancak yüzde üzerinden okunur. Sınıf
+              ortalaması yanında durur ki öğrencinin nerede olduğu görünsün. */}
+          <ul className="liste">
+            {sinavlar.map((sinav) => (
+              <li key={sinav.sinavId}>
+                <Link className="satir" href={`/sinavlar/${sinav.sinavId}`}>
+                  <span className="satir-ad">
+                    {sinav.baslik}
+                    <span className="soluk odev-tarih">
+                      {sinavTarihiYazisi(sinav.examDate)}
+                      {sinav.sinifOrtalamasiYuzde !== null &&
+                        ` · sınıf ort. %${sinav.sinifOrtalamasiYuzde}`}
+                    </span>
+                  </span>
+                  <span className="satir-sag">
+                    {sinav.scope === "OFFICIAL" && (
+                      <span className="rozet rozet-resmi">Resmî</span>
+                    )}
+                    {sinav.isAbsent ? (
+                      <span className="rozet">Girmedi</span>
+                    ) : sinav.puan === null ? (
+                      <span className="soluk">notu girilmedi</span>
+                    ) : (
+                      <>
+                        <span className="rozet">
+                          {sinav.puan} / {sinav.maxScore}
+                        </span>
+                        <span className="oran">%{sinav.yuzde}</span>
+                      </>
+                    )}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {odevler.length > 0 && (
         <section className="kart">
