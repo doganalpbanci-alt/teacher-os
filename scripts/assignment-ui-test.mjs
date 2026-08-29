@@ -36,8 +36,16 @@ const govde = () => sayfa.innerText("body");
 const say = (tablo) => sql(`SELECT count(*) FROM "${tablo}";`);
 
 // Gecmis ve gelecek tarihler: "suresi gecti" kurali bugune gore calisiyor.
+// "Bugun" UYGULAMANIN saydigi gundur: Europe/Istanbul. Sunucu UTC calisiyor,
+// ikisi 21:00-24:00 UTC arasinda farkli gunleri gosterir.
 const gun = (fark) => {
-  const d = new Date();
+  const bugun = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const d = new Date(`${bugun}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + fark);
   return d.toISOString().slice(0, 10);
 };

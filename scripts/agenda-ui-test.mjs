@@ -31,8 +31,17 @@ await oturumHazirla(sayfa, T);
 // innerText: textContent Next.js'in gomdugu RSC verisini de dondurur.
 const govde = () => sayfa.innerText("body");
 const panel = () => sayfa.locator("section.gundem");
+// "Bugun" UYGULAMANIN saydigi gundur: Europe/Istanbul. Sunucu UTC calisiyor,
+// ikisi 21:00-24:00 UTC arasinda farkli gunleri gosterir. UTC'ye gore
+// hesaplanirsa gun(0) o saatlerde "dun" olur ve test gecersiz yere kalir.
 const gun = (fark) => {
-  const d = new Date();
+  const bugun = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const d = new Date(`${bugun}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + fark);
   return d.toISOString().slice(0, 10);
 };
