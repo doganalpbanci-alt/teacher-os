@@ -3,16 +3,16 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 25 Ağustos 2026 · anlatılan kod durumu `main` = `baad251`
+Son güncelleme: 31 Ağustos 2026 · anlatılan kod durumu `main` = `3a05ccd`
 (üstündeki commit'ler yalnızca bu notun kendisidir)
 
 ---
 
 ## Proje nedir
 
-İngilizce öğretmenleri için öğrenci, sınıf, ders, ödev, davranış ve performans
-takip paneli. Tek öğretmenin kişisel aracı olarak başladı, artık çok
-öğretmenli çalışacak yapıda.
+İngilizce öğretmenleri için öğrenci, sınıf, ders, ödev, sınav, davranış ve
+performans takip paneli. Tek öğretmenin kişisel aracı olarak başladı, artık
+çok öğretmenli çalışacak yapıda.
 
 ## Nerede çalışıyor
 
@@ -64,7 +64,7 @@ alır. Yarım uygulanmış şema oluşmaz.
 
 ---
 
-## Migration'lar (7)
+## Migration'lar (9)
 
 ```
 20260821214524_init                    tablolar
@@ -74,10 +74,12 @@ alır. Yarım uygulanmış şema oluşmaz.
 20260823174546_lesson_ended_at         Lesson.endedAt + eski dersler kapatıldı
 20260825152117_assignment_module       Assignment sınıftan öğretmene taşındı
 20260825191157_lesson_single_open      tek açık ders kısıtı + birikmiş dersler kapatıldı
+20260825202845_exam_teacher_owned      Exam sınıftan öğretmene taşındı
+20260825205716_exam_components         ExamComponent + ExamResultComponent, scope, isAbsent
 ```
 
-Yedisi de Supabase'de uygulandı ve `verify-state.sql` ile doğrulandı
-(25 satır, hepsi TAMAM). Bekleyen migration yok.
+Dokuzu da Supabase'de uygulandı ve `verify-state.sql` ile doğrulandı
+(34 satır, hepsi TAMAM). Bekleyen migration yok.
 
 ---
 
@@ -95,12 +97,16 @@ src/lib/
                       kullanır, böylece kural iki yere kopyalanmaz
   penalty.ts          teneffüs cezası kuralları + kronometre durumu
   assignment.ts       ödev: oluşturma, atama, işaretleme, istatistik, gündem
+  exam.ts             sınav: oluşturma, atama, not girme, ortalama, istatistik
+  exam-rules.ts       sınav hesabının veritabanısız kısmı: şablonlar, net,
+                      ağırlıklı puan, dönem, bileşen form satırı. Ekran da
+                      sunucu da bunu kullanır, kural iki yere kopyalanmaz
   student-history.ts  öğrenci geçmişi ve dönem toplamları
   siralama.ts         Türkçe alfabe sıralaması
   form-state.ts       form durumu tipi
 
 src/components/
-  UstMenu.tsx            Sınıflarım · Ödevler · Ayarlar + gündem sayacı
+  UstMenu.tsx            Sınıflarım · Ödevler · Sınavlar · Ayarlar + gündem sayacı
   OgrenciSatiri.tsx      ders ekranındaki öğrenci satırı; iyimser güncelleme
   DavranisDugmeleri.tsx  şablona göre düğmeler, gönderimler sıraya girer
   DersKontrolu.tsx       duruma göre "Yeni ders başlat" ya da "Dersi bitir"
@@ -111,6 +117,11 @@ src/components/
   TopluIsaretle.tsx      sınıfın tamamını tek basışta işaretleme
   OdevIslemleri.tsx      düzenle · kopyala · arşivle · sil
   GundemPaneli.tsx       ana sayfadaki "Bugün kontrol edilecek"
+  SinavFormu.tsx         sınav oluşturma ve düzenleme (aynı form)
+  BilesenDuzenleyici.tsx sınavın parçaları; ağırlık toplamı canlı görünür
+  NotHucresi.tsx         not tablosunda tek hücre; alandan çıkınca kaydeder
+  GirmediDugmesi.tsx     "sınava girmedi" işareti
+  SinavIslemleri.tsx     düzenle · kopyala · sil
 
 src/app/
   page.tsx            gündem paneli + sınıf listesi
@@ -121,11 +132,17 @@ src/app/
   odevler/yeni/       ödev verme; ?kaynak=<id> ile kopyalama
   odevler/[odevId]/   ödev detayı: sınıfa göre gruplu öğrenciler
   odevler/[odevId]/duzenle/
-  ogrenci/[id]/       öğrenci: özet, not girme, ödevler, geçmiş, cezalar
+  sinif/[id]/sinavlar/ sınıfın sınavları + ortalama + öğrenci dökümü
+  sinavlar/           sınav listesi (tümü · resmî · deneme)
+  sinavlar/yeni/      sınav açma; ?kaynak=<id> ile kopyalama
+  sinavlar/[sinavId]/ not tablosu: sınıfa göre gruplu, bileşen sütunlu
+  sinavlar/[sinavId]/duzenle/
+  ogrenci/[id]/       öğrenci: özet, not girme, ödevler, sınavlar, geçmiş, cezalar
   ayarlar/            davranış şablonu seçimi
   giris/ kurulum/     oturum ekranları
   actions.ts          sınıf, öğrenci, ders, davranış, ceza action'ları
   odev-actions.ts     ödev action'ları (ayrı dosya; modül tek başına büyük)
+  sinav-actions.ts    sınav action'ları
   oturum-actions.ts   giriş / kurulum / çıkış
   middleware.ts       oturumsuz istekleri /giris'e yollar
 ```
@@ -180,6 +197,33 @@ ayrıca tutulmaz. Böylece aynı ödev birden fazla sınıfa ve tek tek seçilen
   kaydın kaybolacağını önceden yazar.
 - `Submission.note` şemada var, arayüzde **kullanılmıyor** (bilinçli).
 
+### Sınav kuralı
+**Sınav da bir sınıfa değil öğretmene aittir** (`Exam.teacherId`), ödevle
+aynı gerekçe. Kime verildiği `ExamResult` satırlarında yazılıdır.
+
+Bir sınav **bileşenlerden** oluşur. MEB sınavı üç bileşendir (Yazılı %50,
+Listening %25, Speaking %25); tek puanlı sınav tek bileşendir; tarama
+sınavında bileşen doğru/yanlış sayısından hesaplanır. Dört sınav türü için
+dört ayrı model yazmak yerine tek mekanizma hepsini karşılar, ve "sınıfın
+Listening ortalaması" sorulabilir hâle gelir.
+
+- **Ağırlıklı hesap ham puanı değil YÜZDEYİ kullanır.** Bileşenlerin tam
+  puanları farklı olabilir ve sınavın kendisi de 100 üzerinden olmayabilir
+  (Oxford sınavları çoğunlukla değil). 20 üzerinden bir Speaking, 100
+  üzerinden bir Yazılı ile başka türlü toplanamaz.
+- **Bir bileşen bile eksikse puan hesaplanmaz.** Yazılı bugün, Speaking
+  gelecek hafta girilir; eksiği sıfır saymak arada yanıltıcı bir düşük not
+  gösterirdi. Öğrenci gerçekten girmediyse öğretmen sıfırı kendisi yazar.
+- **"Girmedi" boş nottan farklıdır.** Boş "henüz girilmedi", girmedi
+  "girmeyecek" demektir. İşaretli öğrenci sayılır ama ortalamaya katılmaz.
+- **Resmî / deneme ayrımı** (`Exam.scope`): deneme sınavları karne
+  ortalamasına karışmaz. Varsayılan deneme.
+- **Dönem sınavın tarihinden türetilir**, ayrı tablo yoktur. 1. dönem
+  Eylül'de, 2. dönem Şubat'ta başlar; sınırlar `exam-rules` içinde sabit.
+- Kurum adları (Oxford, Cambridge) bilerek **şablon değildir**; kişiye özel
+  kurallar koda gömülmez. Oxford sınavı "Tek puan" şablonuyla, kendi tam
+  puanı yazılarak açılır.
+
 ### Günlük gündem
 Ana sayfadaki panel ve üst menüdeki sayaç. Bir ödev üç şart birden
 sağlıyorsa gündemdedir: arşivlenmemiş + teslim günü gelmiş ya da geçmiş +
@@ -191,8 +235,8 @@ okunmaz olur.
 
 ## Testler
 
-On üç arayüz testi, gerçek tarayıcıda (Playwright), toplam **338 kontrol**.
-Hepsi geçiyor.
+On dört arayüz testi (gerçek tarayıcıda, Playwright) ve bir saf hesap testi,
+toplam **407 kontrol**. Hepsi geçiyor.
 
 ```
 scripts/e2e-test.mjs                  sınıf ve öğrenci ekleme            33
@@ -208,7 +252,15 @@ scripts/layout-ui-test.mjs            telefon/tahta düzeni, sıralama     13
 scripts/assignment-ui-test.mjs        ödev verme, atama, işaretleme      43
 scripts/assignment-admin-ui-test.mjs  düzenleme, arşiv, silme, kopyalama 36
 scripts/agenda-ui-test.mjs            günlük gündem ve sayaç             24
+scripts/exam-ui-test.mjs              sınav açma, not girme, girmedi     40
+scripts/exam-rules-test.mjs           ağırlıklı puan, net, dönem         29
 ```
+
+`exam-rules-test.mjs` diğerlerinden farklı: tarayıcı açmaz, sunucu
+gerektirmez. Ağırlıklı puan, net ve dönem hesabı ne veritabanına ne ekrana
+bağlı olduğu için doğrudan sınanır. Kurallar TypeScript'te yazılı olduğundan
+test önce `scripts/exam-rules/kurallar.ts` dosyasını geçici bir dizine
+derler. Tek başına da çalışır: `node scripts/exam-rules-test.mjs`.
 
 `test-oturum.mjs`, `test-ders.mjs`, `test-form.mjs` ve `test-kayit.mjs`
 testlerin ortak adımlarıdır (giriş, ders başlatma, katlı öğrenci formunu
@@ -253,7 +305,7 @@ Testlerin çoğu SQL okur ya da yazar; `SQL_KOMUTU` her zaman tanımlı olmalı.
 Puan ders ekranında gösterilmediği için testler puanı kayıttan okur. Testler
 veri yazar — **üretim veritabanına karşı çalıştırılmaz.**
 
-### Test yazarken iki tuzak
+### Test yazarken dört tuzak
 - **`textContent("body")` kullanma, `innerText("body")` kullan.** İlki
   Next.js'in sayfaya gömdüğü RSC veri script'ini de döndürür; ekranda
   olmayan isimler orada geçer ve "şu öğrenci listede yok" gibi kontroller
@@ -261,6 +313,13 @@ veri yazar — **üretim veritabanına karşı çalıştırılmaz.**
 - **`psql` ifade hatasında da 0 çıkış kodu döndürür** (`ON_ERROR_STOP` yok).
   "Veritabanı bunu reddetti" gibi kontroller hata mesajına değil
   **gözlenebilir sonuca** bakmalı: kayıt sayısı değişti mi.
+- **Tarihleri Europe/Istanbul'a göre kur, UTC'ye göre değil.** Uygulama
+  "bugün"ü öğretmenin saat diliminde sayar; sunucu UTC çalışır. İkisi
+  21:00–24:00 UTC arasında farklı günleri gösterir, ve o saatlerde
+  UTC'den kurulmuş bir "bugün" testi haksız yere kalır. Bu gerçekten oldu.
+- **Beklerken ekranda ZATEN doğru olan bir metni bekleme.** `waitFor`
+  anında geçer ve test eski değeri okur. Değişecek olanın kendisini
+  bekle (örn. "3 bileşen eksik" değil "2 bileşen eksik").
 
 ---
 
@@ -271,8 +330,10 @@ yönetimi, davranış şablonları (basit +/− ve kart sistemi), sarı/kırmız
 performans puanı, öğrenci geçmişi, teneffüs cezası ve kronometre, ders
 yönetimi, ders ekranının telefon ve akıllı tahta için düzenlenmesi, **ödev
 modülü** (verme, çoklu sınıf/öğrenci atama, tarihler, işaretleme, toplu
-işaretleme, düzenleme, arşiv/silme, kopyalama, istatistikler) ve **günlük
-gündem**.
+işaretleme, düzenleme, arşiv/silme, kopyalama, istatistikler), **günlük
+gündem** ve **sınav modülü** (bileşenli sınavlar, şablonlar, ağırlıklı puan,
+net hesabı, girmedi işareti, resmî/deneme ayrımı, sınıf ve öğrenci
+istatistikleri).
 
 **Hız:** Vercel fonksiyonları `vercel.json` ile `dub1`'de (Dublin) çalışır —
 veritabanıyla aynı bölge. Varsayılan `iad1` (Washington) her sorguyu
@@ -282,21 +343,27 @@ paralel gider. Davranış düğmeleri sunucuyu beklemeden ekranı günceller.
 **Kurulum tamamlandı** — canlıda hesap mevcut, `/kurulum` kapalı.
 
 v0.1 ve v0.2 canlıda gerçek kullanımla doğrulandı. v0.3 (ödev) canlıda
-doğrulandı; gündem paneli henüz birkaç gün gerçek kullanımla sınanmadı.
+doğrulandı. **v0.4 (sınav) yeni deploy edildi; gündem paneli gibi o da henüz
+birkaç gün gerçek kullanımla sınanmadı.** İlk gerçek sınav girildiğinde
+bakılacak yer: ağırlıklı puan beklenen sonucu veriyor mu, not tablosu akıllı
+tahtada ve telefonda kullanılabiliyor mu.
 
-**Sırada:** `ROADMAP.md` v0.4 — sınav ve akademik takip. Şemada `Exam` ve
-`ExamResult` hazır, ama `Exam` da `classroomId`'ye bağlı: ödevde çözdüğümüz
-"tek sınıfa bağlılık" sorusu orada da çıkacak. Aynı kararı tekrar vermek
-gerekecek.
+**Sırada:** `ROADMAP.md` v0.5 — veli iletişimi. Şemada `ParentMessage` hazır
+bekliyor; `Student.parentName` ve `parentPhone` zaten dolduruluyor.
 
 ### Açık kalan küçük sorular
 - Kart şablonunda ders sırasında öğrencinin birikimi görünmüyor (puan
   kaldırıldı, yıldız sayısı hiç yoktu). İstenirse "bu derste kaç yıldız"
   sayacı eklenebilir.
-- Ders ekranında ödev görünürlüğü yok: ders sırasında kimin ödevini
+- Ders ekranında ödev ve sınav görünürlüğü yok: ders sırasında kimin ödevini
   yapmadığı görünmüyor. Ders ekranı bilerek sade tutulduğu için eklenmedi.
 - Gerçek telefon bildirimi (uygulama kapalıyken) yok. Gündem yalnızca
   uygulama içi. Push için service worker + VAPID + izin akışı gerekir.
+- Gündem yalnızca ödeve bakıyor; sınav gündeme düşmüyor. Sınav "notu
+  girilmemiş" hâliyle bir hatırlatma adayı, ama gerçek kullanım görülmeden
+  eklenmedi.
+- Karne ortalaması (resmî sınavların dönem ortalaması) hesaplanmıyor.
+  Veri buna hazır: `scope` ve `donemBul` var, eksik olan yalnızca ekran.
 
 ---
 
@@ -325,4 +392,19 @@ ya da akıllı tahtadan kullanır (tabletten değil).
 - **`pkill -f "next start"` kendi kabuğunu öldürür** (komut satırı eşleşir).
   Sunucuyu kapatmak için `ps -eo pid,cmd | grep next-server` ile pid bul.
   Eski sunucu ayakta kalırsa testler yeni build'i değil eskisini görür ve
-  yanıltıcı sonuç verir.
+  yanıltıcı sonuç verir. `ss -lptn` bazen sahibi göstermiyor; `ps` güvenilir.
+
+### Derlemenin yakalayamadığı iki hata sınıfı
+Sınav modülünde ikisi de yaşandı; `npm run build` temiz geçtiği hâlde sayfa
+çalışmıyordu. Yeni modülde **mutlaka tarayıcı testi yaz**, derleme yeterli
+değil.
+
+- **İstemci/sunucu sınırı.** Sunucu bileşeni, `"use client"` modülünden
+  export edilmiş bir fonksiyonu çağıramaz; sayfa çalışma zamanında 500
+  verir. Ortak yardımcılar `src/lib/` altında, `"use client"` taşımayan bir
+  dosyada durmalı (`exam-rules.ts` böyle).
+- **Form nesnesini doğrudan Prisma'ya yaymak.** `...b` ile yayılan form
+  satırı, düzenleme için taşınan `id` gibi fazladan alanları da götürür ve
+  kayıt reddedilir. TypeScript yakalamaz: fazladan alan kontrolü yalnızca
+  nesne değişmezlerinde çalışır, geniş tipli bir değişken geçilince değil.
+  `create`/`update` içinde alanları tek tek yaz.

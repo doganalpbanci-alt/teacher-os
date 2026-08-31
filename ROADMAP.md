@@ -41,18 +41,32 @@ kayıtlarından türetilir. Ayrıntısı `HANDOFF.md`'de.
 v0.3 canlıda kullanımda.
 
 ## v0.4 — Sınav & Akademik Takip
-- Sınav sonuçları
-- Sınıf ortalamaları
-- Öğrenci gelişimi
+- ✓ Sınav sonuçları *(bileşenli sınav: MEB üç parça, tek puan, tarama/net;
+  ağırlıklı hesap yüzde üzerinden)*
+- ✓ Sınıf ortalamaları *(sınav, sınıf ve bileşen bazında)*
+- ✓ Öğrenci gelişimi *(öğrenci sayfasında dönem dönem sınav geçmişi)*
 - Grafikler
 
-Not: `Exam` tablosu şu an `classroomId`'ye bağlı. Ödevde çözülen "tek sınıfa
-bağlılık" sorusu burada da çıkacak; aynı karar baştan verilmeli.
+Ayrıca tamamlandı: resmî/deneme ayrımı, "sınava girmedi" işareti, dönemin
+sınav tarihinden türetilmesi, sınav düzenleme ve kopyalama, öğrenci dökümü.
+
+Mimari karar ödevle aynı: sınav bir sınıfa değil öğretmene aittir. Ayrıntısı
+`HANDOFF.md`'de.
+
+Grafikler bilerek bırakıldı: sayılar okunur hâlde duruyor, grafiğin neyi
+göstermesi gerektiği birkaç dönem veri birikmeden belli olmaz.
+
+v0.4 canlıda, gerçek kullanım bekleniyor.
 
 ## v0.5 — Veli İletişimi
 - Veli bilgileri
 - Kişiselleştirilmiş mesajlar
 - Mesaj geçmişi
+
+Not: `ParentMessage` tablosu şemada hazır, `Student.parentName` ve
+`parentPhone` zaten dolduruluyor. Mesajın nasıl gönderileceği (uygulama
+içinde taslak mı, WhatsApp/SMS'e aktarma mı) kararlaştırılmadı; bu, işin
+kapsamını belirleyen ilk soru.
 
 ## v0.6 — Dashboard & Raporlama
 - Genel dashboard
