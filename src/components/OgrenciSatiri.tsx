@@ -44,6 +44,7 @@ export function OgrenciSatiri({
   arti,
   eksi,
   ceza,
+  kilitli = false,
 }: {
   ogrenciId: string;
   ad: string;
@@ -54,6 +55,8 @@ export function OgrenciSatiri({
   arti: number;
   eksi: number;
   ceza?: CezaOzeti;
+  /** Tahta kilitli: satırdaki hiçbir düğme kayıt yazmaz. */
+  kilitli?: boolean;
 }) {
   const sunucudan: SatirDurumu = { kart, arti, eksi };
   const [gorunen, iyimserUygula] = useOptimistic(
@@ -82,6 +85,7 @@ export function OgrenciSatiri({
             sinifId={sinifId}
             kalanSaniye={ceza.kalanSaniye}
             calisiyor={ceza.calisiyor}
+            kilitli={kilitli}
           />
         )}
       </span>
@@ -97,7 +101,8 @@ export function OgrenciSatiri({
           sinifId={sinifId}
           dersId={dersId}
           sablon={sablon}
-          onIyimser={iyimserUygula}
+          kilitli={kilitli}
+          onIyimser={kilitli ? undefined : iyimserUygula}
         />
       </span>
     </div>

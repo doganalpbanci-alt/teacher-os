@@ -967,3 +967,141 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
+
+/* ---------- Akıllı tahta kilidi ---------- */
+
+.kilit-seridi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.kilit-seridi form {
+  display: contents;
+}
+
+.kilit-dugme {
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  background: var(--kart);
+  color: var(--metin);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kilit-dugme:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.kilit-ikincil {
+  font-weight: 400;
+  color: var(--soluk);
+}
+
+.kilit-not {
+  flex: 1 1 12rem;
+}
+
+.kilit-rozet {
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kilit-acik .kilit-rozet {
+  background: #e6f4ec;
+  color: var(--basari);
+}
+
+.kilit-kapali .kilit-rozet {
+  background: #fdeaea;
+  color: var(--hata);
+}
+
+/* Kilitli düğme: görünür durur ama iş görmediği belli olur. */
+.davranis .kilitli {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+/* Tuş takımı. Akıllı tahtanın dokunmatiği güvenilmez olduğu için hedefler
+   iri ve az sayıda; küçük bir tuşa ıskalayarak basmak PIN'i yanlış girdirir. */
+.kilit-perde {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(20, 22, 26, 0.75);
+}
+
+.kilit-pad {
+  width: min(22rem, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  background: var(--kart);
+}
+
+.kilit-pad-baslik {
+  margin: 0;
+  font-weight: 600;
+  text-align: center;
+}
+
+.kilit-pad-nokta {
+  margin: 0;
+  min-height: 2rem;
+  color: var(--vurgu);
+  font-size: 1.75rem;
+  letter-spacing: 0.35rem;
+  text-align: center;
+  line-height: 1;
+}
+
+.kilit-tuslar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.kilit-tus {
+  padding: 1rem 0;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  background: var(--zemin);
+  color: var(--metin);
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  /* Tahtada arka arkaya basınca rakamların seçilmesini engeller. */
+  user-select: none;
+}
+
+.kilit-tus:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.kilit-tus-onay {
+  background: var(--basari);
+  border-color: var(--basari);
+  color: #ffffff;
+}
+
+.kilit-tus-sil {
+  color: var(--soluk);
+}

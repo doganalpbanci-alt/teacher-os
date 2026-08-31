@@ -15,6 +15,7 @@ export function CezaKontrolu({
   sinifId,
   kalanSaniye,
   calisiyor,
+  kilitli = false,
 }: {
   cezaId: string;
   sinifId: string;
@@ -22,6 +23,8 @@ export function CezaKontrolu({
   // için geri sayım bu değerden başlatılır.
   kalanSaniye: number;
   calisiyor: boolean;
+  /** Tahta kilitli: rozet kalan süreyi gösterir ama panel açılmaz. */
+  kilitli?: boolean;
 }) {
   const [durum, gonder, bekliyor] = useActionState(cezaGuncelle, BOS_FORM);
   const [acik, setAcik] = useState(false);
@@ -51,14 +54,15 @@ export function CezaKontrolu({
       <button
         type="button"
         className={`ceza-rozet${koşuyor ? " ceza-calisiyor" : ""}`}
-        onClick={() => setAcik((o) => !o)}
-        aria-expanded={acik}
+        onClick={kilitli ? undefined : () => setAcik((o) => !o)}
+        data-kilit-ac={kilitli ? "" : undefined}
+        aria-expanded={kilitli ? undefined : acik}
         aria-label={`Teneffüs cezası, kalan ${sureYazisi(kalan)}`}
       >
         ⏱ {koşuyor ? sureYazisi(kalan) : `${Math.ceil(kalan / 60)} dk`}
       </button>
 
-      {acik && (
+      {acik && !kilitli && (
         <span className="ceza-panel">
           <span className="ceza-sure">{sureYazisi(kalan)}</span>
           {bitti && <span className="ceza-bitti">Süre doldu</span>}

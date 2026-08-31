@@ -27,6 +27,7 @@ export function DavranisDugmeleri({
   sinifId,
   dersId,
   sablon,
+  kilitli = false,
   onIyimser,
 }: {
   ogrenciId: string;
@@ -34,6 +35,9 @@ export function DavranisDugmeleri({
   // Aktif ders yoksa null gelir; düğmeler pasif olur.
   dersId: string | null;
   sablon: BehaviorTemplate;
+  // Tahta kilitli: düğmeler görünür kalır ama kayıt yazmaz, basılınca PIN
+  // sorulur.
+  kilitli?: boolean;
   // Basılan eylemin sonucunu sunucuyu beklemeden gösterir. Kaydı yine sunucu
   // yazar; bu yalnızca ekrandaki geri bildirimdir.
   onIyimser?: (eylem: Eylem) => void;
@@ -62,15 +66,19 @@ export function DavranisDugmeleri({
       <input type="hidden" name="sinifId" value={sinifId} />
       <input type="hidden" name="dersId" value={dersId ?? ""} />
       {DUGMELER[sablon].map((dugme) => (
+        // Kilitliyken `disabled` KULLANILMAZ: tarayıcı disabled düğmede
+        // tıklama olayı üretmez, basış hiçbir şey yapmazdı. Düğme görünür
+        // ve basılabilir kalır, yalnızca gönderim yerine PIN sorar.
         <button
           key={dugme.deger}
-          type="submit"
+          type={kilitli ? "button" : "submit"}
           name="tur"
           value={dugme.deger}
-          className={dugme.sinif}
-          disabled={kapali}
-          aria-label={dugme.etiket}
-          title={dugme.etiket}
+          className={`${dugme.sinif}${kilitli ? " kilitli" : ""}`}
+          disabled={!kilitli && kapali}
+          data-kilit-ac={kilitli ? "" : undefined}
+          aria-label={kilitli ? `${dugme.etiket} (kilitli)` : dugme.etiket}
+          title={kilitli ? `${dugme.etiket} — tahta kilitli` : dugme.etiket}
         >
           {dugme.yazi}
         </button>

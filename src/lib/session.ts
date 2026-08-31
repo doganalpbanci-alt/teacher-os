@@ -10,8 +10,11 @@ const ALGORITMA = "HS256";
 /**
  * İmzalama anahtarı. Eksikse uygulama zayıf bir varsayılana düşmez, hata
  * verir: sessizce imzasız çalışan bir oturum, oturum olmamasından kötüdür.
+ *
+ * Tahta kilidinin jetonu da (`lock-token.ts`) aynı anahtarla imzalanır;
+ * ikisi de çerezde taşınan, kısa ömürlü, sunucunun ürettiği verilerdir.
  */
-function anahtar(): Uint8Array {
+export function imzaAnahtari(): Uint8Array {
   const gizli = process.env.SESSION_SECRET;
   if (!gizli || gizli.length < 32) {
     throw new Error(
@@ -27,14 +30,14 @@ export async function jetonUret(ogretmenId: string): Promise<string> {
     .setProtectedHeader({ alg: ALGORITMA })
     .setIssuedAt()
     .setExpirationTime(`${SURE_GUN}d`)
-    .sign(anahtar());
+    .sign(imzaAnahtari());
 }
 
 /** Jetondaki öğretmen id'si; imza veya süre geçersizse null. */
 export async function jetonuCoz(jeton: string | undefined): Promise<string | null> {
   if (!jeton) return null;
   try {
-    const { payload } = await jwtVerify(jeton, anahtar(), { algorithms: [ALGORITMA] });
+    const { payload } = await jwtVerify(jeton, imzaAnahtari(), { algorithms: [ALGORITMA] });
     const oid = payload.oid;
     return typeof oid === "string" && oid.length > 0 ? oid : null;
   } catch {

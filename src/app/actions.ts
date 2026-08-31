@@ -6,6 +6,7 @@ import { getCurrentTeacher } from "@/lib/current-teacher";
 import type { FormState } from "@/lib/form-state";
 import { dersBaslat, dersBitir, DersHatasi } from "@/lib/lesson";
 import { davranisKaydet, eylemGecerliMi, DavranisHatasi } from "@/lib/behavior";
+import { yazmaKilitli } from "@/lib/lock";
 
 const AD_SINIRI = 60;
 const TELEFON_SINIRI = 30;
@@ -28,6 +29,19 @@ function hata(
 
 function basarili(onceki: FormState): FormState {
   return { hata: null, deneme: onceki.deneme + 1, degerler: {} };
+}
+
+const KILIT_MESAJI = "Tahta kilitli. Önce PIN ile açın.";
+
+/**
+ * Ders ekranından ulaşılabilen her yazma işleminin başında durur.
+ *
+ * Middleware kilitli cihazı zaten tek sayfaya hapsediyor, ama düğmeyi
+ * gizlemek kuralın kendisi değildir: açık kalmış bir sekme ya da geri
+ * gönderilen bir form kilidi delmemeli. Kural yazmanın yanında durur.
+ */
+async function kilitliyseDur(onceki: FormState): Promise<FormState | null> {
+  return (await yazmaKilitli()) ? hata(onceki, KILIT_MESAJI, {}) : null;
 }
 
 export async function sinifOlustur(
@@ -61,6 +75,9 @@ export async function ogrenciEkle(
   onceki: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const kilit = await kilitliyseDur(onceki);
+  if (kilit) return kilit;
+
   const sinifId = metin(formData.get("sinifId"));
   const ad = metin(formData.get("ad"));
   const soyad = metin(formData.get("soyad"));
@@ -122,6 +139,9 @@ export async function yeniDersBaslat(
   onceki: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const kilit = await kilitliyseDur(onceki);
+  if (kilit) return kilit;
+
   const sinifId = metin(formData.get("sinifId"));
   if (!sinifId) return hata(onceki, "Sınıf bilgisi eksik.", {});
 
@@ -145,6 +165,9 @@ export async function dersiBitir(
   onceki: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const kilit = await kilitliyseDur(onceki);
+  if (kilit) return kilit;
+
   const dersId = metin(formData.get("dersId"));
   const sinifId = metin(formData.get("sinifId"));
   if (!dersId) return hata(onceki, "Ders bilgisi eksik.", {});
@@ -167,6 +190,9 @@ export async function davranisKaydiOlustur(
   onceki: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const kilit = await kilitliyseDur(onceki);
+  if (kilit) return kilit;
+
   const ogrenciId = metin(formData.get("ogrenciId"));
   const dersId = metin(formData.get("dersId"));
   const tur = metin(formData.get("tur"));
@@ -272,6 +298,9 @@ export async function cezaGuncelle(
   onceki: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const kilit = await kilitliyseDur(onceki);
+  if (kilit) return kilit;
+
   const cezaId = metin(formData.get("cezaId"));
   const islem = metin(formData.get("islem")) as CezaIslemi;
   const sinifId = metin(formData.get("sinifId"));

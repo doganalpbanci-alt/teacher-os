@@ -8,6 +8,8 @@ import { OgrenciFormu } from "@/components/OgrenciFormu";
 import { DersKontrolu } from "@/components/DersKontrolu";
 import { OgrenciSatiri, type CezaOzeti } from "@/components/OgrenciSatiri";
 import { bekleyenCezalar } from "@/lib/penalty";
+import { kilitDurumu } from "@/lib/lock";
+import { TahtaKilidi } from "@/components/TahtaKilidi";
 import { turkceSirala } from "@/lib/siralama";
 import type { Sayimlar } from "@/lib/behavior";
 
@@ -43,6 +45,12 @@ export default async function SinifSayfasi({
 
   if (!sinif) notFound();
 
+  // Tahta kilidi cihaza aittir, sınıfa değil: aynı sınıf telefonda açık,
+  // tahtada kilitli olabilir. Kilit başka bir sınıfa aitse middleware zaten
+  // buraya bırakmaz; yine de eşleşme aranır, kilit yanlış sınıfı kilitlemesin.
+  const kilit = await kilitDurumu();
+  const kilitli = kilit.kapali && kilit.sinifId === sinif.id;
+
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
   const ogrenciler = turkceSirala(
     sinif.students.map((o) => ({ id: o.id, ad: `${o.firstName} ${o.lastName}` })),
@@ -65,9 +73,22 @@ export default async function SinifSayfasi({
 
   return (
     <>
-      <Link className="geri" href="/">
-        ← Sınıflarım
-      </Link>
+      {/* Kilitliyken sayfadan çıkış yolu gösterilmez; middleware zaten
+          engelliyor, ama görünen bir bağlantı öğrenciyi denemeye çağırır. */}
+      {!kilitli && (
+        <Link className="geri" href="/">
+          ← Sınıflarım
+        </Link>
+      )}
+
+      <TahtaKilidi
+        sinifId={sinif.id}
+        pinVar={ogretmen.boardPin !== null}
+        kilitli={kilit.kilitli}
+        kapali={kilitli}
+        kalanSaniye={kilit.kalanSaniye}
+        bekleSaniye={kilit.bekleSaniye}
+      />
 
       <main className="kart ders-ekrani">
         {/* Ders sırasında bakılan tek satır: hangi ders açık ve nasıl
@@ -81,18 +102,20 @@ export default async function SinifSayfasi({
                 : "Aktif ders yok"}
             </span>
           </div>
-          <div className="ders-basi-sag">
-            <Link className="baglanti" href={`/sinif/${sinif.id}/odevler`}>
-              Ödevler →
-            </Link>
-            <Link className="baglanti" href={`/sinif/${sinif.id}/sinavlar`}>
-              Sınavlar →
-            </Link>
-            <Link className="baglanti" href={`/sinif/${sinif.id}/dersler`}>
-              Ders geçmişi →
-            </Link>
-            <DersKontrolu sinifId={sinif.id} aktifDersId={aktifDers?.id ?? null} />
-          </div>
+          {!kilitli && (
+            <div className="ders-basi-sag">
+              <Link className="baglanti" href={`/sinif/${sinif.id}/odevler`}>
+                Ödevler →
+              </Link>
+              <Link className="baglanti" href={`/sinif/${sinif.id}/sinavlar`}>
+                Sınavlar →
+              </Link>
+              <Link className="baglanti" href={`/sinif/${sinif.id}/dersler`}>
+                Ders geçmişi →
+              </Link>
+              <DersKontrolu sinifId={sinif.id} aktifDersId={aktifDers?.id ?? null} />
+            </div>
+          )}
         </div>
 
         {ogrenciler.length === 0 ? (
@@ -115,6 +138,7 @@ export default async function SinifSayfasi({
                     arti={sayim.arti}
                     eksi={sayim.eksi}
                     ceza={cezalar.get(ogrenci.id)}
+                    kilitli={kilitli}
                   />
                 </li>
               );
@@ -124,10 +148,12 @@ export default async function SinifSayfasi({
       </main>
 
       {/* Ders sırasında öğrenci eklenmez; form kapalı durur, istenince açılır. */}
-      <details className="kart katlanir">
-        <summary>Yeni öğrenci</summary>
-        <OgrenciFormu sinifId={sinif.id} />
-      </details>
+      {!kilitli && (
+        <details className="kart katlanir">
+          <summary>Yeni öğrenci</summary>
+          <OgrenciFormu sinifId={sinif.id} />
+        </details>
+      )}
     </>
   );
 }

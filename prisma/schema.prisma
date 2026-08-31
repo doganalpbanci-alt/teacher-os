@@ -68,6 +68,17 @@ model Teacher {
   // isledigi. Ayarlardan degistirilir.
   behaviorTemplate BehaviorTemplate @default(SIMPLE)
 
+  /// Akilli tahta kilidini acan PIN'in bcrypt hash'i. Hesap parolasindan
+  /// AYRIDIR ve bilerek oyle: tahtaya yazilan sey sinifin tamami tarafindan
+  /// gorulur, orada hesap parolasi yazilmamalidir. Ele gecerse yalnizca bu
+  /// deger degistirilir, hesap etkilenmez. Null ise kilit henuz kurulmamistir
+  /// ve cihaz kilitlenemez.
+  boardPin String?
+
+  /// PIN girildikten sonra cihazin kac dakika acik kalacagi. Sure dolunca
+  /// cihaz kendiliginden kilitlenir.
+  boardUnlockMinutes Int @default(10)
+
   classrooms     Classroom[]
   behaviorLogs   BehaviorLog[]
   assignments    Assignment[]
