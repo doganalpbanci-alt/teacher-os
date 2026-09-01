@@ -1,4 +1,4 @@
-import type { BehaviorTemplate } from "@prisma/client";
+import type { BehaviorTemplate, BehaviorType } from "@prisma/client";
 
 // Şablon kurallarının veritabanına dokunmayan kısmı. Ekran, düğmeye basıldığı
 // anda sonucu göstermek için aynı kuralı kullanır; kural iki yere kopyalanmaz.
@@ -65,3 +65,23 @@ export function eylemiUygula(
 
   return { ...durum, kart: "KIRMIZI", eksi: durum.eksi + 1 };
 }
+
+/**
+ * Tahtanın canlı bildiriminde bir kaydın nasıl görüneceği: simge ve etiket.
+ * Ders ekranındaki düğme simgeleriyle aynı fikri taşır ama ayrı bir amaca
+ * hizmet eder (buton değil, bildirim), o yüzden ayrı tutulur.
+ */
+export const OLAY_GORUNUMU: Record<
+  BehaviorTemplate,
+  Partial<Record<BehaviorType, { yazi: string; etiket: string }>>
+> = {
+  SIMPLE: {
+    PLUS: { yazi: "+", etiket: "artı aldı" },
+    MINUS: { yazi: "−", etiket: "eksi aldı" },
+  },
+  CARD: {
+    PLUS: { yazi: "★", etiket: "yıldız aldı" },
+    YELLOW_CARD: { yazi: "🟨", etiket: "sarı kart aldı" },
+    RED_CARD: { yazi: "🟥", etiket: "kırmızı kart aldı" },
+  },
+};

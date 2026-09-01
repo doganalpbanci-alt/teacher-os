@@ -1105,3 +1105,64 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 .kilit-tus-sil {
   color: var(--soluk);
 }
+
+/* ---------- Canlı yayın (telefondan verilen kart tahtada) ---------- */
+
+.canli-yayin {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.canli-ses-dugmesi {
+  pointer-events: auto;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 999px;
+  background: var(--kart);
+  color: var(--metin);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.canli-ses-dugmesi:disabled {
+  cursor: default;
+  color: var(--basari);
+  border-color: var(--basari);
+}
+
+.canli-bildirim {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-radius: 0.75rem;
+  background: var(--metin);
+  color: #ffffff;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  animation: canli-bildirim-gir 0.2s ease-out;
+}
+
+.canli-bildirim-simge {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.canli-bildirim-metin {
+  font-size: 1.125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@keyframes canli-bildirim-gir {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}

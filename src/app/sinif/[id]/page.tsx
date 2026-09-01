@@ -10,6 +10,7 @@ import { OgrenciSatiri, type CezaOzeti } from "@/components/OgrenciSatiri";
 import { bekleyenCezalar } from "@/lib/penalty";
 import { kilitDurumu } from "@/lib/lock";
 import { TahtaKilidi } from "@/components/TahtaKilidi";
+import { SinifCanliBildirimleri } from "@/components/SinifCanliBildirimleri";
 import { turkceSirala } from "@/lib/siralama";
 import type { Sayimlar } from "@/lib/behavior";
 
@@ -154,6 +155,15 @@ export default async function SinifSayfasi({
           <OgrenciFormu sinifId={sinif.id} />
         </details>
       )}
+
+      {/* Ayrı bir "tahta sayfası" yok: bu bileşen ekran zaten tahta
+          sayılacak kadar genişse (globals.css'teki aynı 1280px eşiği)
+          kendini etkinleştirir. Telefon bunu hiç görmez. */}
+      <SinifCanliBildirimleri
+        dersId={aktifDers?.id ?? null}
+        sablon={ogretmen.behaviorTemplate}
+        baslangicZamani={new Date().toISOString()}
+      />
     </>
   );
 }

@@ -13,6 +13,14 @@ function kilitliYol(sinifId: string): string {
 
 export async function middleware(istek: NextRequest) {
   const yol = istek.nextUrl.pathname;
+
+  // API rotaları burada denetlenmez: sayfa yönlendirmesi (giriş/kilit) bir
+  // `fetch` isteğine HTML döndürür, çağıran taraf onu JSON sanıp patlar. Her
+  // API rotası kendi oturum ve sahiplik kontrolünü kendi yapar — bkz.
+  // src/app/api/ders/[dersId]/olaylar/route.ts. Yeni bir API rotası eklenirse
+  // bu kontrolü kendisi yapmak zorundadır, buradan bedava gelmez.
+  if (yol.startsWith("/api/")) return NextResponse.next();
+
   const acikYol = ACIK_YOLLAR.some((acik) => yol === acik || yol.startsWith(`${acik}/`));
 
   // Middleware Edge'de çalışır, veritabanına erişemez; yalnızca çerezlerin
