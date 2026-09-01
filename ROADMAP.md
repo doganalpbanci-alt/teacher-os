@@ -93,6 +93,38 @@ raporlama · AI · smartboard.
 
 ---
 
+## Ekstra — Gamification (opsiyonel modül)
+
+Numaralı sıranın dışında tutulur: davranış şablonu gibi (`Teacher.behaviorTemplate`)
+öğretmen bazlı açılıp kapanan ayrı bir modül olacak. Kart/yıldız sistemini
+kullanmayan ya da bu tarz bir ödül mekaniği istemeyen öğretmen hiç görmeyecek.
+v1.0'ın temel tanımına dahil değildir.
+
+Büyükten küçüğe değil, en basitinden en büyüğüne düşünülüyor — her aşama
+kendi başına anlamlı, bir sonrakini beklemek zorunda değil:
+
+- Sınıf hedefleri *(toplu yıldız/kart sayacı bir eşiğe ulaşınca ödül —
+  "100 yıldızda film günü" gibi)*
+- Tecrübe puanı (XP) ve seviye
+- Bireysel ödüller
+- Karakter özelleştirme
+- Öğrenciler arası düello
+
+Mimari not: kaynak veri yine `BehaviorLog` olacak (ya da yanına eklenecek
+benzer bir event tablosu). XP ve seviye `Student.performanceScore` ile aynı
+prensiple çalışır — geçmiş kayıttan **türetilen**, hızlı erişim için
+tutulan bir değer; kayıtların kendisi hiçbir zaman silinip yeniden yazılmaz.
+
+Sınıf hedefleri en basit ve en bağımsız parça: mevcut kart sistemi üzerine
+kurulur, başka hiçbir modülü beklemez. Bu yüzden istenirse v0.5'i beklemeden
+de ele alınabilir — sıra öğretmenin isteğine göre belirlenir, roadmap
+numarasına göre değil. XP/seviyeden itibaren gelen kısım daha büyük bir
+mimari karar gerektirir (XP'nin kaynağı, performans notuyla ilişkisi,
+seviyenin neyi temsil ettiği) ve şimdilik yalnızca yer ayrılıyor;
+tasarımı iş sırası geldiğinde yapılır.
+
+---
+
 ## Notlar
 - Bu belge bağlayıcı talimat değildir; yön gösterir.
 - Gerçek kullanım geri bildirimlerine göre versiyon sırası değişebilir.
