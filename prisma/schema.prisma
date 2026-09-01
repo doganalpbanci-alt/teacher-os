@@ -109,6 +109,12 @@ model Student {
   parentName  String?
   parentPhone String?
 
+  /// Ogretmenin, bu iletisim bilgisini kullanmak icin velinin bilgisi/izni
+  /// oldugunu beyan ettigi an. Telefon her girildiginde/guncellendiginde
+  /// yeniden istenir ve bu deger tazelenir. KVKK uyumlulugunun garantisi
+  /// DEGILDIR -- yalnizca ogretmenin beyaninin zaman damgali izidir.
+  parentConsentAt DateTime?
+
   // Cached value. Kaynak gerçek BehaviorLog kayıtlarıdır; loglardan yeniden hesaplanabilir.
   performanceScore Int @default(90)
 

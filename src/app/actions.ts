@@ -83,6 +83,7 @@ export async function ogrenciEkle(
   const soyad = metin(formData.get("soyad"));
   const veliAdi = metin(formData.get("veliAdi"));
   const veliTelefonu = metin(formData.get("veliTelefonu"));
+  const veliOnayi = formData.get("veliOnayi") === "on";
 
   const girilen = { ad, soyad, veliAdi, veliTelefonu };
 
@@ -99,6 +100,16 @@ export async function ogrenciEkle(
     return hata(
       onceki,
       `Veli telefonu en fazla ${TELEFON_SINIRI} karakter olabilir.`,
+      girilen,
+    );
+  }
+  // Telefon numarası girilecekse iznin teyidi zorunlu; isteğe bağlı olan
+  // yalnızca telefonun kendisi, izin değil. Bu, KVKK uyumluluğunu garanti
+  // etmez -- yalnızca öğretmenin beyanının zaman damgalı bir izini tutar.
+  if (veliTelefonu.length > 0 && !veliOnayi) {
+    return hata(
+      onceki,
+      "Veli telefonu girmek için iznin olduğunu onaylamalısınız.",
       girilen,
     );
   }
@@ -120,6 +131,7 @@ export async function ogrenciEkle(
         lastName: soyad,
         parentName: bosIseNull(veliAdi),
         parentPhone: bosIseNull(veliTelefonu),
+        parentConsentAt: veliTelefonu.length > 0 ? new Date() : null,
       },
     });
   } catch {

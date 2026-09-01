@@ -62,6 +62,7 @@ export default async function OgrenciSayfasi({
       lastName: true,
       parentName: true,
       parentPhone: true,
+      parentConsentAt: true,
       performanceScore: true,
       classroom: { select: { id: true, name: true } },
     },
@@ -301,6 +302,9 @@ export default async function OgrenciSayfasi({
         ogrenciId={ogrenci.id}
         veliAdi={ogrenci.parentName}
         veliTelefonu={ogrenci.parentPhone}
+        sonOnayYazisi={
+          ogrenci.parentConsentAt ? dersTarihiYazisi(ogrenci.parentConsentAt) : null
+        }
       />
 
       {cezalar.length > 0 && (

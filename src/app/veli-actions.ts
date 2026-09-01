@@ -80,13 +80,14 @@ export async function veliBilgisiKaydet(
   const ogrenciId = metin(formData.get("ogrenciId"));
   const veliAdi = metin(formData.get("veliAdi"));
   const veliTelefonu = metin(formData.get("veliTelefonu"));
+  const veliOnayi = formData.get("veliOnayi") === "on";
   const girilen = { veliAdi, veliTelefonu };
 
   if (!ogrenciId) return hata(onceki, "Öğrenci bilgisi eksik.", girilen);
 
   try {
     const ogretmen = await getCurrentTeacher();
-    await veliBilgisiGuncelle(ogrenciId, ogretmen.id, veliAdi, veliTelefonu);
+    await veliBilgisiGuncelle(ogrenciId, ogretmen.id, veliAdi, veliTelefonu, veliOnayi);
   } catch (error) {
     if (error instanceof VeliMesajHatasi) return hata(onceki, error.message, girilen);
     return hata(onceki, "Kaydedilemedi. Veritabanına ulaşılamıyor olabilir.", girilen);

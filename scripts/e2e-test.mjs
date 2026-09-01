@@ -128,6 +128,7 @@ await sayfa.getByLabel("Ad", { exact: true }).fill("Zeynep");
 await sayfa.getByLabel("Soyad").fill("Arslan");
 await sayfa.getByLabel(/Veli adı/).fill("Fatma Arslan");
 await sayfa.getByLabel(/Veli telefonu/).fill("05551112233");
+await sayfa.getByRole("checkbox").check();
 await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
 await metinBekle(sayfa, "Zeynep");
 let govde = await sayfa.textContent("body");
@@ -161,6 +162,9 @@ await hataBekle(sayfa, "Soyadsiz reddedildi", "Öğrenci soyadı boş olamaz.");
 ok("Hatadan sonra ad korundu", (await sayfa.getByLabel("Ad", { exact: true }).inputValue()) === "Ali");
 
 await sayfa.getByLabel(/Veli telefonu/).fill("05559998877");
+// Telefon girilince izin kutusu gorunur ve `required` olur; soyad uzunlugunu
+// sinamak icin once kutu isaretlenir, yoksa tarayici gonderimi kendisi engeller.
+await sayfa.getByRole("checkbox").check();
 await uzunGonder(sayfa, sayfa.getByLabel("Soyad"), 61);
 await hataBekle(sayfa, "61 karakterlik soyad sunucuda reddedildi", "en fazla 60 karakter");
 ok("Hatadan sonra veli telefonu korundu",
@@ -168,11 +172,28 @@ ok("Hatadan sonra veli telefonu korundu",
 ok("Hatadan sonra ad hala duruyor",
   (await sayfa.getByLabel("Ad", { exact: true }).inputValue()) === "Ali");
 
+// Telefon girilip izin onaylanmazsa sunucu reddeder (hukuki/KVKK gerekcesi:
+// veli iletisim verisi icin ogretmenin izin beyaninin zaman damgali izi).
+// Onceki hatali gonderimden sonra kutu isaretsiz baslar (bkz. OgrenciFormu:
+// `girilen` icinde veliOnayi tasinmaz). `required` nitelik tarayicida
+// engeller; sunucunun BAGIMSIZ olarak da reddettigini kanitlamak icin
+// nitelik kaldirilip oyle gonderilir (bkz. lock-ui-test'teki ayni desen).
+await sayfa.getByLabel("Soyad").fill("Veli");
+await sayfa.locator('input[name="veliOnayi"]').evaluate((el) => el.removeAttribute("required"));
+await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
+await hataBekle(sayfa, "Onaysiz telefon reddedildi", "iznin olduğunu onaylamalısınız");
+
+await sayfa.getByRole("checkbox").check();
+await sayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
+await metinBekle(sayfa, "Ali Veli");
+ok("Onay verilince ogrenci eklendi", (await sayfa.textContent("body")).includes("Ali Veli"));
+
 // --- G: Ana sayfaya yansima ---
 console.log("\nG. Ana sayfaya yansima");
 await sayfa.goto(TEMEL, { waitUntil: "networkidle" });
 const anaGovde = (await sayfa.textContent("body")).replace(/\s+/g, " ");
-ok("5-A icin 2 ogrenci", /5-A\s*2 öğrenci/.test(anaGovde), anaGovde.slice(0, 160));
+// F bolumunde "Ali Veli" eklendigi icin artik 3 (Zeynep, Mert, Ali Veli).
+ok("5-A icin 3 ogrenci", /5-A\s*3 öğrenci/.test(anaGovde), anaGovde.slice(0, 160));
 ok("6-B icin 0 ogrenci", /6-B\s*0 öğrenci/.test(anaGovde));
 
 // --- H: Olmayan sinif ---
@@ -196,7 +217,8 @@ console.log("\nJ. Kalicilik");
 await sayfa.reload({ waitUntil: "networkidle" });
 govde = await sayfa.textContent("body");
 ok("Yenilemeden sonra veriler duruyor", govde.includes("Zeynep Arslan") && govde.includes("Işıl"));
-ok("Ogrenci sayisi 3", (await sayfa.locator(".ogrenci").count()) === 3);
+// Zeynep, Mert, Ali Veli, Işıl.
+ok("Ogrenci sayisi 4", (await sayfa.locator(".ogrenci").count()) === 4);
 
 await tarayici.close();
 console.log(`\n=== SONUC: ${gecti} gecti, ${kaldi} kaldi ===`);

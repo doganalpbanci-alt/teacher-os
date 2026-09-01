@@ -1265,3 +1265,18 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   cursor: default;
   pointer-events: none;
 }
+
+/* ---------- Veli izin onayı ---------- */
+
+.onay-satiri {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--soluk);
+}
+
+.onay-satiri input[type="checkbox"] {
+  margin-top: 0.1875rem;
+  flex-shrink: 0;
+}

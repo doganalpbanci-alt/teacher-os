@@ -112,6 +112,7 @@ await sayfa.locator("summary", { hasText: "Veli bilgilerini düzenle" }).click()
 const veliForm = sayfa.locator("form").filter({ has: sayfa.getByLabel("Veli adı") });
 await veliForm.getByLabel("Veli adı").fill("Ayşe Aydın");
 await veliForm.getByLabel("Veli telefonu").fill("0555 123 45 67");
+await veliForm.getByRole("checkbox").check();
 await veliForm.getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 ok("Veli bilgisi veritabaninda", sql(`SELECT "parentPhone" FROM "Student" WHERE id='${OGRENCI_ID}';`) === "0555 123 45 67");

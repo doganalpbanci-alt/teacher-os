@@ -133,18 +133,28 @@ const TELEFON_SINIRI = 30;
  * Bir öğrencinin veli adı/telefonunu günceller. Öğrenci eklenirken de
  * girilebilir; bu, sonradan düzeltmek ya da eksik bırakılanı tamamlamak
  * içindir.
+ *
+ * Telefon her kaydedildiğinde (ilk giriş ya da değişiklik fark etmeksizin)
+ * izin teyidi zorunludur ve `parentConsentAt` tazelenir. Bu, KVKK
+ * uyumluluğunu garanti etmez — yalnızca öğretmenin beyanının zaman damgalı
+ * bir izini tutar. Bkz. `ogrenciEkle` (src/app/actions.ts) aynı kuralı
+ * öğrenci ekleme anında uygular.
  */
 export async function veliBilgisiGuncelle(
   ogrenciId: string,
   ogretmenId: string,
   veliAdi: string,
   veliTelefonu: string,
+  veliOnayi: boolean,
 ): Promise<void> {
   if (veliAdi.length > AD_SINIRI) {
     throw new VeliMesajHatasi(`Veli adı en fazla ${AD_SINIRI} karakter olabilir.`);
   }
   if (veliTelefonu.length > TELEFON_SINIRI) {
     throw new VeliMesajHatasi(`Veli telefonu en fazla ${TELEFON_SINIRI} karakter olabilir.`);
+  }
+  if (veliTelefonu.length > 0 && !veliOnayi) {
+    throw new VeliMesajHatasi("Veli telefonu girmek için iznin olduğunu onaylamalısınız.");
   }
 
   const ogrenci = await prisma.student.findFirst({
@@ -158,6 +168,7 @@ export async function veliBilgisiGuncelle(
     data: {
       parentName: veliAdi.length > 0 ? veliAdi : null,
       parentPhone: veliTelefonu.length > 0 ? veliTelefonu : null,
+      parentConsentAt: veliTelefonu.length > 0 ? new Date() : null,
     },
   });
 }
