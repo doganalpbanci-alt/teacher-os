@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CikisDugmesi } from "@/components/CikisDugmesi";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import { gundemSayisi } from "@/lib/assignment";
+import { taslakSayisi } from "@/lib/parent-message";
 
 // Uygulamanın üst sekmeleri. Ödevler artık sınıfın altında değil kendi
 // başına bir bölüm: öğretmen ödevi sınıftan bağımsız verir ve birden fazla
@@ -13,10 +14,13 @@ import { gundemSayisi } from "@/lib/assignment";
 export async function UstMenu({
   aktif,
 }: {
-  aktif: "siniflar" | "odevler" | "sinavlar" | "ayarlar";
+  aktif: "siniflar" | "odevler" | "sinavlar" | "veli" | "ayarlar";
 }) {
   const ogretmen = await getCurrentTeacher();
-  const bekleyen = await gundemSayisi(ogretmen.id);
+  const [bekleyen, taslak] = await Promise.all([
+    gundemSayisi(ogretmen.id),
+    taslakSayisi(ogretmen.id),
+  ]);
 
   return (
     <nav className="ust-menu">
@@ -46,6 +50,18 @@ export async function UstMenu({
           aria-current={aktif === "sinavlar" ? "page" : undefined}
         >
           Sınavlar
+        </Link>
+        <Link
+          className={`ust-sekme${aktif === "veli" ? " secili" : ""}`}
+          href="/veli"
+          aria-current={aktif === "veli" ? "page" : undefined}
+        >
+          Veli
+          {taslak > 0 && (
+            <span className="sekme-sayac" aria-label={`${taslak} taslak mesaj bekliyor`}>
+              {taslak}
+            </span>
+          )}
         </Link>
         <Link
           className={`ust-sekme${aktif === "ayarlar" ? " secili" : ""}`}

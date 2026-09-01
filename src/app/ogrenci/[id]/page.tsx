@@ -16,8 +16,15 @@ import {
   ogrenciDonemOzetleri,
   sinavTarihiYazisi,
 } from "@/lib/exam";
+import { ogrenciMesajGecmisi } from "@/lib/parent-message";
 import { NotFormu } from "@/components/NotFormu";
-import type { SubmissionStatus } from "@prisma/client";
+import { VeliBilgisiFormu } from "@/components/VeliBilgisiFormu";
+import type { SubmissionStatus, MessageStatus } from "@prisma/client";
+
+const MESAJ_DURUMU_YAZISI: Record<MessageStatus, string> = {
+  DRAFT: "Taslak",
+  SENT: "Gönderildi",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +73,7 @@ export default async function OgrenciSayfasi({
   // Hepsi aynı öğrenciye bakar, birbirini beklemez.
   // Teneffüs cezaları yalnızca kart sisteminde oluşur; basit sisteme geçilse
   // bile geçmişte kalanlar gösterilir.
-  const [ozet, gecmis, cezalar, odevler, odevOzeti, sinavlar, donemler] =
+  const [ozet, gecmis, cezalar, odevler, odevOzeti, sinavlar, donemler, veliMesajlari] =
     await Promise.all([
       ogrenciOzeti(ogrenci.id),
       ogrenciGecmisi(ogrenci.id),
@@ -75,6 +82,7 @@ export default async function OgrenciSayfasi({
       ogrenciOdevIstatistigi(ogrenci.id, ogretmen.id),
       ogrenciSinavlari(ogrenci.id, ogretmen.id),
       ogrenciDonemOzetleri(ogrenci.id, ogretmen.id),
+      ogrenciMesajGecmisi(ogrenci.id, ogretmen.id),
     ]);
 
   // Basit sistemde kartlar gündemde değil; kart sisteminde yıldız/kart öne çıkar.
@@ -256,6 +264,44 @@ export default async function OgrenciSayfasi({
           </ul>
         </section>
       )}
+
+      <section className="kart">
+        <div className="sayfa-basi">
+          <h2>Veli mesajları</h2>
+          <Link className="baglanti" href={`/veli/yeni/${ogrenci.id}`}>
+            + Yeni mesaj
+          </Link>
+        </div>
+        {veliMesajlari.length === 0 ? (
+          <p className="soluk">Henüz veli mesajı yok.</p>
+        ) : (
+          <ul className="liste">
+            {veliMesajlari.map((mesaj) => (
+              <li key={mesaj.id} className="satir satir-durgun">
+                <span className="satir-ad">
+                  {mesaj.body}
+                  <span className="soluk odev-tarih">
+                    {dersTarihiYazisi(mesaj.createdAt)}
+                  </span>
+                </span>
+                <span className="satir-sag">
+                  <span
+                    className={`teslim-rozet ${mesaj.status === "SENT" ? "t-done" : "t-pending"}`}
+                  >
+                    {MESAJ_DURUMU_YAZISI[mesaj.status]}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <VeliBilgisiFormu
+        ogrenciId={ogrenci.id}
+        veliAdi={ogrenci.parentName}
+        veliTelefonu={ogrenci.parentPhone}
+      />
 
       {cezalar.length > 0 && (
         <section className="kart">
