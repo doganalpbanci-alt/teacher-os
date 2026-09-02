@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { BehaviorTemplate, BehaviorType } from "@prisma/client";
 import { OLAY_GORUNUMU } from "@/lib/behavior-rules";
 import { sesCal } from "@/lib/board-sound";
@@ -47,6 +48,7 @@ export function SinifCanliBildirimleri({
    *  kullanılmaz — akıllı tahtanın sistem saati güvenilir olmayabilir. */
   baslangicZamani: string;
 }) {
+  const router = useRouter();
   const [etkin, setEtkin] = useState(false);
   const [sesAcik, setSesAcik] = useState(false);
   const [gosterilen, setGosterilen] = useState<Olay | null>(null);
@@ -96,10 +98,16 @@ export function SinifCanliBildirimleri({
     }, BILDIRIM_SURESI_MS);
   }
 
+  // İmleç yalnızca DERS değişince sıfırlanır, her yeni `baslangicZamani`
+  // değerinde değil: aşağıdaki `router.refresh()` sunucudan taze bir zaman
+  // damgası getirir ve bu effect ona da bağlı olsaydı imleç ileri atlar,
+  // tazeleme ile bir sonraki yoklama arasına düşen olaylar hiç görünmezdi.
+  // İlk değer zaten `useRef(baslangicZamani)` ile mount'ta alınıyor.
   useEffect(() => {
     sonKontrol.current = baslangicZamani;
     kuyruk.current = [];
-  }, [dersId, baslangicZamani]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dersId]);
 
   useEffect(() => {
     if (!etkin || !dersId) return;
@@ -120,6 +128,12 @@ export function SinifCanliBildirimleri({
         if (veri.olaylar.length > 0) {
           kuyruk.current.push(...veri.olaylar);
           siradakiniGoster();
+          // Bildirim geçicidir; altındaki liste (kimde kaç yıldız, kartı ne
+          // renkte) sayfa yüklendiği andaki hâlinde donuk kalırdı. Tahta bir
+          // ilan panosu gibi açık dururken sınıfın oradan okuduğu şey bu
+          // liste, o yüzden olay geldikçe tazelenir. Yalnızca gerçekten yeni
+          // olay varken çağrılır: boş yoklamada sunucuya iş çıkarmaz.
+          router.refresh();
         }
       } catch {
         // Ağ hatası: bir sonraki yoklamada tekrar denenir, sessizce geçilir.

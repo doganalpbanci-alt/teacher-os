@@ -94,6 +94,20 @@ ok("Yoklama gercekten calisiyordu", (await yoklamaSayaci(tahta)) > yoklamaOncesi
 await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 5000 });
 ok("Bildirim kendiliginden kapandi", (await tahta.locator(".canli-bildirim").count()) === 0);
 
+// Bildirim geciciydi; asil mesele altindaki listenin de tazelenmesi. Tahta
+// bir ilan panosu gibi acik dururken sinifin okudugu sey o liste.
+await tahta
+  .locator("li")
+  .filter({ hasText: "Elif" })
+  .filter({ hasText: "1 artı" })
+  .waitFor({ timeout: 8000 })
+  .catch(() => {});
+ok(
+  "Alttaki liste de tazelendi (yenilemeden)",
+  (await satir(tahta, "Elif").innerText()).includes("1 artı"),
+  (await satir(tahta, "Elif").innerText()).replace(/\s+/g, " "),
+);
+
 // --- D. Ses yalnizca acilinca calar ---
 console.log("\nD. Ses acma");
 const sesOncesi = await sesSayaci(tahta);
