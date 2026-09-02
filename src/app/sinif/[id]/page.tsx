@@ -163,6 +163,7 @@ export default async function SinifSayfasi({
         dersId={aktifDers?.id ?? null}
         sablon={ogretmen.behaviorTemplate}
         baslangicZamani={new Date().toISOString()}
+        kilitli={kilitli}
       />
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BehaviorTemplate, BehaviorType } from "@prisma/client";
 import { OLAY_GORUNUMU } from "@/lib/behavior-rules";
@@ -9,12 +9,19 @@ import { sesCal } from "@/lib/board-sound";
 // Telefondan verilen bir kart/yıldızın tahtada anında görünmesi ve dikkat
 // çekici bir ses çalması.
 //
-// AYRI BİR SAYFA YOK: bu bileşen mevcut sınıf ekranına eklenir ve yalnızca
-// ekran zaten "tahta" sayılacak kadar genişse (globals.css'teki 1280px eşiği
-// ile aynı) kendini etkinleştirir — telefon bunu hiç görmez, hiç yoklama
-// yapmaz. Bu eşik kesin bir "bu cihaz tahta" bilgisi değil, genişlik
-// tahminidir; geniş bir dizüstünde de açılır, zararsızdır (ses yine
-// dokunmadan çalmaz).
+// AYRI BİR SAYFA YOK: bu bileşen mevcut sınıf ekranına eklenir.
+//
+// NE ZAMAN ETKİN: varsayılan olarak ekran genişliği globals.css'teki 1280px
+// eşiğini geçtiğinde (yani ekran zaten "tahta" sayılacak kadar genişse) —
+// telefon bunu kendiliğinden hiç açmaz. Ama bu yalnızca bir TAHMİN: tahtayı
+// bölünmüş ekranda dar bir şeride koyduğunda genişlik düşer ve tahmin yanılır.
+// Bu yüzden öğretmen açık bir düğmeyle her iki yöne de karar verebilir; seçim
+// cihazda (localStorage) kalır, sunucuya gitmez — cihaza özel bir tercihtir,
+// tıpkı kilidin cihaza ait olması gibi.
+//
+// Düğme yalnızca GÖRÜNÜMÜ değil, canlı katmanı açar: iki sütunlu büyük düzen
+// hâlâ CSS'teki genişlik eşiğine bağlıdır. Dar bir şeritte bildirim ve ses
+// gelir ama düzen kompakt kalır — zaten dar şeritte istenen de budur.
 //
 // Websocket ya da Supabase Realtime KULLANILMAZ: tarayıcıdan doğrudan
 // veritabanına erişim, sahiplik kuralını (her sorgu öğretmen id'siyle
@@ -24,6 +31,7 @@ import { sesCal } from "@/lib/board-sound";
 const TAHTA_ESIGI = "(min-width: 1280px)";
 const YOKLAMA_ARALIGI_MS = 2000;
 const BILDIRIM_SURESI_MS = 2500;
+const SECIM_ANAHTARI = "teacher_os_tahta_modu";
 
 // Yalnızca tarayıcı testlerinin gözlemlemesi için: sesin çalındığını ve
 // yoklamanın çalıştığını doğrudan doğrulamanın başka yolu yok (Playwright
@@ -37,19 +45,46 @@ declare global {
 
 type Olay = { id: string; tur: BehaviorType; ogrenciAdi: string };
 
+/** null = karar verilmemiş, genişliğe bakılır. */
+type Secim = boolean | null;
+
+function secimiOku(): Secim {
+  try {
+    const deger = window.localStorage.getItem(SECIM_ANAHTARI);
+    if (deger === "acik") return true;
+    if (deger === "kapali") return false;
+  } catch {
+    // Gizli sekme ya da depolama kapalı: karar verilmemiş sayılır.
+  }
+  return null;
+}
+
+function secimiYaz(secim: Secim): void {
+  try {
+    if (secim === null) window.localStorage.removeItem(SECIM_ANAHTARI);
+    else window.localStorage.setItem(SECIM_ANAHTARI, secim ? "acik" : "kapali");
+  } catch {
+    // Yazılamazsa seçim yalnızca bu oturum için geçerli olur.
+  }
+}
+
 export function SinifCanliBildirimleri({
   dersId,
   sablon,
   baslangicZamani,
+  kilitli,
 }: {
   dersId: string | null;
   sablon: BehaviorTemplate;
   /** Sunucuda üretilmiş ISO zaman damgası. İstemcinin kendi saati asla
    *  kullanılmaz — akıllı tahtanın sistem saati güvenilir olmayabilir. */
   baslangicZamani: string;
+  /** Kilitli tahtada mod düğmesi gizlenir: öğrenci canlı yayını kapatamasın. */
+  kilitli: boolean;
 }) {
   const router = useRouter();
-  const [etkin, setEtkin] = useState(false);
+  const [genis, setGenis] = useState(false);
+  const [secim, setSecim] = useState<Secim>(null);
   const [sesAcik, setSesAcik] = useState(false);
   const [gosterilen, setGosterilen] = useState<Olay | null>(null);
 
@@ -59,24 +94,30 @@ export function SinifCanliBildirimleri({
   const kuyruk = useRef<Olay[]>([]);
   const gosteriliyor = useRef(false);
 
+  // Öğretmenin açık seçimi genişlik tahminini her iki yönde de ezer.
+  const etkin = secim ?? genis;
+
   useEffect(() => {
     sesAcikRef.current = sesAcik;
   }, [sesAcik]);
 
-  // Genişlik eşiği: aynı css breakpoint'i JS tarafında da izler. Bir
-  // pencerenin bu eşiği ders sırasında geçmesi beklenmez ama dinleyici
-  // ucuz olduğu için eklendi.
+  useEffect(() => {
+    setSecim(secimiOku());
+  }, []);
+
+  // Genişlik eşiği: aynı css breakpoint'i JS tarafında da izler. Bölünmüş
+  // ekranda pencere bu eşiği geçebildiği için dinleyici gerçekten gerekli.
   useEffect(() => {
     const sorgu = window.matchMedia(TAHTA_ESIGI);
-    setEtkin(sorgu.matches);
-    const dinle = (olay: MediaQueryListEvent) => setEtkin(olay.matches);
+    setGenis(sorgu.matches);
+    const dinle = (olay: MediaQueryListEvent) => setGenis(olay.matches);
     sorgu.addEventListener("change", dinle);
     return () => sorgu.removeEventListener("change", dinle);
   }, []);
 
   // Sıradaki bildirimi gösterir; yalnızca ref'lere dokunduğu için bileşen
   // yeniden render olsa bile davranışı değişmez (bayat closure sorunu yok).
-  function siradakiniGoster() {
+  const siradakiniGoster = useCallback(function goster() {
     if (gosteriliyor.current) return;
     const olay = kuyruk.current.shift();
     if (!olay) return;
@@ -94,9 +135,9 @@ export function SinifCanliBildirimleri({
     setTimeout(() => {
       gosteriliyor.current = false;
       setGosterilen(null);
-      siradakiniGoster();
+      goster();
     }, BILDIRIM_SURESI_MS);
-  }
+  }, []);
 
   // İmleç yalnızca DERS değişince sıfırlanır, her yeni `baslangicZamani`
   // değerinde değil: aşağıdaki `router.refresh()` sunucudan taze bir zaman
@@ -142,10 +183,7 @@ export function SinifCanliBildirimleri({
 
     const zamanlayici = setInterval(yokla, YOKLAMA_ARALIGI_MS);
     return () => clearInterval(zamanlayici);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [etkin, dersId]);
-
-  if (!etkin || !dersId) return null;
+  }, [etkin, dersId, router, siradakiniGoster]);
 
   async function sesiAc() {
     if (!sesBaglami.current) sesBaglami.current = new AudioContext();
@@ -153,15 +191,33 @@ export function SinifCanliBildirimleri({
     setSesAcik(true);
   }
 
+  function moduDegistir() {
+    const yeni = !etkin;
+    setSecim(yeni);
+    secimiYaz(yeni);
+  }
+
+  // Kilitliyken düğme yok (öğrenci kapatamasın), canlı katman kapalıysa da
+  // gösterilecek bir şey kalmaz.
+  if (kilitli && !etkin) return null;
+
   const gorunum = gosterilen ? OLAY_GORUNUMU[sablon][gosterilen.tur] : undefined;
 
   return (
     <div className="canli-yayin">
-      <button type="button" className="canli-ses-dugmesi" onClick={sesiAc} disabled={sesAcik}>
-        {sesAcik ? "🔊 Ses açık" : "🔈 Sesi aç"}
-      </button>
+      {!kilitli && (
+        <button type="button" className="canli-mod-dugmesi" onClick={moduDegistir}>
+          {etkin ? "🖥 Tahta modu açık" : "🖥 Tahta modu"}
+        </button>
+      )}
 
-      {gosterilen && gorunum && (
+      {etkin && (
+        <button type="button" className="canli-ses-dugmesi" onClick={sesiAc} disabled={sesAcik}>
+          {sesAcik ? "🔊 Ses açık" : "🔈 Sesi aç"}
+        </button>
+      )}
+
+      {etkin && gosterilen && gorunum && (
         <div className="canli-bildirim" role="status" aria-live="polite">
           <span className="canli-bildirim-simge" aria-hidden="true">
             {gorunum.yazi}

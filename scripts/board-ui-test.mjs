@@ -252,6 +252,41 @@ ok("Baska ogretmenin dersi bos doner (bulundugu sizdirilmaz)",
   JSON.stringify(ikinciYanit));
 await ikinciBaglami.close();
 
+// --- I. Tahta modu dugmesi (dar ekranda elle acma) ---
+// Genislik esigi yalnizca bir TAHMIN; bolunmus ekranda tahta dar bir seride
+// duser ve tahmin yanilir. Dugme bu yuzden var: dar ekranda da acilabilmeli.
+console.log("\nI. Tahta modu dugmesi");
+await telefon.goto(`${T}${SINIF_ADRESI}`, { waitUntil: "networkidle" });
+await telefon.waitForSelector(".canli-mod-dugmesi", { timeout: 10000 });
+ok("Dar ekranda mod dugmesi var", (await telefon.locator(".canli-mod-dugmesi").count()) === 1);
+ok("Acilmadan ses dugmesi YOK", (await telefon.locator(".canli-ses-dugmesi").count()) === 0);
+
+const modOncesiYoklama = await yoklamaSayaci(telefon);
+await telefon.getByRole("button", { name: /Tahta modu/ }).click();
+await telefon.waitForSelector(".canli-ses-dugmesi", { timeout: 10000 });
+ok("Dugmeye basinca canli katman acildi", (await telefon.locator(".canli-ses-dugmesi").count()) === 1);
+
+await telefon.waitForTimeout(3000);
+ok(
+  "Dar ekranda da yoklama basladi",
+  (await yoklamaSayaci(telefon)) > modOncesiYoklama,
+  `${modOncesiYoklama} -> ${await yoklamaSayaci(telefon)}`,
+);
+
+// Secim cihazda kalir: tahtayi bir kez ayarlayip her derste yeniden
+// ugrasmak gerekmesin.
+await telefon.reload({ waitUntil: "networkidle" });
+await telefon.waitForSelector(".canli-ses-dugmesi", { timeout: 10000 });
+ok("Secim yenilemeden sonra da duruyor", (await telefon.locator(".canli-ses-dugmesi").count()) === 1);
+
+await telefon.getByRole("button", { name: /Tahta modu açık/ }).click();
+await telefon.waitForFunction(
+  () => document.querySelector(".canli-ses-dugmesi") === null,
+  null,
+  { timeout: 10000 },
+);
+ok("Tekrar basinca kapaniyor", (await telefon.locator(".canli-ses-dugmesi").count()) === 0);
+
 console.log(`\nSonuc: ${gecti} gecti, ${kaldi} kaldi\n`);
 await tarayici.close();
 process.exit(kaldi === 0 ? 0 : 1);
