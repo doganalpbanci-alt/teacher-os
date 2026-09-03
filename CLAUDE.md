@@ -60,6 +60,22 @@ ait olduğunu doğrulamalıdır. Bu kural unutulursa veri ayrımı sessizce deli
 ## Gelecek
 Mimari ileride Exam, PDF processing, AI assistant, reporting, smartboard ve gamification eklenmesine uygun olmalı. Bunları MVP'ye gereksiz yere dahil etme.
 
+## Dallanma ve deploy
+- `main` = production. Vercel'de otomatik yayına girer, gerçek Supabase
+  veritabanına bağlıdır. **main'e doğrudan merge yok.**
+- `staging` = test ortamı. Ayrı bir Vercel Preview ortamı ve ayrı, izole bir
+  Supabase projesi kullanır; orada yazılan hiçbir şey production verisine
+  karışmaz.
+- Akış: her özellik önce kendi `claude/...` dalında geliştirilir → `staging`'e
+  mergelenir → öğretmen orada test edip onaylar → ancak ondan sonra `main`'e
+  mergelenir.
+- Şema değişikliği yapılırsa migration SQL'i **iki** veritabanına da
+  uygulanmalı (production'da her zamanki onay akışıyla, staging'de ayrıca)
+  — yoksa staging'in şeması sürüklenir ve orada test etmek anlamsızlaşır.
+- `staging`'de yeni kodu görmek için dala gerçek bir commit push edilmelidir.
+  Vercel'deki "Redeploy", var olan bir deployment'ı aynı commit'le yeniden
+  build eder, dal değiştirmez.
+
 ## Çalışma yöntemi
 Önce incele → planla → onay al → uygula → test et → kısa rapor ver.
 

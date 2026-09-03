@@ -24,10 +24,14 @@ sebebini gosterir.
 ## Vercel'e deploy
 
 1. Vercel'de projeyi bu depoya bagla (Framework: Next.js, otomatik algilanir).
-2. Settings > Environment Variables altina `DATABASE_URL` ve `DIRECT_URL`
-   degerlerini ekle. `.env.example` icindeki aciklamalar gecerlidir.
-3. Degiskenleri Production, Preview ve Development ortamlarinin hepsine ekle;
-   aksi halde preview deployment'lar veritabanina ulasamaz.
+2. Settings > Environment Variables altina `DATABASE_URL`, `DIRECT_URL` ve
+   `SESSION_SECRET` degerlerini ekle. `.env.example` icindeki aciklamalar
+   gecerlidir.
+3. Production ve Preview icin AYRI degerler kullan: Preview (`staging` dali)
+   kendi izole Supabase projesine baglanmali, production'a degil. Ayni
+   degeri iki ortama da eklemek, staging'de yapilan testlerin gercek
+   ogrenci verisine karismasina yol acar. Bkz. `HANDOFF.md` > "Dallanma ve
+   staging".
 
 `DATABASE_URL` transaction pooler (port 6543) olmalidir: serverless ortamda
 her istek yeni bir baglanti acar, pooler bunu tasir. `connection_limit=1` ve
