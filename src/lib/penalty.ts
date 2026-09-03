@@ -83,6 +83,44 @@ export async function kirmiziKartCezasiEkle(
   }
 }
 
+/**
+ * Kırmızı kart geri alındığında cezasını da geri alır.
+ *
+ * Eklenirken `cezaDakikasi(sira)` kadar süre eklenmişti; aynı süreyi geri
+ * almak için `sira` aynı şekilde hesaplanmalı — yani bu fonksiyon kart
+ * HENÜZ SİLİNMEDEN çağrılmalıdır, tıpkı ekleyen tarafın kart yazıldıktan
+ * SONRA çağrılması gibi. İki taraf aynı sayıma bakar.
+ *
+ * Tamamlanmış cezaya dokunulmaz: öğrenci teneffüsü zaten kaçırdıysa o
+ * yaşanmış bir şeydir, kaydı geri almak onu geri getirmez.
+ */
+export async function kirmiziKartCezasiGeriAl(
+  tx: Prisma.TransactionClient,
+  ogrenciId: string,
+  sinifId: string,
+  aktifDersId: string,
+): Promise<void> {
+  const sira = await kacinciKirmizi(tx, ogrenciId, sinifId, aktifDersId);
+  const cikarilacak = cezaDakikasi(sira) * 60;
+
+  const acik = await tx.breakPenalty.findFirst({
+    where: { studentId: ogrenciId, completedAt: null },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!acik) return;
+
+  const kalanSaniye = acik.seconds - cikarilacak;
+  if (kalanSaniye > 0) {
+    await tx.breakPenalty.update({
+      where: { id: acik.id },
+      data: { seconds: kalanSaniye },
+    });
+  } else {
+    // Ceza yalnızca bu karttan doğmuştu; kart geri alınınca kaydı da kalkar.
+    await tx.breakPenalty.delete({ where: { id: acik.id } });
+  }
+}
+
 export type CezaDurumu = {
   id: string;
   toplamSaniye: number;

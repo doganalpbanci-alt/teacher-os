@@ -326,6 +326,49 @@ a.satir:hover .satir-ad {
   cursor: default;
 }
 
+/* Geri alma: yanlış basılan tuşu düzeltir, bir eylem düğmesi değildir. Bu
+   yüzden artı/kart düğmelerinden küçük ve soluk durur — telefonda yan yana
+   dururken yanlışlıkla ona basılmasın diye de araya bir boşluk konur. */
+.geri-al {
+  position: relative;
+  display: flex;
+  margin-right: 0.25rem;
+}
+
+.geri-al button {
+  width: 1.875rem;
+  height: 1.875rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--soluk);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.geri-al button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Hata satırın içinde yer kaplasaydı öğrenci adını kısaltırdı; altına
+   taşar ve bir sonraki tazelemede kendiliğinden kaybolur. */
+.geri-al .hata {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 1;
+  margin-top: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.375rem;
+  background: var(--kart);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
 .kart-rozet {
   flex-shrink: 0;
   font-size: 0.75rem;
