@@ -5,6 +5,7 @@ import { useOptimistic } from "react";
 import type { BehaviorTemplate } from "@prisma/client";
 import { DavranisDugmeleri } from "@/components/DavranisDugmeleri";
 import { CezaKontrolu } from "@/components/CezaKontrolu";
+import { GeriAlDugmesi } from "@/components/GeriAlDugmesi";
 import {
   eylemiUygula,
   type Eylem,
@@ -45,6 +46,7 @@ export function OgrenciSatiri({
   eksi,
   ceza,
   kilitli = false,
+  geriAlinabilir = false,
 }: {
   ogrenciId: string;
   ad: string;
@@ -57,6 +59,8 @@ export function OgrenciSatiri({
   ceza?: CezaOzeti;
   /** Tahta kilitli: satırdaki hiçbir düğme kayıt yazmaz. */
   kilitli?: boolean;
+  /** Süren derste bu öğrencinin geri alınabilecek bir kaydı var mı. */
+  geriAlinabilir?: boolean;
 }) {
   const sunucudan: SatirDurumu = { kart, arti, eksi };
   const [gorunen, iyimserUygula] = useOptimistic(
@@ -95,6 +99,16 @@ export function OgrenciSatiri({
           <span className="rozet">
             {gorunen.arti} artı · {gorunen.eksi} eksi
           </span>
+        )}
+        {/* Kilitli tahtada geri alma yok: tahta bir gösterim ekranı,
+            düzeltme öğretmenin kendi cihazından yapılır. */}
+        {geriAlinabilir && !kilitli && dersId && (
+          <GeriAlDugmesi
+            ogrenciId={ogrenciId}
+            sinifId={sinifId}
+            dersId={dersId}
+            ad={ad}
+          />
         )}
         <DavranisDugmeleri
           ogrenciId={ogrenciId}
