@@ -99,13 +99,24 @@ console.log("\nC. Sinif formu dogrulamasi");
 await sayfa.getByRole("button", { name: "Sınıf ekle" }).click();
 await hataBekle(sayfa, "Bos ad reddedildi", "Sınıf adı boş olamaz.");
 
+// Iki ret de AYNI metni gosteriyor ("Sınıf adı boş olamaz."). Onceki .hata
+// dugumunu once yakalamazsak, ikinci hataBekle kosulu hemen (yanlislikla)
+// dogru olur: hala eskisine bakiyordur, ikinci gonderimin remount'unu hic
+// beklemez. Once eskisinin DOM'dan dusmesini bekleyip oyle devam ediyoruz.
+const oncekiHataDugumu = await sayfa.locator(".hata").elementHandle();
 await sayfa.getByLabel("Sınıf adı").fill("   ");
 await sayfa.getByRole("button", { name: "Sınıf ekle" }).click();
+await oncekiHataDugumu.waitForElementState("hidden");
 await hataBekle(sayfa, "Sadece bosluk reddedildi", "Sınıf adı boş olamaz.");
 
-// maxLength istemci tarafinda; sunucu korumasini dogrulamak icin kaldiriliyor.
-ok("Hatadan sonra sinif adi korundu",
-  (await sayfa.getByLabel("Sınıf adı").inputValue()) === "   ");
+// Sunucu deger her zaman trim'ler (metin()); sadece boslukdan olusan bir ad
+// trim sonrasi bos dize olur, o yuzden alan bos gorunur - bu dogru davranis,
+// gorunmez bosluklari "korumanin" kullaniciya bir faydasi olmazdi.
+{
+  const gercekDeger = await sayfa.getByLabel("Sınıf adı").inputValue();
+  ok("Hatadan sonra sinif adi trim'lenmis olarak geldi",
+    gercekDeger === "", `deger=${JSON.stringify(gercekDeger)}`);
+}
 
 await uzunGonder(sayfa, sayfa.getByLabel("Sınıf adı"), 61);
 await hataBekle(sayfa, "61 karakterlik sinif adi sunucuda reddedildi", "en fazla 60 karakter");

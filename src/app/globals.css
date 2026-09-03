@@ -1,12 +1,18 @@
 :root {
-  --zemin: #f6f7f9;
+  --zemin: #f3f4f7;
   --kart: #ffffff;
   --cizgi: #e2e5ea;
   --metin: #1a1d21;
   --soluk: #5c6570;
   --vurgu: #1d4ed8;
+  --vurgu-soluk: #eef2ff;
   --basari: #136c3a;
   --hata: #a11212;
+  /* Kartlarda ve düğmelerde tutarlı, göz yormayan derinlik için. Flat
+     tasarımın üstüne yalnızca bir seviye ekler, gölge yığmaz. */
+  --golge: 0 1px 2px rgba(20, 22, 26, 0.04), 0 1px 8px rgba(20, 22, 26, 0.05);
+  --golge-hover: 0 2px 4px rgba(20, 22, 26, 0.05), 0 4px 16px rgba(20, 22, 26, 0.08);
+  --gecis: 120ms ease;
 }
 
 * {
@@ -30,7 +36,8 @@ body {
 .kart {
   background: var(--kart);
   border: 1px solid var(--cizgi);
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
+  box-shadow: var(--golge);
   padding: 1.25rem;
   margin-bottom: 1rem;
 }
@@ -82,9 +89,16 @@ h2 {
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 0;
+  padding: 0.75rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-radius: 0.5rem;
   color: inherit;
   text-decoration: none;
+  transition: background var(--gecis);
+}
+
+a.satir:hover {
+  background: var(--zemin);
 }
 
 a.satir:hover .satir-ad {
@@ -118,11 +132,13 @@ a.satir:hover .satir-ad {
   font-size: 1rem;
   background: var(--kart);
   color: var(--metin);
+  transition: border-color var(--gecis), box-shadow var(--gecis);
 }
 
 .form input:focus {
-  outline: 2px solid var(--vurgu);
-  outline-offset: -1px;
+  outline: none;
+  border-color: var(--vurgu);
+  box-shadow: 0 0 0 3px var(--vurgu-soluk);
 }
 
 .form textarea {
@@ -135,11 +151,13 @@ a.satir:hover .satir-ad {
   background: var(--kart);
   color: var(--metin);
   resize: vertical;
+  transition: border-color var(--gecis), box-shadow var(--gecis);
 }
 
 .form textarea:focus {
-  outline: 2px solid var(--vurgu);
-  outline-offset: -1px;
+  outline: none;
+  border-color: var(--vurgu);
+  box-shadow: 0 0 0 3px var(--vurgu-soluk);
 }
 
 .form button {
@@ -151,6 +169,16 @@ a.satir:hover .satir-ad {
   font: inherit;
   font-weight: 500;
   cursor: pointer;
+  transition: background var(--gecis), box-shadow var(--gecis), transform var(--gecis);
+}
+
+.form button:hover:not(:disabled) {
+  background: #1a3fb8;
+  box-shadow: var(--golge-hover);
+}
+
+.form button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .form button:disabled {
@@ -282,6 +310,12 @@ a.satir:hover .satir-ad {
   font: inherit;
   font-size: 0.875rem;
   cursor: pointer;
+  transition: background var(--gecis), border-color var(--gecis);
+}
+
+.ders-dugme:hover:not(:disabled) {
+  background: var(--zemin);
+  border-color: var(--soluk);
 }
 
 .ders-dugme:disabled {
@@ -319,11 +353,70 @@ a.satir:hover .satir-ad {
   font-size: 1.125rem;
   line-height: 1;
   cursor: pointer;
+  transition: background var(--gecis), border-color var(--gecis), transform var(--gecis);
+}
+
+.davranis button:hover:not(:disabled) {
+  background: var(--zemin);
+  border-color: var(--soluk);
+}
+
+.davranis button:active:not(:disabled) {
+  transform: scale(0.94);
 }
 
 .davranis button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* Geri alma: yanlış basılan tuşu düzeltir, bir eylem düğmesi değildir. Bu
+   yüzden artı/kart düğmelerinden küçük ve soluk durur — telefonda yan yana
+   dururken yanlışlıkla ona basılmasın diye de araya bir boşluk konur. */
+.geri-al {
+  position: relative;
+  display: flex;
+  margin-right: 0.25rem;
+}
+
+.geri-al button {
+  width: 1.875rem;
+  height: 1.875rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--soluk);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--gecis), color var(--gecis);
+}
+
+.geri-al button:hover:not(:disabled) {
+  background: var(--zemin);
+  color: var(--metin);
+}
+
+.geri-al button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Hata satırın içinde yer kaplasaydı öğrenci adını kısaltırdı; altına
+   taşar ve bir sonraki tazelemede kendiliğinden kaybolur. */
+.geri-al .hata {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 1;
+  margin-top: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.375rem;
+  background: var(--kart);
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .kart-rozet {
@@ -754,31 +847,36 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin: -0.25rem -0.25rem 1.25rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--cizgi);
 }
 
 .ust-menu-baglantilar {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
   flex-wrap: wrap;
 }
 
 .ust-sekme {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   padding: 0.4rem 0.75rem;
   border-radius: 0.5rem;
   color: var(--soluk);
   text-decoration: none;
   font-size: 0.9375rem;
   font-weight: 500;
+  transition: background var(--gecis), color var(--gecis);
 }
 
-.ust-sekme:hover { background: var(--kart); color: var(--metin); }
+.ust-sekme:hover { background: var(--zemin); color: var(--metin); }
 
 .ust-sekme.secili {
-  background: var(--kart);
-  border: 1px solid var(--cizgi);
-  color: var(--metin);
+  background: var(--vurgu-soluk);
+  color: var(--vurgu);
 }
 
 /* Ödev listesi filtreleri */
@@ -950,8 +1048,6 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 .gundem h2 { margin-bottom: 0; }
 
 /* Üst menüdeki sayaç */
-.ust-sekme { display: inline-flex; align-items: center; gap: 0.375rem; }
-
 .sekme-sayac {
   display: inline-flex;
   align-items: center;

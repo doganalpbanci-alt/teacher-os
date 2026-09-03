@@ -5,7 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import type { FormState } from "@/lib/form-state";
 import { dersBaslat, dersBitir, DersHatasi } from "@/lib/lesson";
-import { davranisKaydet, eylemGecerliMi, DavranisHatasi } from "@/lib/behavior";
+import {
+  davranisKaydet,
+  eylemGecerliMi,
+  sonKaydiGeriAl,
+  DavranisHatasi,
+} from "@/lib/behavior";
 import { yazmaKilitli } from "@/lib/lock";
 
 const AD_SINIRI = 60;
@@ -228,6 +233,37 @@ export async function davranisKaydiOlustur(
   } catch (error) {
     if (error instanceof DavranisHatasi) return hata(onceki, error.message, {});
     return hata(onceki, "Kayıt eklenemedi. Veritabanına ulaşılamıyor olabilir.", {});
+  }
+
+  const sinifId = metin(formData.get("sinifId"));
+  if (sinifId) revalidatePath(`/sinif/${sinifId}`);
+  revalidatePath("/");
+  return basarili(onceki);
+}
+
+/**
+ * Süren dersteki son kaydı geri alır. Yanlış öğrenciye basmak ders sırasında
+ * olağan bir hata; düzeltilemezse gerçek bir öğrencinin kaydı kalıcı olarak
+ * yanlış kalır. Kuralın sınırları `sonKaydiGeriAl` içinde.
+ */
+export async function davranisGeriAl(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const kilit = await kilitliyseDur(onceki);
+  if (kilit) return kilit;
+
+  const ogrenciId = metin(formData.get("ogrenciId"));
+  const dersId = metin(formData.get("dersId"));
+
+  if (!ogrenciId || !dersId) return hata(onceki, "Kayıt bilgisi eksik.", {});
+
+  try {
+    const ogretmen = await getCurrentTeacher();
+    await sonKaydiGeriAl(ogrenciId, dersId, ogretmen.behaviorTemplate, ogretmen.id);
+  } catch (error) {
+    if (error instanceof DavranisHatasi) return hata(onceki, error.message, {});
+    return hata(onceki, "Geri alınamadı. Veritabanına ulaşılamıyor olabilir.", {});
   }
 
   const sinifId = metin(formData.get("sinifId"));

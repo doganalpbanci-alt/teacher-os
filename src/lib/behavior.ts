@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { BehaviorTemplate } from "@prisma/client";
-import { kirmiziKartCezasiEkle } from "@/lib/penalty";
+import { kirmiziKartCezasiEkle, kirmiziKartCezasiGeriAl } from "@/lib/penalty";
 import {
   BASLANGIC_PUANI,
   KART_PUAN,
@@ -194,5 +194,90 @@ export async function davranisKaydet(
       where: { id: ogrenciId },
       data: { performanceScore: BASLANGIC_PUANI + (toplam._sum.points ?? 0) },
     });
+  });
+}
+
+/** Aktif derste kaydı olan öğrenciler. Geri alma düğmesi yalnızca onlarda görünür. */
+export async function derstekiKayitliOgrenciler(dersId: string): Promise<Set<string>> {
+  const kayitlar = await prisma.behaviorLog.groupBy({
+    by: ["studentId"],
+    where: { lessonId: dersId },
+  });
+  return new Set(kayitlar.map((k) => k.studentId));
+}
+
+/**
+ * Bir öğrencinin SÜREN dersteki son kaydını geri alır.
+ *
+ * Bu, "geçmişi silmek" değil yanlış basılan tuşu düzeltmektir; ikisini
+ * ayıran şey zamandır. Ders sürerken yapılan bir kayıt henüz geçmiş değil,
+ * o anın kendisidir; ders bitince geçmişe dönüşür ve bir daha dokunulmaz.
+ * Bu yüzden kural dar tutuldu:
+ *   - yalnızca EN SON kayıt,
+ *   - yalnızca SÜREN derste.
+ * Bitmiş dersin kaydı geri alınamaz (`CLAUDE.md`: öğrenci geçmişi kaybolmaz).
+ *
+ * Kırmızı kart tek satır değildir: yanında ceza puanı olan bir MINUS ve bir
+ * teneffüs cezası yazılır. Üçü birlikte yazıldığı gibi birlikte geri alınır,
+ * yoksa öğrencide sebepsiz bir eksi ya da hayalet bir ceza kalırdı.
+ */
+export async function sonKaydiGeriAl(
+  ogrenciId: string,
+  dersId: string,
+  sablon: BehaviorTemplate,
+  ogretmenId: string,
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const ders = await tx.lesson.findUnique({
+      where: { id: dersId },
+      select: {
+        classroomId: true,
+        endedAt: true,
+        classroom: { select: { teacherId: true } },
+      },
+    });
+    if (!ders) throw new DavranisHatasi("Ders bulunamadı.");
+    // Sahiplik en alt katmanda; hiçbir çağrı yolu bunu atlayamasın.
+    if (ders.classroom.teacherId !== ogretmenId) {
+      throw new DavranisHatasi("Bu ders size ait değil.");
+    }
+    if (ders.endedAt) {
+      throw new DavranisHatasi("Bitmiş dersin kaydı geri alınamaz.");
+    }
+
+    const son = await tx.behaviorLog.findFirst({
+      where: { studentId: ogrenciId, lessonId: dersId },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    if (!son) throw new DavranisHatasi("Bu derste geri alınacak kayıt yok.");
+
+    // Kırmızı kart ile eşlik eden MINUS tek `createMany` ile yazıldığı için
+    // aynı `createdAt`i taşır; sıralama ikisini ayırt edemez, o yüzden o ana
+    // ait bütün satırlar tek grup sayılır.
+    const grup = await tx.behaviorLog.findMany({
+      where: { studentId: ogrenciId, lessonId: dersId, createdAt: son.createdAt },
+      select: { id: true, type: true },
+    });
+
+    // Ceza, kart hâlâ dururken geri alınır: sayım eklenirkenki ile aynı olsun.
+    if (grup.some((k) => k.type === "RED_CARD")) {
+      await kirmiziKartCezasiGeriAl(tx, ogrenciId, ders.classroomId, dersId);
+    }
+
+    await tx.behaviorLog.deleteMany({ where: { id: { in: grup.map((k) => k.id) } } });
+
+    // Basit şablonda not öğretmen tarafından elle giriliyor; buradan yeniden
+    // hesaplamak onun girdiği değeri silerdi. Yazan taraftaki kuralın aynısı.
+    if (sablon === "CARD") {
+      const toplam = await tx.behaviorLog.aggregate({
+        where: { studentId: ogrenciId },
+        _sum: { points: true },
+      });
+      await tx.student.update({
+        where: { id: ogrenciId },
+        data: { performanceScore: BASLANGIC_PUANI + (toplam._sum.points ?? 0) },
+      });
+    }
   });
 }
