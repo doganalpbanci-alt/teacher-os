@@ -94,8 +94,14 @@ export function SinifCanliBildirimleri({
   const kuyruk = useRef<Olay[]>([]);
   const gosteriliyor = useRef(false);
 
-  // Öğretmenin açık seçimi genişlik tahminini her iki yönde de ezer.
-  const etkin = secim ?? genis;
+  // Kilitli cihaz TANIM GEREĞİ tahtadır: öğretmen onu bilerek kilitledi,
+  // sınıfın önünde duran ekran o. Genişlik yalnızca bir tahmindi ve gerçek
+  // tahtada yanıldı (1280px'in altında kalan bir tahtada canlı katman hiç
+  // açılmıyordu; üstelik kilitliyken mod düğmesi de gizli olduğu için açmanın
+  // yolu kalmıyordu). Bu yüzden kilit, genişliğin de seçimin de önüne geçer.
+  // Aksi halde ders boyunca hiçbir bildirim gelmez, kilit açılınca hepsi
+  // birden düşer.
+  const etkin = kilitli || (secim ?? genis);
 
   useEffect(() => {
     sesAcikRef.current = sesAcik;
@@ -196,10 +202,6 @@ export function SinifCanliBildirimleri({
     setSecim(yeni);
     secimiYaz(yeni);
   }
-
-  // Kilitliyken düğme yok (öğrenci kapatamasın), canlı katman kapalıysa da
-  // gösterilecek bir şey kalmaz.
-  if (kilitli && !etkin) return null;
 
   const gorunum = gosterilen ? OLAY_GORUNUMU[sablon][gosterilen.tur] : undefined;
 

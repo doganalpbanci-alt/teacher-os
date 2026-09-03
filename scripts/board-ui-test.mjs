@@ -287,6 +287,45 @@ await telefon.waitForFunction(
 );
 ok("Tekrar basinca kapaniyor", (await telefon.locator(".canli-ses-dugmesi").count()) === 0);
 
+// --- J. Dar VE kilitli tahta ---
+// Gercek tahtadan gelen sikayet: kilitliyken ne bildirim geliyor ne de liste
+// guncelleniyor, kilidi acinca hepsi birden dusuyor. Suphe: tahtanin tarayici
+// genisligi 1280px esiginin altinda kaliyor, canli katman hic acilmiyor;
+// kilit de mod dugmesini gizledigi icin acmanin yolu kalmiyor. Kilitli bir
+// cihaz zaten TANIM GEREGI tahtadir — genislige bakilmamali.
+console.log("\nJ. Dar ve kilitli tahta");
+const darBaglam = await tarayici.newContext({ viewport: { width: 390, height: 844 } });
+const darTahta = await darBaglam.newPage();
+await oturumHazirla(darTahta, T);
+await darTahta.goto(`${T}${SINIF_ADRESI}`, { waitUntil: "networkidle" });
+await darTahta.getByRole("button", { name: /Bu cihazı kilitle/ }).click();
+await darTahta.waitForFunction(
+  () => document.body.innerText.includes("Tahta kilitli"),
+  null,
+  { timeout: 10000 },
+);
+ok("Dar cihaz kilitlendi", (await darTahta.innerText("body")).includes("Tahta kilitli"));
+
+await satir(telefon, "Elif").getByRole("button", { name: "Yıldız ver" }).click();
+await darTahta
+  .waitForFunction(
+    () => document.querySelector(".canli-bildirim")?.innerText.includes("yıldız") ?? false,
+    null,
+    { timeout: 10000 },
+  )
+  .catch(() => {});
+ok(
+  "Dar ve kilitli tahtada bildirim geldi",
+  (await darTahta.locator(".canli-bildirim").count()) === 1,
+  "kilitli cihaz genislige bakilmadan tahta sayilmali",
+);
+ok(
+  "Dar ve kilitli tahtada yoklama calisiyor",
+  (await yoklamaSayaci(darTahta)) > 0,
+  `yoklama=${await yoklamaSayaci(darTahta)}`,
+);
+await darBaglam.close();
+
 console.log(`\nSonuc: ${gecti} gecti, ${kaldi} kaldi\n`);
 await tarayici.close();
 process.exit(kaldi === 0 ? 0 : 1);
