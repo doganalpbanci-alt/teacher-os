@@ -19,14 +19,19 @@ performans takip paneli. Tek öğretmenin kişisel aracı olarak başladı, art�
 | | |
 |---|---|
 | Depo | `doganalpbanci-alt/teacher-os` |
-| Deploy dalı | `main` — her push Vercel'de otomatik yayına girer |
-| Çalışma dalı | her iş için yeni bir `claude/...` dalı; onaydan sonra merge |
+| Deploy dalı | `main` — her push Vercel'de otomatik yayına girer (Production) |
+| Test dalı | `staging` — her push Vercel'de ayrı bir Preview deployment üretir |
+| Çalışma dalı | her iş için yeni bir `claude/...` dalı → önce `staging`'e merge → orada test/onay → sonra `main`'e merge |
 | Canlı | https://teacher-os-black.vercel.app |
-| Veritabanı | Supabase PostgreSQL |
+| Staging | https://teacher-os-git-staging-doganalp-banci.vercel.app |
+| Veritabanı | Supabase PostgreSQL — production ve staging **ayrı, izole projeler** |
 
-Vercel ortam değişkenleri (Production + Preview): `DATABASE_URL`,
-`DIRECT_URL`, `SESSION_SECRET`. `SESSION_SECRET` "sensitive" olduğu için
-Development ortamında yoktur; gerekmiyor.
+Vercel ortam değişkenleri: `DATABASE_URL`, `DIRECT_URL`, `SESSION_SECRET`.
+3 Eylül 2026'dan beri bunlar Production ve Preview için **ayrı ayrı**
+tanımlı — Production kendi Supabase'ine, Preview (yani `staging`) kendi
+izole Supabase'ine bağlanır. Ayrıntı ve gerekçe için aşağıdaki "Dallanma ve
+staging" bölümüne bak. `SESSION_SECRET` "sensitive" olduğu için Development
+ortamında yoktur; gerekmiyor.
 
 ---
 
@@ -377,12 +382,40 @@ Kullanıcı tablet üzerinden çalışır; yerel bilgisayarı yoktur. Doğrulama
 canlı deployment üzerinden yapılır. Ders sırasında uygulamayı telefondan
 ya da akıllı tahtadan kullanır (tabletten değil).
 
+### Dallanma ve staging
+
+3 Eylül 2026'da kuruldu. `main`'in (production) yanında bir de `staging`
+dalı var; Vercel'de ikisi de otomatik build ediliyor ama tamamen ayrı
+ortamlar:
+
+| | `main` (Production) | `staging` (Preview) |
+|---|---|---|
+| Vercel ortamı | Production | Preview |
+| Supabase projesi | üretim | ayrı, izole test projesi |
+| Adres | teacher-os-black.vercel.app | teacher-os-git-staging-doganalp-banci.vercel.app |
+
+**Akış:** her özellik önce kendi `claude/...` dalında geliştirilir, `staging`'e
+mergelenir. Öğretmen orada test edip onaylayınca `staging`, `main`'e
+mergelenir. **`main`'e doğrudan merge yok.**
+
+**Staging'de yeni kod görmek için dala gerçek bir commit push edilmelidir.**
+Vercel'deki "Redeploy" var olan bir deployment'ı aynı commit'le yeniden
+build eder, dal değiştirmez — bu yüzden bir ara "main" zannedilip yanlışlıkla
+iki kez production redeploy edildi, `staging` hiç build olmadı. Yeni kodun
+staging'e gitmesinin tek güvenilir yolu push'tur.
+
+**Staging linkine bu bulut ortamından (curl vb.) erişilince Vercel'in kendi
+giriş ekranı çıkar** ("Login – Vercel"), uygulamanın kendisi değil —
+Deployment Protection nedeniyle, bir hata değil. Doğrulama öğretmenin kendi
+(Vercel'e giriş yapmış) tarayıcısından yapılmalı.
+
+**Şema değişikliği artık iki veritabanına gidiyor.** Migration üretilince
+SQL hem production'da her zamanki akışla (onay → SQL Editor → verify-state)
+hem de staging'in kendi Supabase SQL Editor'ünde ayrıca çalıştırılmalı;
+aksi halde staging'in şeması production'dan sürüklenir ve orada test etmek
+anlamsızlaşır.
+
 ### Bu ortamın tuzakları
-- **Preview deployment'lar ÜRETİM veritabanını kullanır.** Ortam
-  değişkenleri Production + Preview olarak tanımlı. Yani merge edilmemiş bir
-  daldan preview üzerinden girilen veri gerçek veridir. "Bu özellik merge
-  edilmedi, tablo boştur" varsayımı yanlıştır — migration yazmadan önce
-  kullanıcıya sor ya da veriyi koruyacak şekilde yaz.
 - **Vercel bazen `main` push'unu kaçırıyor.** Deployment listesinde commit
   yalnızca Preview olarak görünüp Production eski sürümde kalabiliyor.
   Çözüm: Vercel → Deployments → ilgili satır → **Promote to Production**.
