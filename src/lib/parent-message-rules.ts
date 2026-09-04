@@ -70,6 +70,35 @@ export function mesajSablonlari(girdi: SablonGirdisi): MesajSablonu[] {
     },
   ];
 
+  // Kart sisteminde, aynı ders içinde sarı üstüne kırmızıya yükselen bir
+  // ihlal yaşanmışsa: veliye durumu anlatan, cezalandırıcı olmayan bir
+  // bilgilendirme mektubu. Kırmızı kartı hiç olmayan öğrencide anlamsız.
+  if (girdi.kartSistemi && girdi.ozet.kirmiziKart > 0) {
+    sablonlar.push({
+      anahtar: "kart-olay",
+      ad: "Kart uygulaması (sarı → kırmızı)",
+      metin: `${selamlama(girdi.veliAdi)} bugün İngilizce dersimizde sınıf içi davranış ve katılım sistemimiz kapsamında ${girdi.ogrenciAdi}'e önce sarı kart ile ilk uyarı verilmiştir. Uyarıya rağmen sınıf kurallarına uygun olmayan davranışın devam etmesi üzerine kırmızı kart ile ikinci uyarı uygulanmıştır.
+
+Dönem sonunda verilecek performans notlarından biri, öğrencinin ders içerisindeki katılımı, kurallara uyumu ve genel sınıf içi performansı dikkate alınarak bu sistem üzerinden değerlendirilecektir. Kırmızı kart performans notunu olumsuz etkileyebilmektedir. Bununla birlikte bu durum, öğrencinin dönem içerisindeki sonraki derslerde göstereceği olumlu katılım ve kurallara uyumla telafi edilebilir.
+
+Amacımız öğrencimizi cezalandırmak değil, ders ortamının düzenli ve verimli bir şekilde ilerlemesini sağlamaktır. Önümüzdeki derslerde daha olumlu bir performans göstereceğine inanıyorum. Desteğiniz için teşekkür ederim.`,
+    });
+  }
+
+  // Tek seferlik bir olaydan farklı: aynı öğrencide kırmızı kart birden
+  // fazlaysa (yani tekrar ediyorsa) daha ciddi ve iş birliği isteyen bir ton.
+  if (girdi.kartSistemi && girdi.ozet.kirmiziKart > 1) {
+    sablonlar.push({
+      anahtar: "kart-tekrar",
+      ad: "Tekrarlayan davranış",
+      metin: `${selamlama(girdi.veliAdi)} ${girdi.ogrenciAdi} ile ilgili sınıf içi davranış ve katılım sistemimiz kapsamında daha önce de bir uyarı paylaşmıştım. Benzer durumun tekrar etmesi üzerine bu konuyu bir kez daha sizinle paylaşmak istedim.
+
+Ders içi katılım ve kurallara uyum, dönem sonu performans değerlendirmesinin bir parçasıdır; tekrar eden ihlaller bu notu olumsuz etkileyebilir. Yine de amacımız bir yaptırım uygulamak değil, ${girdi.ogrenciAdi}'in sınıf ortamına uyumunu birlikte güçlendirmektir.
+
+Evde de bu konuda destek olabilirseniz, önümüzdeki derslerde farkı görebileceğimize inanıyorum. Görüş ve sorularınızı benimle paylaşmaktan çekinmeyin. Desteğiniz için teşekkür ederim.`,
+    });
+  }
+
   if (girdi.odevOzeti.toplam > 0) {
     sablonlar.push({
       anahtar: "odev",
@@ -85,6 +114,19 @@ export function mesajSablonlari(girdi: SablonGirdisi): MesajSablonu[] {
       metin: `${selamlama(girdi.veliAdi)} ${girdi.ogrenciAdi}'in "${girdi.sonSinav.baslik}" sınavı: ${girdi.sonSinav.puan}/${girdi.sonSinav.maxScore} (%${girdi.sonSinav.yuzde}).`,
     });
   }
+
+  // Belirli bir olaya bağlı değil; her zaman önerilir. Köşeli parantez
+  // öğretmenin o anki gözlemini eklemesi için bir hatırlatma, gönderilmeden
+  // önce doldurulması/kaldırılması beklenir.
+  sablonlar.push({
+    anahtar: "genel-durum",
+    ad: "Genel durum bilgilendirmesi",
+    metin: `${selamlama(girdi.veliAdi)} ${girdi.ogrenciAdi}'in derslerimizdeki genel katılımı ve sınıf içi davranışı hakkında kısa bir bilgilendirme yapmak istedim. [Güncel gözleminizi buraya ekleyin.]
+
+Ders içi katılım, kurallara uyum ve genel tutum, dönem sonunda verilecek performans değerlendirmesinin bir parçasıdır. Süreç boyunca gelişimini yakından takip ediyor, kendisini olumlu yönde desteklemeye devam ediyoruz.
+
+Her türlü soru ya da geri bildiriminiz için bana ulaşabilirsiniz. İlginiz için teşekkür ederim.`,
+  });
 
   sablonlar.push({ anahtar: "serbest", ad: "Serbest", metin: "" });
 
