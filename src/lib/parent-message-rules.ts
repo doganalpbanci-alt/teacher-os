@@ -119,17 +119,18 @@ Evde de bu konuda destek olabilirseniz, önümüzdeki derslerde farkı görebile
     });
   }
 
-  // Belirli bir olaya bağlı değil; her zaman önerilir. Köşeli parantez
-  // öğretmenin o anki gözlemini eklemesi için bir hatırlatma, gönderilmeden
-  // önce doldurulması/kaldırılması beklenir.
+  // "Davranış özeti" zaten sayısal bir döküm; bu, herhangi bir sayıya ya da
+  // olaya bağlı olmayan, serbestçe doldurulacak bir not — akademik bir
+  // gelişme, sosyal bir gözlem, güzel bir şey, ne olursa. Köşeli parantez
+  // gönderilmeden önce doldurulması/kaldırılması için bir hatırlatma.
   sablonlar.push({
     anahtar: "genel-durum",
-    ad: "Genel durum bilgilendirmesi",
-    metin: `${selamlama(girdi.veliAdi)} ${girdi.ogrenciAdi}'in derslerimizdeki genel katılımı ve sınıf içi davranışı hakkında kısa bir bilgilendirme yapmak istedim. [Güncel gözleminizi buraya ekleyin.]
+    ad: "Genel bilgilendirme",
+    metin: `${selamlama(girdi.veliAdi)} ${girdi.ogrenciAdi} ile ilgili kısa bir bilgilendirme paylaşmak istedim. [Güncel gözleminizi buraya ekleyin.]
 
-Ders içi katılım, kurallara uyum ve genel tutum, dönem sonunda verilecek performans değerlendirmesinin bir parçasıdır. Süreç boyunca gelişimini yakından takip ediyor, kendisini olumlu yönde desteklemeye devam ediyoruz.
+Kendisiyle ilgili gelişmeleri sizinle paylaşmaya devam edeceğim. Herhangi bir soru ya da eklemek istediğiniz bir şey olursa benimle iletişime geçebilirsiniz.
 
-Her türlü soru ya da geri bildiriminiz için bana ulaşabilirsiniz. İlginiz için teşekkür ederim.`,
+İlginiz için teşekkür ederim.`,
   });
 
   sablonlar.push({ anahtar: "serbest", ad: "Serbest", metin: "" });
