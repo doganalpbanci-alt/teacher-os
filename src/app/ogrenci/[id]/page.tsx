@@ -18,6 +18,7 @@ import {
 } from "@/lib/exam";
 import { ogrenciMesajGecmisi } from "@/lib/parent-message";
 import { NotFormu } from "@/components/NotFormu";
+import { OgrenciAdiFormu } from "@/components/OgrenciAdiFormu";
 import { VeliBilgisiFormu } from "@/components/VeliBilgisiFormu";
 import type { SubmissionStatus, MessageStatus } from "@prisma/client";
 
@@ -108,9 +109,11 @@ export default async function OgrenciSayfasi({
       </Link>
 
       <main className="kart">
-        <h1>
-          {ogrenci.firstName} {ogrenci.lastName}
-        </h1>
+        <OgrenciAdiFormu
+          ogrenciId={ogrenci.id}
+          ad={ogrenci.firstName}
+          soyad={ogrenci.lastName}
+        />
         <p className="soluk">
           {ogrenci.classroom ? ogrenci.classroom.name : "Sınıfa atanmamış"}
           {ogrenci.parentName ? ` · Veli: ${ogrenci.parentName}` : ""}
