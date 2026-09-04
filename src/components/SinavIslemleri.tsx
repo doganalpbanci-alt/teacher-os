@@ -24,7 +24,7 @@ export function SinavIslemleri({
   const [silDurum, silGonder, silBekliyor] = useActionState(sinavKaldir, BOS_FORM);
 
   return (
-    <div className="odev-islemler">
+    <div className="yonetim-satiri">
       <Link className="ders-dugme" href={`/sinavlar/${sinavId}/duzenle`}>
         Düzenle
       </Link>

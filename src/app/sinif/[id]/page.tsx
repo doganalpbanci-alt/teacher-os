@@ -16,6 +16,7 @@ import { bekleyenCezalar } from "@/lib/penalty";
 import { kilitDurumu } from "@/lib/lock";
 import { TahtaKilidi } from "@/components/TahtaKilidi";
 import { SinifCanliBildirimleri } from "@/components/SinifCanliBildirimleri";
+import { SinifYonetimi } from "@/components/SinifYonetimi";
 import { turkceSirala } from "@/lib/siralama";
 import type { Sayimlar } from "@/lib/behavior";
 
@@ -38,12 +39,15 @@ export default async function SinifSayfasi({
       select: {
         id: true,
         name: true,
+        isActive: true,
+        // Aktif/arşivli ayrımı aşağıda JS'te yapılır: arşivlenmiş
+        // öğrencileri de listeleyebilmek için hepsi tek sorguda gelir.
         // Sıralama Türkçe alfabeye göre aşağıda yapılır; veritabanı
         // sıralaması Ç, Ğ, İ gibi harfleri listenin sonuna atıyor.
         students: {
-          where: { isActive: true },
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, isActive: true },
         },
+        _count: { select: { lessons: true } },
       },
     }),
     aktifDersiGetir(id, ogretmen.id),
@@ -59,9 +63,19 @@ export default async function SinifSayfasi({
 
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
   const ogrenciler = turkceSirala(
-    sinif.students.map((o) => ({ id: o.id, ad: `${o.firstName} ${o.lastName}` })),
+    sinif.students
+      .filter((o) => o.isActive)
+      .map((o) => ({ id: o.id, ad: `${o.firstName} ${o.lastName}` })),
     (o) => o.ad,
   );
+  const arsivliOgrenciler = turkceSirala(
+    sinif.students
+      .filter((o) => !o.isActive)
+      .map((o) => ({ id: o.id, ad: `${o.firstName} ${o.lastName}` })),
+    (o) => o.ad,
+  );
+  // Sınıf yalnızca hiç öğrenci (arşivli dahil) ve hiç ders yoksa silinebilir.
+  const sinifSilinebilir = sinif.students.length === 0 && sinif._count.lessons === 0;
   const ogrenciIdleri = ogrenciler.map((o) => o.id);
 
   // Kart durumu yalnızca aktif derse aittir; ders değişince sıfırdan başlar.
@@ -109,7 +123,10 @@ export default async function SinifSayfasi({
             bitirilir. Sınıf adı ve mevcut da buraya sığar. */}
         <div className="ders-basi">
           <div className="ders-basi-sol">
-            <h1>{sinif.name}</h1>
+            <h1>
+              {sinif.name}
+              {!sinif.isActive && " · arşivde"}
+            </h1>
             <span className="soluk">
               {aktifDers
                 ? `${aktifDers.gunlukSira}. ders · ${dersKisaYazisi(aktifDers.tarih)}`
@@ -167,6 +184,35 @@ export default async function SinifSayfasi({
         <details className="kart katlanir">
           <summary>Yeni öğrenci</summary>
           <OgrenciFormu sinifId={sinif.id} />
+        </details>
+      )}
+
+      {/* Arşivlenmiş öğrenciyi geri açma yolu burası: kendi listesinden
+          kalkınca bir daha görünmez, ama tamamen kaybolmaz. Arşivden çıkarma
+          düğmesi öğrencinin kendi sayfasında (OgrenciYonetimi). */}
+      {!kilitli && arsivliOgrenciler.length > 0 && (
+        <details className="kart katlanir">
+          <summary>Arşivlenmiş öğrenciler ({arsivliOgrenciler.length})</summary>
+          <ul className="liste">
+            {arsivliOgrenciler.map((o) => (
+              <li key={o.id}>
+                <Link className="satir" href={`/ogrenci/${o.id}`}>
+                  <span className="satir-ad">{o.ad}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {!kilitli && (
+        <details className="kart katlanir">
+          <summary>Sınıfı yönet</summary>
+          <SinifYonetimi
+            sinifId={sinif.id}
+            arsivde={!sinif.isActive}
+            silinebilir={sinifSilinebilir}
+          />
         </details>
       )}
 

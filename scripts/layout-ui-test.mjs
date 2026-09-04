@@ -51,12 +51,15 @@ await sayfa.getByRole("link", { name: /Duzen-Test/ }).click();
 await sayfa.getByRole("heading", { name: "Duzen-Test" }).waitFor();
 const sinifAdresi = sayfa.url();
 
-// Ders sirasinda ogrenci eklenmez; form kapali baslar.
-const formAcik = await sayfa.locator("details.katlanir").evaluate((e) => e.open);
+// Ders sirasinda ogrenci eklenmez; form kapali baslar. Sinif sayfasinda
+// birden fazla katlanir bolum var (Yeni ogrenci, Sinifi yonet, ...);
+// digerleriyle karismasin diye ozellikle "Yeni ogrenci" bolumu seciliyor.
+const yeniOgrenciDetay = sayfa.locator("details.katlanir").filter({ hasText: "Yeni öğrenci" });
+const formAcik = await yeniOgrenciDetay.evaluate((e) => e.open);
 ok("Yeni ogrenci formu KAPALI basliyor", formAcik === false);
-ok("Formun basligi goruluyor", await sayfa.locator("summary").isVisible());
+ok("Formun basligi goruluyor", await yeniOgrenciDetay.locator("summary").isVisible());
 
-await sayfa.locator("summary").click();
+await yeniOgrenciDetay.locator("summary").click();
 // Turkce harfli isimler: siralamanin dogru yerde tuttugunu gostermeli.
 const ogrenciler = [
   ["Hale", "Aydın"], ["İrem", "Koç"], ["Kaan", "Öztürk"],

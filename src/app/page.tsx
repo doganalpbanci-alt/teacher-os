@@ -12,22 +12,30 @@ export const dynamic = "force-dynamic";
 type Sinif = { id: string; name: string; _count: { students: number } };
 
 type Sonuc =
-  | { ok: true; siniflar: Sinif[]; gundem: Gundem }
+  | { ok: true; siniflar: Sinif[]; arsivliSiniflar: Sinif[]; gundem: Gundem }
   | { ok: false; mesaj: string };
 
 async function anaSayfaVerisi(): Promise<Sonuc> {
   try {
     const ogretmen = await getCurrentTeacher();
-    // Ikisi de ayni ogretmene bakar, birbirini beklemez.
-    const [siniflar, gundem] = await Promise.all([
+    // Ucu de ayni ogretmene bakar, birbirini beklemez.
+    const [siniflar, arsivliSiniflar, gundem] = await Promise.all([
       prisma.classroom.findMany({
         where: { teacherId: ogretmen.id, isActive: true },
         orderBy: { createdAt: "asc" },
         select: { id: true, name: true, _count: { select: { students: true } } },
       }),
+      // Arşivlenmiş sınıfı geri açma yolu burası: kendi listesinden kalkınca
+      // bir daha görünmez, ama tamamen kaybolmaz. Arşivden çıkarma düğmesi
+      // sınıfın kendi sayfasında (SinifYonetimi).
+      prisma.classroom.findMany({
+        where: { teacherId: ogretmen.id, isActive: false },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true, _count: { select: { students: true } } },
+      }),
       gunlukGundem(ogretmen.id),
     ]);
-    return { ok: true, siniflar, gundem };
+    return { ok: true, siniflar, arsivliSiniflar, gundem };
   } catch (error) {
     return {
       ok: false,
@@ -83,6 +91,22 @@ export default async function AnaSayfa() {
         <h2>Yeni sınıf</h2>
         <SinifFormu />
       </section>
+
+      {sonuc.arsivliSiniflar.length > 0 && (
+        <details className="kart katlanir">
+          <summary>Arşivlenmiş sınıflar ({sonuc.arsivliSiniflar.length})</summary>
+          <ul className="liste">
+            {sonuc.arsivliSiniflar.map((sinif) => (
+              <li key={sinif.id}>
+                <Link className="satir" href={`/sinif/${sinif.id}`}>
+                  <span className="satir-ad">{sinif.name}</span>
+                  <span className="rozet">{sinif._count.students} öğrenci</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </>
   );
 }
