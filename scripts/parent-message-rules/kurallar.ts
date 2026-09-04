@@ -51,9 +51,50 @@ ok("Cozulmeyen telefon baglanti kurmaz", whatsappBaglantisi("123", "merhaba") ==
   ok("Odev yoksa odev sablonu yok", !sablonlar.some((s) => s.anahtar === "odev"));
   ok("Sinav yoksa sinav sablonu yok", !sablonlar.some((s) => s.anahtar === "sinav"));
   ok("Serbest sablon her zaman var", sablonlar.some((s) => s.anahtar === "serbest" && s.metin === ""));
+  ok("Genel durum sablonu basit sablonda da var", sablonlar.some((s) => s.anahtar === "genel-durum"));
+  ok("Basit sablonda kart sablonlari yok", !sablonlar.some((s) => s.anahtar === "kart-olay" || s.anahtar === "kart-tekrar"));
   const davranis = sablonlar.find((s) => s.anahtar === "davranis");
   ok("Basit sablonda arti/eksi geciyor", (davranis?.metin ?? "").includes("5 artı ve 2 eksi"));
   ok("Veli adi selamlamada geciyor", (davranis?.metin ?? "").startsWith("Merhaba Fatma Yılmaz,"));
+}
+
+// --- Kart olayi ve tekrar sablonlari ---
+{
+  const tekKirmizi = mesajSablonlari({
+    ogrenciAdi: "Yahya Burak",
+    veliAdi: null,
+    kartSistemi: true,
+    ozet: { arti: 0, eksi: 0, sariKart: 1, kirmiziKart: 1 },
+    odevOzeti: { toplam: 0, oran: 0, done: 0, late: 0 },
+    sonSinav: null,
+  });
+  const olay = tekKirmizi.find((s) => s.anahtar === "kart-olay");
+  ok("Tek kirmizida kart-olay var", olay !== undefined);
+  ok("kart-olay ogrenci adini iceriyor", (olay?.metin ?? "").includes("Yahya Burak"));
+  ok("kart-olay 1000 karakteri asmiyor", (olay?.metin.length ?? 9999) <= 1000);
+  ok("Tek kirmizida kart-tekrar YOK", !tekKirmizi.some((s) => s.anahtar === "kart-tekrar"));
+
+  const kirmizisiz = mesajSablonlari({
+    ogrenciAdi: "Test",
+    veliAdi: null,
+    kartSistemi: true,
+    ozet: { arti: 2, eksi: 0, sariKart: 1, kirmiziKart: 0 },
+    odevOzeti: { toplam: 0, oran: 0, done: 0, late: 0 },
+    sonSinav: null,
+  });
+  ok("Kirmizi kart yoksa kart-olay YOK", !kirmizisiz.some((s) => s.anahtar === "kart-olay"));
+
+  const cokluKirmizi = mesajSablonlari({
+    ogrenciAdi: "Test",
+    veliAdi: "Veli Test",
+    kartSistemi: true,
+    ozet: { arti: 0, eksi: 0, sariKart: 2, kirmiziKart: 2 },
+    odevOzeti: { toplam: 0, oran: 0, done: 0, late: 0 },
+    sonSinav: null,
+  });
+  const tekrar = cokluKirmizi.find((s) => s.anahtar === "kart-tekrar");
+  ok("Iki kirmizida kart-tekrar var", tekrar !== undefined);
+  ok("kart-tekrar 1000 karakteri asmiyor", (tekrar?.metin.length ?? 9999) <= 1000);
 }
 
 {
