@@ -59,14 +59,36 @@ göstermesi gerektiği birkaç dönem veri birikmeden belli olmaz.
 v0.4 canlıda, gerçek kullanım bekleniyor.
 
 ## v0.5 — Veli İletişimi
-- Veli bilgileri
-- Kişiselleştirilmiş mesajlar
-- Mesaj geçmişi
+- ✓ Veli bilgileri *(ad, telefon; KVKK amaçlı rıza onayı ve zaman damgasıyla)*
+- ✓ Kişiselleştirilmiş mesajlar *(hazır şablonlar, düzenlenebilir taslak)*
+- ✓ Mesaj geçmişi
 
-Not: `ParentMessage` tablosu şemada hazır, `Student.parentName` ve
-`parentPhone` zaten dolduruluyor. Mesajın nasıl gönderileceği (uygulama
-içinde taslak mı, WhatsApp/SMS'e aktarma mı) kararlaştırılmadı; bu, işin
-kapsamını belirleyen ilk soru.
+Karar verildi: mesaj uygulama içinde taslak olarak hazırlanır, gönderim
+WhatsApp'a (`wa.me` bağlantısı) devredilir — ayrı bir SMS/WhatsApp API
+ücreti ve entegrasyonu gerekmez. Telefon numarası olmadan da veli adı
+girilebilir; numara girilince önce rıza onayı istenir, onaysız numara
+kaydedilmez.
+
+v0.5 canlıda, gerçek kullanım bekleniyor.
+
+## Sınıf yönetimi — küçük iyileştirmeler (numaralanmamış)
+Roadmap sırasının dışında, gerçek ders kullanımından gelen ihtiyaçlarla
+eklendi:
+- ✓ Akıllı tahta kilidi *(öğretmen PIN'i, süreli kilit, yalnızca kilitli
+  cihazda kart/artı verilemez)*
+- ✓ Telefondan verilen kartın tahtada canlı yansıması + sesli bildirim
+- ✓ Veli iletişimi için rıza akışı (bkz. v0.5)
+- ✓ Son davranış kaydını geri alma *(yalnızca süren derste, yalnızca son
+  kayıt — geçmiş kayıtlara dokunmaz)*
+- ✓ Ayrı staging ortamı ve dallanma akışı (bkz. `HANDOFF.md`)
+
+### Açık kalan küçük sorular
+- Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
+  bildirimin görünür kalması (PiP/overlay) denendi ama ölçüm sonucu
+  paylaşılmadı; tanı sayfası kod tabanından kaldırıldı. Gerçekten istenirse
+  yeniden ele alınabilir.
+- Sınıf/öğrenci bazlı silme ve toplu veri sıfırlama arayüzden yapılamıyor;
+  şimdiye kadar SQL ile elle yürütüldü.
 
 ## v0.6 — Dashboard & Raporlama
 - Genel dashboard

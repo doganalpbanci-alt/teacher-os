@@ -131,7 +131,12 @@ await sayfa.goto(T, { waitUntil: "networkidle" });
 await sayfa.getByRole("link", { name: /Kart-Test/ }).click();
 await sayfa.getByRole("heading", { name: "Kart-Test" }).waitFor();
 ok("Kart dugmeleri gizlendi", (await satir("Ali").getByRole("button", { name: /kart ver/ }).count()) === 0);
-ok("Basit sablonda iki dugme", (await satir("Ali").getByRole("button").count()) === 2);
+// Geri alma düğmesi ayrı bir kapsayıcıda durur (`.geri-al`); davranış
+// düğmeleriyle karışmasın diye sayım `.davranis` içine daraltılır.
+ok(
+  "Basit sablonda iki dugme",
+  (await satir("Ali").locator(".davranis").getByRole("button").count()) === 2,
+);
 
 // Dugmenin degerini kurcalayip SARI_KART gondermeyi dene
 const oncekiPuan = puan("Ece");

@@ -3,7 +3,12 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import { aktifDersiGetir, dersKisaYazisi } from "@/lib/lesson";
-import { dersKartDurumlari, ogrenciSayimlari, type KartDurumu } from "@/lib/behavior";
+import {
+  dersKartDurumlari,
+  derstekiKayitliOgrenciler,
+  ogrenciSayimlari,
+  type KartDurumu,
+} from "@/lib/behavior";
 import { OgrenciFormu } from "@/components/OgrenciFormu";
 import { DersKontrolu } from "@/components/DersKontrolu";
 import { OgrenciSatiri, type CezaOzeti } from "@/components/OgrenciSatiri";
@@ -62,14 +67,22 @@ export default async function SinifSayfasi({
   // Kart durumu yalnızca aktif derse aittir; ders değişince sıfırdan başlar.
   // Basit sistemde not elle girildiği için artı/eksi sayıları öne çıkar,
   // teneffüs cezası ise yalnızca kart sisteminde oluşur.
-  const [kartlar, sayimlar, cezalar] = await Promise.all<
-    [Promise<Map<string, KartDurumu>>, Promise<Map<string, Sayimlar>>, Promise<Map<string, CezaOzeti>>]
+  // Geri alma düğmesi yalnızca SÜREN derste kaydı olan öğrencilerde görünür:
+  // basılacak bir şeyin olmadığı satırda düğme durmasın (kural: `sonKaydiGeriAl`).
+  const [kartlar, sayimlar, cezalar, geriAlinabilirler] = await Promise.all<
+    [
+      Promise<Map<string, KartDurumu>>,
+      Promise<Map<string, Sayimlar>>,
+      Promise<Map<string, CezaOzeti>>,
+      Promise<Set<string>>,
+    ]
   >([
     kartSistemi && aktifDers
       ? dersKartDurumlari(aktifDers.id)
       : Promise.resolve(new Map()),
     kartSistemi ? Promise.resolve(new Map()) : ogrenciSayimlari(ogrenciIdleri),
     kartSistemi ? bekleyenCezalar(ogrenciIdleri) : Promise.resolve(new Map()),
+    aktifDers ? derstekiKayitliOgrenciler(aktifDers.id) : Promise.resolve(new Set()),
   ]);
 
   return (
@@ -140,6 +153,7 @@ export default async function SinifSayfasi({
                     eksi={sayim.eksi}
                     ceza={cezalar.get(ogrenci.id)}
                     kilitli={kilitli}
+                    geriAlinabilir={geriAlinabilirler.has(ogrenci.id)}
                   />
                 </li>
               );
