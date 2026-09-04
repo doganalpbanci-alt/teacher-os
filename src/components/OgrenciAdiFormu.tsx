@@ -13,10 +13,12 @@ export function OgrenciAdiFormu({
   ogrenciId,
   ad,
   soyad,
+  arsivde = false,
 }: {
   ogrenciId: string;
   ad: string;
   soyad: string;
+  arsivde?: boolean;
 }) {
   const [duzenleniyor, setDuzenleniyor] = useState(false);
   const [durum, gonder, bekliyor] = useActionState(ogrenciAdiGuncelle, BOS_FORM);
@@ -30,6 +32,7 @@ export function OgrenciAdiFormu({
     return (
       <h1 className="ogrenci-basligi">
         {ad} {soyad}
+        {arsivde && " · arşivde"}
         <button
           type="button"
           className="ogrenci-adi-duzenle"

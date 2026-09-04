@@ -2,6 +2,7 @@ import { getCurrentTeacher } from "@/lib/current-teacher";
 import { SablonFormu } from "@/components/SablonFormu";
 import { UstMenu } from "@/components/UstMenu";
 import { TahtaPinFormu, TahtaSuresiFormu } from "@/components/TahtaAyarlari";
+import { HesapSifirlamaFormu } from "@/components/HesapSifirlamaFormu";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,17 @@ export default async function AyarlarSayfasi() {
         <TahtaPinFormu pinVar={ogretmen.boardPin !== null} />
         <TahtaSuresiFormu dakika={ogretmen.boardUnlockMinutes} />
       </main>
+
+      <section className="kart tehlike-bolgesi">
+        <h2>Tehlike bölgesi</h2>
+        <p className="soluk">
+          Bütün sınıflarınızı, öğrencilerinizi, ders ve davranış geçmişinizi,
+          ödev, sınav ve veli mesajlarınızı kalıcı olarak siler. Hesabınız
+          (giriş bilginiz, tahta PIN&apos;iniz, sistem tercihiniz) kalır —
+          sıfırdan başlarsınız. <b>Geri alınamaz.</b>
+        </p>
+        <HesapSifirlamaFormu />
+      </section>
     </>
   );
 }

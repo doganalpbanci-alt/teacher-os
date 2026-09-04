@@ -19,6 +19,7 @@ import {
 import { ogrenciMesajGecmisi } from "@/lib/parent-message";
 import { NotFormu } from "@/components/NotFormu";
 import { OgrenciAdiFormu } from "@/components/OgrenciAdiFormu";
+import { OgrenciYonetimi } from "@/components/OgrenciYonetimi";
 import { VeliBilgisiFormu } from "@/components/VeliBilgisiFormu";
 import type { SubmissionStatus, MessageStatus } from "@prisma/client";
 
@@ -65,6 +66,7 @@ export default async function OgrenciSayfasi({
       parentPhone: true,
       parentConsentAt: true,
       performanceScore: true,
+      isActive: true,
       classroom: { select: { id: true, name: true } },
     },
   });
@@ -99,6 +101,15 @@ export default async function OgrenciSayfasi({
         { deger: ozet.eksi, etiket: "eksi" },
       ];
 
+  // Öğrenci yalnızca hiçbir geçmiş kaydı yoksa silinebilir; asıl kural
+  // sunucuda (ogrenciSil), bu yalnızca düğmeyi boşuna göstermemek için.
+  const ogrenciSilinebilir =
+    gecmis.length === 0 &&
+    cezalar.length === 0 &&
+    odevler.length === 0 &&
+    sinavlar.length === 0 &&
+    veliMesajlari.length === 0;
+
   return (
     <>
       <Link
@@ -113,6 +124,7 @@ export default async function OgrenciSayfasi({
           ogrenciId={ogrenci.id}
           ad={ogrenci.firstName}
           soyad={ogrenci.lastName}
+          arsivde={!ogrenci.isActive}
         />
         <p className="soluk">
           {ogrenci.classroom ? ogrenci.classroom.name : "Sınıfa atanmamış"}
@@ -140,6 +152,12 @@ export default async function OgrenciSayfasi({
             <span className="olcum-etiket">performans notu</span>
           </div>
         </div>
+
+        <OgrenciYonetimi
+          ogrenciId={ogrenci.id}
+          arsivde={!ogrenci.isActive}
+          silinebilir={ogrenciSilinebilir}
+        />
       </main>
 
       <section className="kart">
