@@ -47,6 +47,44 @@ h1 {
   margin: 0 0 0.25rem;
 }
 
+/* Öğrenci sayfası başlığı: ada bitişik küçük bir "Düzenle" düğmesi. */
+.ogrenci-basligi {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.ogrenci-adi-duzenle {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--vurgu);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ogrenci-adi-duzenle:hover {
+  text-decoration: underline;
+}
+
+.ogrenci-adi-formu {
+  margin-bottom: 0.25rem;
+}
+
+.ogrenci-adi-dugmeler {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* "Vazgeç" .form içinde durduğu için `.form button` onu da mavi yapardı;
+   ikincil bir düğme olduğu için burada geri alınıyor. */
+.ogrenci-adi-dugmeler .ders-dugme {
+  background: var(--kart);
+  color: var(--metin);
+  border: 1px solid var(--cizgi);
+}
+
 h2 {
   font-size: 1rem;
   margin: 0 0 0.75rem;

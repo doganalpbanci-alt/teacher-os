@@ -152,6 +152,51 @@ export async function ogrenciEkle(
   return basarili(onceki);
 }
 
+/** Öğrencinin ad/soyadını düzeltir. Ekleme sırasında yapılan bir yazım
+ * hatasının tek düzeltme yolu buydu; SQL ile elle değiştirmek gerekiyordu. */
+export async function ogrenciAdiGuncelle(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const kilit = await kilitliyseDur(onceki);
+  if (kilit) return kilit;
+
+  const ogrenciId = metin(formData.get("ogrenciId"));
+  const ad = metin(formData.get("ad"));
+  const soyad = metin(formData.get("soyad"));
+  const girilen = { ad, soyad };
+
+  if (!ogrenciId) return hata(onceki, "Öğrenci bilgisi eksik.", girilen);
+  if (!ad) return hata(onceki, "Öğrenci adı boş olamaz.", girilen);
+  if (!soyad) return hata(onceki, "Öğrenci soyadı boş olamaz.", girilen);
+  if (ad.length > AD_SINIRI || soyad.length > AD_SINIRI) {
+    return hata(onceki, `Ad ve soyad en fazla ${AD_SINIRI} karakter olabilir.`, girilen);
+  }
+
+  let sinifId: string | null = null;
+  try {
+    const ogretmen = await getCurrentTeacher();
+    // Sahiplik sorgunun parçası: başkasının öğrencisi "bulunamadı" sayılır.
+    const ogrenci = await prisma.student.findFirst({
+      where: { id: ogrenciId, classroom: { teacherId: ogretmen.id } },
+      select: { classroomId: true },
+    });
+    if (!ogrenci) return hata(onceki, "Öğrenci bulunamadı.", girilen);
+    sinifId = ogrenci.classroomId;
+
+    await prisma.student.update({
+      where: { id: ogrenciId },
+      data: { firstName: ad, lastName: soyad },
+    });
+  } catch {
+    return hata(onceki, "İsim kaydedilemedi. Veritabanına ulaşılamıyor olabilir.", girilen);
+  }
+
+  revalidatePath(`/ogrenci/${ogrenciId}`);
+  if (sinifId) revalidatePath(`/sinif/${sinifId}`);
+  return basarili(onceki);
+}
+
 export async function yeniDersBaslat(
   onceki: FormState,
   formData: FormData,
