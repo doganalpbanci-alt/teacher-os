@@ -60,7 +60,9 @@ v0.4 canlıda, gerçek kullanım bekleniyor.
 
 ## v0.5 — Veli İletişimi
 - ✓ Veli bilgileri *(ad, telefon; KVKK amaçlı rıza onayı ve zaman damgasıyla)*
-- ✓ Kişiselleştirilmiş mesajlar *(hazır şablonlar, düzenlenebilir taslak)*
+- ✓ Kişiselleştirilmiş mesajlar *(hazır şablonlar, düzenlenebilir taslak;
+  davranış özeti/ödev/sınav + kart olayı, tekrarlayan davranış ve genel
+  bilgilendirme şablonları)*
 - ✓ Mesaj geçmişi
 
 Karar verildi: mesaj uygulama içinde taslak olarak hazırlanır, gönderim
