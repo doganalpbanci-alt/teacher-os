@@ -77,11 +77,15 @@ export function mesajSablonlari(girdi: SablonGirdisi): MesajSablonu[] {
     sablonlar.push({
       anahtar: "kart-olay",
       ad: "Kart uygulaması (sarı → kırmızı)",
-      metin: `${selamlama(girdi.veliAdi)} bugün İngilizce dersimizde sınıf içi davranış ve katılım sistemimiz kapsamında ${girdi.ogrenciAdi}'e önce sarı kart ile ilk uyarı verilmiştir. Uyarıya rağmen sınıf kurallarına uygun olmayan davranışın devam etmesi üzerine kırmızı kart ile ikinci uyarı uygulanmıştır.
+      // Öğretmenin kendi yazdığı metin, birebir korunuyor. Değişen tek şey
+      // sonundaki öğrenci adı — "sistem sadece ismi değiştirecek" isteği.
+      metin: `${selamlama(girdi.veliAdi)} bugün İngilizce dersimizde sınıf içi davranış ve katılım sistemimiz kapsamında öğrencimize önce sarı kart ile ilk uyarı verilmiştir. Uyarıya rağmen sınıf kurallarına uygun olmayan davranışın devam etmesi üzerine kırmızı kart ile ikinci uyarı uygulanmıştır.
 
-Dönem sonunda verilecek performans notlarından biri, öğrencinin ders içerisindeki katılımı, kurallara uyumu ve genel sınıf içi performansı dikkate alınarak bu sistem üzerinden değerlendirilecektir. Kırmızı kart performans notunu olumsuz etkileyebilmektedir. Bununla birlikte bu durum, öğrencinin dönem içerisindeki sonraki derslerde göstereceği olumlu katılım ve kurallara uyumla telafi edilebilir.
+Dönem sonunda verilecek 3 performans notundan biri, öğrencinin ders içerisindeki katılımı, kurallara uyumu ve genel sınıf içi performansı dikkate alınarak bu sistem üzerinden değerlendirilecektir. Kırmızı kart performans notunu olumsuz etkileyebilmektedir. Bununla birlikte bu durum öğrencinin dönem içerisindeki sonraki derslerde göstereceği olumlu katılım ve kurallara uyumla telafi edilebilir.
 
-Amacımız öğrencimizi cezalandırmak değil, ders ortamının düzenli ve verimli bir şekilde ilerlemesini sağlamaktır. Önümüzdeki derslerde daha olumlu bir performans göstereceğine inanıyorum. Desteğiniz için teşekkür ederim.`,
+Amacımız öğrencimizi cezalandırmak değil, ders ortamının düzenli ve verimli bir şekilde ilerlemesini sağlamak. Önümüzdeki derslerde daha olumlu bir performans göstereceğine inanıyorum. Desteğiniz için teşekkür ederim.
+
+Öğrenci: ${girdi.ogrenciAdi}`,
     });
   }
 
