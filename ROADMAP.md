@@ -81,14 +81,17 @@ eklendi:
 - ✓ Son davranış kaydını geri alma *(yalnızca süren derste, yalnızca son
   kayıt — geçmiş kayıtlara dokunmaz)*
 - ✓ Ayrı staging ortamı ve dallanma akışı (bkz. `HANDOFF.md`)
+- ✓ Sınıf/öğrenci adını sonradan düzeltme
+- ✓ Sınıf/öğrenci arşivleme ve silme *(silme yalnızca geçmiş kaydı yoksa —
+  aksi hâlde arşiv; ödev modülündeki aynı desen)*
+- ✓ Ayarlardan tüm hesap verisini sıfırlama *(parola + yazılı onay ister,
+  öğretmen hesabı kalır)*
 
 ### Açık kalan küçük sorular
 - Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
   bildirimin görünür kalması (PiP/overlay) denendi ama ölçüm sonucu
   paylaşılmadı; tanı sayfası kod tabanından kaldırıldı. Gerçekten istenirse
   yeniden ele alınabilir.
-- Sınıf/öğrenci bazlı silme ve toplu veri sıfırlama arayüzden yapılamıyor;
-  şimdiye kadar SQL ile elle yürütüldü.
 
 ## v0.6 — Dashboard & Raporlama
 - Genel dashboard
