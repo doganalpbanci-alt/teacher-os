@@ -1327,17 +1327,27 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   gap: 0.5rem;
 }
 
-.veli-sablon {
+/* Bu düğmeler `.form` içinde durduğu için `.form button` onları da mavi
+   yapardı; ikincil/seçilebilir oldukları için burada geri alınıyor
+   (bkz. `.ogrenci-adi-dugmeler .ders-dugme` ile aynı gerekçe). */
+.veli-sablon-satiri .veli-sablon {
   padding: 0.4rem 0.75rem;
   border: 1px solid var(--cizgi);
   border-radius: 999px;
   background: var(--kart);
   color: var(--metin);
   font-size: 0.8125rem;
+  font-weight: 400;
   cursor: pointer;
 }
 
-.veli-sablon.secili {
+.veli-sablon-satiri .veli-sablon:hover:not(:disabled) {
+  background: var(--zemin);
+  box-shadow: none;
+}
+
+.veli-sablon-satiri .veli-sablon.secili {
+  background: var(--kart);
   border-color: var(--vurgu);
   color: var(--vurgu);
   font-weight: 600;
@@ -1349,9 +1359,15 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   gap: 0.5rem;
 }
 
-.veli-taslak-dugmesi {
+.veli-gonder-satiri .veli-taslak-dugmesi {
   background: var(--kart);
   color: var(--soluk);
+  border: 1px solid var(--cizgi);
+}
+
+.veli-gonder-satiri .veli-taslak-dugmesi:hover:not(:disabled) {
+  background: var(--zemin);
+  box-shadow: none;
 }
 
 .veli-taslak-islemleri {
