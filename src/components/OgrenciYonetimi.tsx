@@ -1,42 +1,31 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
-import { odevArsivDegistir, odevKaldir } from "@/app/odev-actions";
+import { ogrenciArsivDegistir, ogrenciSil } from "@/app/actions";
 import { BOS_FORM } from "@/lib/form-state";
 
-// Ödev detayındaki yönetim düğmeleri: düzenle, kopyala, arşivle, sil.
-//
-// Silme yalnızca hiçbir öğrenci işaretlenmemişse mümkün. Kural sunucuda,
-// kaydın silindiği katmanda; buradaki gizleme yalnızca öğretmeni boşuna
-// tıklatmamak için. Düğme gizlemek yetki kontrolü değildir.
-
-export function OdevIslemleri({
-  odevId,
+// Silme yalnızca öğrencinin hiç geçmiş kaydı (davranış, ceza, ödev, sınav,
+// veli mesajı) yoksa mümkün. Kural sunucuda; buradaki gizleme yalnızca
+// öğretmeni boşuna tıklatmamak için, yetki kontrolü değildir.
+export function OgrenciYonetimi({
+  ogrenciId,
   arsivde,
   silinebilir,
 }: {
-  odevId: string;
+  ogrenciId: string;
   arsivde: boolean;
   silinebilir: boolean;
 }) {
   const [arsivDurum, arsivGonder, arsivBekliyor] = useActionState(
-    odevArsivDegistir,
+    ogrenciArsivDegistir,
     BOS_FORM,
   );
-  const [silDurum, silGonder, silBekliyor] = useActionState(odevKaldir, BOS_FORM);
+  const [silDurum, silGonder, silBekliyor] = useActionState(ogrenciSil, BOS_FORM);
 
   return (
     <div className="yonetim-satiri">
-      <Link className="ders-dugme" href={`/odevler/${odevId}/duzenle`}>
-        Düzenle
-      </Link>
-      <Link className="ders-dugme" href={`/odevler/yeni?kaynak=${odevId}`}>
-        Kopyala
-      </Link>
-
       <form action={arsivGonder}>
-        <input type="hidden" name="odevId" value={odevId} />
+        <input type="hidden" name="ogrenciId" value={ogrenciId} />
         <input type="hidden" name="arsiv" value={arsivde ? "0" : "1"} />
         <button type="submit" className="ders-dugme" disabled={arsivBekliyor}>
           {arsivde ? "Arşivden çıkar" : "Arşivle"}
@@ -45,7 +34,7 @@ export function OdevIslemleri({
 
       {silinebilir && (
         <form action={silGonder}>
-          <input type="hidden" name="odevId" value={odevId} />
+          <input type="hidden" name="ogrenciId" value={ogrenciId} />
           <button type="submit" className="ders-dugme ders-bitir" disabled={silBekliyor}>
             Sil
           </button>
