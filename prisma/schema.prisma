@@ -79,6 +79,11 @@ model Teacher {
   /// cihaz kendiliginden kilitlenir.
   boardUnlockMinutes Int @default(10)
 
+  /// Sinif hedefleri gibi oyunlastirma ozelliklerinin gorunup gorunmeyecegini
+  /// belirler. behaviorTemplate gibi ogretmen bazlidir ve varsayilan kapalidir:
+  /// bu tarz bir odul mekanigi istemeyen ogretmen hic gormez.
+  gamificationEnabled Boolean @default(false)
+
   classrooms     Classroom[]
   behaviorLogs   BehaviorLog[]
   assignments    Assignment[]
@@ -97,8 +102,32 @@ model Classroom {
   students     Student[]
   lessons      Lesson[]
   behaviorLogs BehaviorLog[]
+  classGoals   ClassGoal[]
 
   @@index([teacherId])
+}
+
+/// Sinif hedefi: toplu bir esige ulasilinca verilecek odul ("100 yildizda
+/// film gunu" gibi). Ilerleme burada TUTULMAZ -- gercek kaynak BehaviorLog'dur,
+/// bu satir yalnizca hedefin baslangicini (createdAt) ve kapanisini isaretler.
+/// Kapanmis hedefler silinmez: kucuk bir basari gecmisi olarak listede kalir.
+model ClassGoal {
+  id          String   @id @default(cuid())
+  classroomId String
+  target      Int
+  reward      String
+  createdAt   DateTime @default(now())
+
+  /// Ogretmen odulu verip hedefi kapattiginda dolar (hedefe ulasilmis ya da
+  /// vazgecilmis olabilir). Acik oldugu surece (null) bu sinifin baska hedefi
+  /// olusturulamaz -- Lesson'daki "tek acik ders" kuraliyla ayni mantik.
+  closedAt DateTime?
+
+  // Cascade: sinif ancak hic dersi/ogrencisi yokken silinebilir (sinifSil),
+  // o durumda kaybedilecek bir BehaviorLog gecmisi de yoktur.
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@index([classroomId, closedAt])
 }
 
 model Student {

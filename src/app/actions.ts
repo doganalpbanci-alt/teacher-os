@@ -15,6 +15,7 @@ import {
 import { yazmaKilitli } from "@/lib/lock";
 import { parolaDogru } from "@/lib/auth";
 import { hesapVerisiniSifirla } from "@/lib/account-reset";
+import { hedefSayisiGecerliMi, odulGecerliMi } from "@/lib/class-goal-rules";
 
 const AD_SINIRI = 60;
 const TELEFON_SINIRI = 30;
@@ -542,6 +543,107 @@ export async function sablonDegistir(
 
   // Butun siniflarda dugmeler degistigi icin tum sayfalar tazelenir.
   revalidatePath("/", "layout");
+  return basarili(onceki);
+}
+
+/** Sınıf hedefleri modülünü açar/kapatır. Kapatmak var olan hedefleri silmez,
+ * yalnızca ekranda göstermeyi durdurur. */
+export async function gamificationDegistir(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const acik = formData.get("acik") === "1";
+
+  try {
+    const ogretmen = await getCurrentTeacher();
+    await prisma.teacher.update({
+      where: { id: ogretmen.id },
+      data: { gamificationEnabled: acik },
+    });
+  } catch {
+    return hata(onceki, "Ayar kaydedilemedi. Veritabanına ulaşılamıyor olabilir.", {});
+  }
+
+  revalidatePath("/", "layout");
+  return basarili(onceki);
+}
+
+/**
+ * Sınıfa yeni bir hedef açar. Bir sınıfın aynı anda en fazla bir açık hedefi
+ * olur — `Lesson`'daki "tek açık ders" kuralıyla aynı mantık; yenisi
+ * açılmadan önce var olan kapatılmalı.
+ */
+export async function sinifHedefiOlustur(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const sinifId = metin(formData.get("sinifId"));
+  const target = Number(metin(formData.get("target")));
+  const reward = metin(formData.get("reward"));
+  const girilen = { target: metin(formData.get("target")), reward };
+
+  if (!sinifId) return hata(onceki, "Sınıf bilgisi eksik.", girilen);
+  if (!hedefSayisiGecerliMi(target)) {
+    return hata(onceki, "Hedef sayısı geçerli bir tam sayı olmalı.", girilen);
+  }
+  if (!odulGecerliMi(reward)) {
+    return hata(onceki, "Ödül açıklaması boş ya da çok uzun olamaz.", girilen);
+  }
+
+  try {
+    const ogretmen = await getCurrentTeacher();
+    const sinif = await prisma.classroom.findFirst({
+      where: { id: sinifId, teacherId: ogretmen.id },
+      select: { id: true },
+    });
+    if (!sinif) return hata(onceki, "Sınıf bulunamadı.", girilen);
+
+    const acikHedef = await prisma.classGoal.findFirst({
+      where: { classroomId: sinif.id, closedAt: null },
+      select: { id: true },
+    });
+    if (acikHedef) {
+      return hata(onceki, "Bu sınıfın açık bir hedefi var. Önce onu kapatın.", girilen);
+    }
+
+    await prisma.classGoal.create({
+      data: { classroomId: sinif.id, target, reward },
+    });
+  } catch {
+    return hata(onceki, "Hedef kaydedilemedi. Veritabanına ulaşılamıyor olabilir.", girilen);
+  }
+
+  revalidatePath(`/sinif/${sinifId}`);
+  return basarili(onceki);
+}
+
+/** Açık bir hedefi kapatır — ödül verildiğinde ya da vazgeçildiğinde. Kayıt
+ * silinmez, geçmiş hedefler listesinde kalır. */
+export async function sinifHedefiKapat(
+  onceki: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const hedefId = metin(formData.get("hedefId"));
+  const sinifId = metin(formData.get("sinifId"));
+  if (!hedefId) return hata(onceki, "Hedef bilgisi eksik.", {});
+
+  try {
+    const ogretmen = await getCurrentTeacher();
+    const hedef = await prisma.classGoal.findFirst({
+      where: { id: hedefId, closedAt: null, classroom: { teacherId: ogretmen.id } },
+      select: { id: true },
+    });
+    if (!hedef) return hata(onceki, "Hedef bulunamadı.", {});
+
+    await prisma.classGoal.update({
+      where: { id: hedef.id },
+      data: { closedAt: new Date() },
+    });
+  } catch {
+    return hata(onceki, "Hedef kapatılamadı. Veritabanına ulaşılamıyor olabilir.", {});
+  }
+
+  if (sinifId) revalidatePath(`/sinif/${sinifId}`);
   return basarili(onceki);
 }
 

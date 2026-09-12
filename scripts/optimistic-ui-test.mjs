@@ -113,7 +113,7 @@ ok("Yenilemeden sonra da 2 arti", (await satirMetni("Mert")).includes("2 artı")
 console.log("\nE. Kart sablonu");
 await sayfa.goto(`${T}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Kart sistemi/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 await sayfa.goto(T, { waitUntil: "networkidle" });
 await sayfa.getByRole("link", { name: /Iyimser-Test/ }).click();

@@ -63,7 +63,7 @@ console.log("\nA. Hazirlik");
 // Kart sistemi varsayilan degil; once ayarlardan secilir.
 await sayfa.goto(`${TEMEL}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Kart sistemi/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 ok("Kart sistemi secildi", true);
 

@@ -116,7 +116,7 @@ console.log("\nD. Kart sistemine gecis");
 await sayfa.goto(`${TEMEL}/ayarlar`, { waitUntil: "networkidle" });
 ok("Basit sistem secili", await sayfa.getByRole("radio", { name: /Basit/ }).isChecked());
 await sayfa.getByRole("radio", { name: /Kart sistemi/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 ok("Ayar kaydedildi", (await sayfa.textContent(".basari")).includes("değiştirildi"));
 
@@ -139,7 +139,7 @@ ok("Ikinci uyari kirmizi kart", (await satirMetni("Deniz")).includes("Kırmızı
 console.log("\nF. Geri donus");
 await sayfa.goto(`${TEMEL}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Basit/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 await sayfa.goto(TEMEL, { waitUntil: "networkidle" });
 await sayfa.getByRole("link", { name: /8-D/ }).click();
