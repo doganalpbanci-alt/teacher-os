@@ -82,7 +82,7 @@ ok("Basit sistemde puan etkisi yok", !g.includes("+1") && !g.includes("-5"), g.s
 console.log("\nC. Kart sisteminde kayitlar");
 await sayfa.goto(`${TEMEL}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Kart sistemi/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 await sayfa.goto(TEMEL, { waitUntil: "networkidle" });
 await sayfa.getByRole("link", { name: /10-B/ }).click();

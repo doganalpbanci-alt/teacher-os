@@ -46,7 +46,7 @@ const cezaSaniye = (ad) =>
 console.log("\nA. Hazirlik");
 await sayfa.goto(`${T}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Kart sistemi/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 await sayfa.goto(T, { waitUntil: "networkidle" });
 await sayfa.getByLabel("Sınıf adı").fill("Ceza-Test");
@@ -146,7 +146,7 @@ ok("Arda temiz dersten sonra YINE 2 dakika", cezaSaniye("Arda") === "120", `sani
 console.log("\nJ. Basit sablon");
 await sayfa.goto(`${T}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Basit/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 await sayfa.goto(T, { waitUntil: "networkidle" });
 await sayfa.getByRole("link", { name: /Ceza-Test/ }).click();

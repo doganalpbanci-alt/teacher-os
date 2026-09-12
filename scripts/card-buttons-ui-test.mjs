@@ -51,7 +51,7 @@ async function kart(ad) {
 console.log("\nA. Hazirlik");
 await sayfa.goto(`${T}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Kart sistemi/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 await sayfa.goto(T, { waitUntil: "networkidle" });
 await sayfa.getByLabel("Sınıf adı").fill("Kart-Test");
@@ -125,7 +125,7 @@ ok("Gecmiste iki sari bir kirmizi", (gecmis.match(/Sarı kart/g) || []).length =
 console.log("\nI. Basit sablonda koruma");
 await sayfa.goto(`${T}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Basit/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 await sayfa.goto(T, { waitUntil: "networkidle" });
 await sayfa.getByRole("link", { name: /Kart-Test/ }).click();
