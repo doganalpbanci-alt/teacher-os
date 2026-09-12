@@ -130,25 +130,26 @@ v1.0'ın temel tanımına dahil değildir.
 Büyükten küçüğe değil, en basitinden en büyüğüne düşünülüyor — her aşama
 kendi başına anlamlı, bir sonrakini beklemek zorunda değil:
 
-- Sınıf hedefleri *(toplu yıldız/kart sayacı bir eşiğe ulaşınca ödül —
-  "100 yıldızda film günü" gibi)*
+- ✓ Sınıf hedefleri *(toplu yıldız/kart sayacı bir eşiğe ulaşınca ödül —
+  "100 yıldızda film günü" gibi; `Teacher.gamificationEnabled` ile açılıp
+  kapanır, varsayılan kapalı)*
 - Tecrübe puanı (XP) ve seviye
 - Bireysel ödüller
 - Karakter özelleştirme
 - Öğrenciler arası düello
 
-Mimari not: kaynak veri yine `BehaviorLog` olacak (ya da yanına eklenecek
-benzer bir event tablosu). XP ve seviye `Student.performanceScore` ile aynı
-prensiple çalışır — geçmiş kayıttan **türetilen**, hızlı erişim için
-tutulan bir değer; kayıtların kendisi hiçbir zaman silinip yeniden yazılmaz.
+Mimari not: kaynak veri `BehaviorLog`'daki PLUS kayıtlarıdır (yıldız/artı).
+XP ve seviye eklenirse `Student.performanceScore` ile aynı prensiple
+çalışacaktır — geçmiş kayıttan **türetilen**, hızlı erişim için tutulan bir
+değer; kayıtların kendisi hiçbir zaman silinip yeniden yazılmaz.
 
-Sınıf hedefleri en basit ve en bağımsız parça: mevcut kart sistemi üzerine
-kurulur, başka hiçbir modülü beklemez. Bu yüzden istenirse v0.5'i beklemeden
-de ele alınabilir — sıra öğretmenin isteğine göre belirlenir, roadmap
-numarasına göre değil. XP/seviyeden itibaren gelen kısım daha büyük bir
-mimari karar gerektirir (XP'nin kaynağı, performans notuyla ilişkisi,
-seviyenin neyi temsil ettiği) ve şimdilik yalnızca yer ayrılıyor;
-tasarımı iş sırası geldiğinde yapılır.
+Sınıf hedefleri canlıda: bir sınıfın aynı anda tek açık hedefi olur, hedefe
+ulaşılması otomatik kapatmaz (öğretmen ödülü verince kapatır), kapanan
+hedefler küçük bir başarı geçmişi olarak sınıf sayfasında kalır. Ayrıntısı
+`HANDOFF.md`'de. XP/seviyeden itibaren gelen kısım daha büyük bir mimari
+karar gerektirir (XP'nin kaynağı, performans notuyla ilişkisi, seviyenin
+neyi temsil ettiği) ve şimdilik yalnızca yer ayrılıyor; tasarımı iş sırası
+geldiğinde yapılır.
 
 ---
 
