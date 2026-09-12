@@ -154,6 +154,14 @@ a.satir:hover .satir-ad {
   white-space: nowrap;
 }
 
+.rozet-seviye {
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: var(--vurgu-soluk);
+  color: var(--vurgu);
+  font-weight: 600;
+}
+
 /* Formlar */
 .form {
   display: grid;

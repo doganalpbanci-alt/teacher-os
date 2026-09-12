@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { BehaviorTemplate } from "@prisma/client";
 import { kirmiziKartCezasiEkle, kirmiziKartCezasiGeriAl } from "@/lib/penalty";
+import { expEkle, expGeriAl } from "@/lib/exp";
+import { YILDIZ_EXP } from "@/lib/exp-rules";
 import {
   BASLANGIC_PUANI,
   KART_PUAN,
@@ -91,6 +93,7 @@ export async function davranisKaydet(
   eylem: Eylem,
   sablon: BehaviorTemplate,
   ogretmenId: string,
+  gamificationEnabled: boolean,
 ): Promise<void> {
   if (!eylemGecerliMi(sablon, eylem)) {
     throw new DavranisHatasi("Bu davranış türü seçili sistemde kullanılmıyor.");
@@ -134,14 +137,18 @@ export async function davranisKaydet(
     };
 
     if (sablon === "SIMPLE") {
-      await tx.behaviorLog.create({
+      const log = await tx.behaviorLog.create({
         data: {
           ...ortak,
           type: eylem === "PLUS" ? "PLUS" : "MINUS",
           points: NOTR_PUAN,
         },
       });
-      // Not elle girildiği için performansScore'a dokunulmaz.
+      // Not elle girildiği için performansScore'a dokunulmaz. EXP ise
+      // performanstan bağımsız, template'ten bağımsız: her yıldız/artı sayılır.
+      if (gamificationEnabled && eylem === "PLUS") {
+        await expEkle(tx, ogrenciId, "YILDIZ", log.id, YILDIZ_EXP);
+      }
       return;
     }
 
@@ -159,9 +166,12 @@ export async function davranisKaydet(
     };
 
     if (eylem === "PLUS") {
-      await tx.behaviorLog.create({
+      const log = await tx.behaviorLog.create({
         data: { ...ortak, type: "PLUS", points: PLUS_PUAN },
       });
+      if (gamificationEnabled) {
+        await expEkle(tx, ogrenciId, "YILDIZ", log.id, YILDIZ_EXP);
+      }
     } else if (eylem === "KIRMIZI_KART") {
       // Doğrudan kırmızı: derste kart olup olmadığına bakılmaz.
       await kirmiziYaz();
@@ -263,6 +273,12 @@ export async function sonKaydiGeriAl(
     // Ceza, kart hâlâ dururken geri alınır: sayım eklenirkenki ile aynı olsun.
     if (grup.some((k) => k.type === "RED_CARD")) {
       await kirmiziKartCezasiGeriAl(tx, ogrenciId, ders.classroomId, dersId);
+    }
+
+    // Yıldızın EXP'si de kayıtla birlikte geri alınır -- kart hâlâ dururken
+    // olduğu gibi, EXP de log silinmeden önce geri alınır.
+    for (const k of grup) {
+      if (k.type === "PLUS") await expGeriAl(tx, ogrenciId, k.id);
     }
 
     await tx.behaviorLog.deleteMany({ where: { id: { in: grup.map((k) => k.id) } } });

@@ -440,6 +440,7 @@ export async function davranisKaydiOlustur(
       tur,
       ogretmen.behaviorTemplate,
       ogretmen.id,
+      ogretmen.gamificationEnabled,
     );
   } catch (error) {
     if (error instanceof DavranisHatasi) return hata(onceki, error.message, {});

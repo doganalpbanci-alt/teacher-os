@@ -17,6 +17,7 @@ import {
   sinavTarihiYazisi,
 } from "@/lib/exam";
 import { ogrenciMesajGecmisi } from "@/lib/parent-message";
+import { seviyeHesapla } from "@/lib/exp";
 import { NotFormu } from "@/components/NotFormu";
 import { OgrenciAdiFormu } from "@/components/OgrenciAdiFormu";
 import { OgrenciYonetimi } from "@/components/OgrenciYonetimi";
@@ -66,6 +67,7 @@ export default async function OgrenciSayfasi({
       parentPhone: true,
       parentConsentAt: true,
       performanceScore: true,
+      expTotal: true,
       isActive: true,
       classroom: { select: { id: true, name: true } },
     },
@@ -100,6 +102,9 @@ export default async function OgrenciSayfasi({
         { deger: ozet.arti, etiket: "artı" },
         { deger: ozet.eksi, etiket: "eksi" },
       ];
+
+  // EXP performans notundan bağımsız: yalnızca gamification açıkken gösterilir.
+  const seviyeDurumu = ogretmen.gamificationEnabled ? seviyeHesapla(ogrenci.expTotal) : null;
 
   // Öğrenci yalnızca hiçbir geçmiş kaydı yoksa silinebilir; asıl kural
   // sunucuda (ogrenciSil), bu yalnızca düğmeyi boşuna göstermemek için.
@@ -152,6 +157,22 @@ export default async function OgrenciSayfasi({
             <span className="olcum-etiket">performans notu</span>
           </div>
         </div>
+
+        {/* EXP performans notundan bağımsız bir sayaç: kırmızı kart notu
+            düşürür ama EXP'yi hiç etkilemez, EXP yalnızca artar. */}
+        {seviyeDurumu && (
+          <div className="hedef-kart">
+            <div className="hedef-basligi">
+              <strong>Seviye {seviyeDurumu.seviye}</strong>
+              <span className="soluk">
+                {seviyeDurumu.buSeviyedeKazanilan}/{seviyeDurumu.sonrakiSeviyeIcinGereken} XP
+              </span>
+            </div>
+            <div className="hedef-cubugu">
+              <div className="hedef-cubugu-dolu" style={{ width: `${seviyeDurumu.yuzde}%` }} />
+            </div>
+          </div>
+        )}
 
         <OgrenciYonetimi
           ogrenciId={ogrenci.id}

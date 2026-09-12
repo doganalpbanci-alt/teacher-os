@@ -1,6 +1,8 @@
 import type { SubmissionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { turkceSirala } from "@/lib/siralama";
+import { expEkle } from "@/lib/exp";
+import { ODEV_TAMAMLANDI_EXP, ODEV_GEC_TAMAMLANDI_EXP } from "@/lib/exp-rules";
 
 // Ödev yönetimi tek yerde toplanır: ödevin kime verildiği, nasıl okunduğu,
 // düzenlendiği ve istatistiğinin nasıl hesaplandığı burada tanımlıdır.
@@ -20,6 +22,13 @@ const ZAMAN_DILIMI = "Europe/Istanbul";
 const LISTE_SINIRI = 100;
 
 export class OdevHatasi extends Error {}
+
+/** Tamamlanma sayılan durumun EXP miktarı; diğer durumlarda EXP verilmez. */
+function odevExpMiktari(status: SubmissionStatus): number | null {
+  if (status === "DONE") return ODEV_TAMAMLANDI_EXP;
+  if (status === "LATE") return ODEV_GEC_TAMAMLANDI_EXP;
+  return null;
+}
 
 /**
  * Tarihi öğretmenin saat dilimine göre "2026-08-25" biçimine indirger.
@@ -306,20 +315,34 @@ export async function odevSil(odevId: string, ogretmenId: string): Promise<void>
   ]);
 }
 
-/** Tek bir öğrencinin teslim durumunu günceller. */
+/**
+ * Tek bir öğrencinin teslim durumunu günceller. Durum DONE ya da LATE'e
+ * dönüyorsa ve gamification açıksa EXP eklenir (`ODEV_TAMAMLANDI`,
+ * referenceId = submission id) -- aynı teslim ikinci kez tamamlanmış
+ * işaretlense bile (ör. PENDING'e çekilip yeniden DONE yapılsa) EXP yalnızca
+ * ilk seferde yazılır, (source, referenceId) essizliği bunu garanti eder.
+ */
 export async function teslimGuncelle(
   submissionId: string,
   ogretmenId: string,
   status: SubmissionStatus,
+  gamificationEnabled: boolean,
 ): Promise<void> {
   // Sahiplik sorgunun parçası: teslim -> ödev -> öğretmen.
   const teslim = await prisma.submission.findFirst({
     where: { id: submissionId, assignment: { teacherId: ogretmenId } },
-    select: { id: true },
+    select: { id: true, studentId: true },
   });
   if (!teslim) throw new OdevHatasi("Teslim kaydı bulunamadı.");
 
-  await prisma.submission.update({ where: { id: teslim.id }, data: { status } });
+  const miktar = gamificationEnabled ? odevExpMiktari(status) : null;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.submission.update({ where: { id: teslim.id }, data: { status } });
+    if (miktar !== null) {
+      await expEkle(tx, teslim.studentId, "ODEV_TAMAMLANDI", teslim.id, miktar);
+    }
+  });
 }
 
 /**
@@ -332,6 +355,7 @@ export async function topluTeslimGuncelle(
   ogretmenId: string,
   status: SubmissionStatus,
   sinifId: string | null,
+  gamificationEnabled: boolean,
 ): Promise<number> {
   const odev = await prisma.assignment.findFirst({
     where: { id: odevId, teacherId: ogretmenId },
@@ -339,14 +363,27 @@ export async function topluTeslimGuncelle(
   });
   if (!odev) throw new OdevHatasi("Ödev bulunamadı.");
 
-  const sonuc = await prisma.submission.updateMany({
-    where: {
-      assignmentId: odev.id,
-      ...(sinifId ? { student: { classroomId: sinifId } } : {}),
-    },
-    data: { status },
+  const hedefSorgu = {
+    assignmentId: odev.id,
+    ...(sinifId ? { student: { classroomId: sinifId } } : {}),
+  };
+
+  const miktar = gamificationEnabled ? odevExpMiktari(status) : null;
+  // EXP verilecekse etkilenecek satırlar önceden bilinmeli: updateMany kaç
+  // ve hangi satırı değiştirdiğini döndürmez.
+  const etkilenenler = miktar !== null
+    ? await prisma.submission.findMany({ where: hedefSorgu, select: { id: true, studentId: true } })
+    : [];
+
+  return prisma.$transaction(async (tx) => {
+    const sonuc = await tx.submission.updateMany({ where: hedefSorgu, data: { status } });
+    if (miktar !== null) {
+      for (const e of etkilenenler) {
+        await expEkle(tx, e.studentId, "ODEV_TAMAMLANDI", e.id, miktar);
+      }
+    }
+    return sonuc.count;
   });
-  return sonuc.count;
 }
 
 // ---------- Okuma ----------

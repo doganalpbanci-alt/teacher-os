@@ -20,6 +20,13 @@ enum BehaviorTemplate {
   CARD
 }
 
+/// EXP'nin hangi olaydan geldigi. Yeni bir kaynak eklemek yalnizca buraya
+/// yeni bir deger eklemek demektir; toplama sorgusu (SUM) hic degismez.
+enum ExpKaynagi {
+  YILDIZ
+  ODEV_TAMAMLANDI
+}
+
 enum BehaviorType {
   PLUS
   MINUS
@@ -151,6 +158,11 @@ model Student {
   // deger tutuluyor.
   performanceScore Int @default(90)
 
+  /// Cached value, ayni prensip: gercek kaynak ExpEvent kayitlaridir
+  /// (SUM(amount)). Performans notundan tamamen bagimsizdir -- kirmizi kart
+  /// notu dusurur ama EXP'yi hic etkilemez, EXP yalnizca artar.
+  expTotal Int @default(0)
+
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
@@ -160,8 +172,34 @@ model Student {
   submissions    Submission[]
   examResults    ExamResult[]
   parentMessages ParentMessage[]
+  expEvents      ExpEvent[]
 
   @@index([classroomId])
+}
+
+/// Append-only EXP olay gunlugu -- BehaviorLog ile ayni felsefe. Her satir
+/// bir kaynagi ve miktari tasir; Student.expTotal buradan turetilir.
+/// `referenceId` ayni olaydan iki kez EXP yazilmasini engeller (ör. bir
+/// odevin DONE/LATE durumu birden fazla kez kaydedilirse): (kaynak,
+/// referenceId) essiz, ikinci deneme veritabani tarafindan sessizce
+/// atlanir (skipDuplicates / ON CONFLICT DO NOTHING).
+///
+/// Once kazanilan EXP asla geri alinmaz -- performansdan farkli olarak
+/// burada "yanlisi duzeltme" kavrami yok, yalnizca ders SURERKEN verilen bir
+/// yildizin BehaviorLog kaydiyla birlikte geri alinmasi istisnadir (bkz.
+/// `sonKaydiGeriAl`).
+model ExpEvent {
+  id        String     @id @default(cuid())
+  studentId String
+  source    ExpKaynagi
+  amount    Int
+  referenceId String
+  createdAt DateTime   @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([source, referenceId])
+  @@index([studentId])
 }
 
 // ---------- Ders ----------
