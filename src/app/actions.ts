@@ -11,6 +11,7 @@ import {
   eylemGecerliMi,
   sonKaydiGeriAl,
   DavranisHatasi,
+  BASLANGIC_PUANI,
 } from "@/lib/behavior";
 import { yazmaKilitli } from "@/lib/lock";
 import { parolaDogru } from "@/lib/auth";
@@ -209,6 +210,7 @@ export async function ogrenciEkle(
         parentName: bosIseNull(veliAdi),
         parentPhone: bosIseNull(veliTelefonu),
         parentConsentAt: veliTelefonu.length > 0 ? new Date() : null,
+        performanceScore: BASLANGIC_PUANI,
       },
     });
   } catch {

@@ -73,11 +73,11 @@ console.log("\nB. Basit sistemde kayit");
 await dersBaslat(sayfa, ". ders");
 await bas("Deniz", "Artı ver");
 ok("Arti sayildi", (await satirMetni("Deniz")).includes("1 artı"));
-ok("Puan DEGISMEDI", (puan("Deniz")) === 90, `puan=${puan("Deniz")}`);
+ok("Puan DEGISMEDI", (puan("Deniz")) === 80, `puan=${puan("Deniz")}`);
 await bas("Deniz", "Eksi ver");
 await bas("Deniz", "Eksi ver");
 ok("Eksiler sayildi", (await satirMetni("Deniz")).includes("2 eksi"));
-ok("Puan hala 90", (puan("Deniz")) === 90, `puan=${puan("Deniz")}`);
+ok("Puan hala 80", (puan("Deniz")) === 80, `puan=${puan("Deniz")}`);
 ok("Kart rozeti yok", !(await satirMetni("Deniz")).includes("kart"));
 
 // --- C: Elle not girme ---

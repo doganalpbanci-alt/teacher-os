@@ -6,7 +6,7 @@ import type { BehaviorTemplate, BehaviorType } from "@prisma/client";
 
 // Kart şablonunun puan sabitleri. Basit şablonda kayıtlar performans notunu
 // değiştirmez; not öğretmen tarafından elle girilir.
-export const BASLANGIC_PUANI = 90;
+export const BASLANGIC_PUANI = 80;
 export const PLUS_PUAN = 1;
 export const MINUS_PUAN = -5;
 // Kartların kendisi puan taşımaz; ceza ayrı MINUS kaydıyla verilir.

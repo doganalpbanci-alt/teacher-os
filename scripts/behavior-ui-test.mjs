@@ -81,7 +81,7 @@ for (const [ad, soyad] of [["Ela", "Kaya"], ["Bora", "Sen"]]) {
   await sayfa.waitForFunction((a) => document.body.innerText.includes(a), ad, { timeout: 10000 });
 }
 ok("Iki ogrenci eklendi", (await sayfa.locator(".ogrenci").count()) === 2);
-ok("Baslangic puani 90", (puan("Ela")) === 90);
+ok("Baslangic puani 80", (puan("Ela")) === 80);
 
 // --- B: Ders yokken ---
 console.log("\nB. Ders baslatilmadan");
@@ -96,39 +96,39 @@ ok("Ders basladi", (await sayfa.textContent("body")).includes("1. ders"));
 ok("Arti dugmesi aktif", !(await satir("Ela").getByRole("button", { name: "Yıldız ver" }).isDisabled()));
 
 await bas("Ela", "PLUS");
-ok("PLUS puani 1 artirdi", (puan("Ela")) === 91, `puan=${puan("Ela")}`);
+ok("PLUS puani 1 artirdi", (puan("Ela")) === 81, `puan=${puan("Ela")}`);
 ok("PLUS kart vermedi", (await kart("Ela")) === "YOK");
 
 await bas("Ela", "IHLAL");
 ok("Ilk ihlal sari kart verdi", (await kart("Ela")) === "SARI", await kart("Ela"));
-ok("Ilk ihlal puani DUSURMEDI", (puan("Ela")) === 91, `puan=${puan("Ela")}`);
+ok("Ilk ihlal puani DUSURMEDI", (puan("Ela")) === 81, `puan=${puan("Ela")}`);
 
 await bas("Ela", "IHLAL");
 ok("Ikinci ihlal kirmizi kart verdi", (await kart("Ela")) === "KIRMIZI", await kart("Ela"));
-ok("Ikinci ihlal -5 puan", (puan("Ela")) === 86, `puan=${puan("Ela")}`);
+ok("Ikinci ihlal -5 puan", (puan("Ela")) === 76, `puan=${puan("Ela")}`);
 
 await bas("Ela", "IHLAL");
-ok("Ucuncu ihlal yine -5", (puan("Ela")) === 81, `puan=${puan("Ela")}`);
+ok("Ucuncu ihlal yine -5", (puan("Ela")) === 71, `puan=${puan("Ela")}`);
 ok("Kart kirmizi kaldi", (await kart("Ela")) === "KIRMIZI");
 
-ok("Diger ogrenci etkilenmedi", (puan("Bora")) === 90 && (await kart("Bora")) === "YOK");
+ok("Diger ogrenci etkilenmedi", (puan("Bora")) === 80 && (await kart("Bora")) === "YOK");
 
 // --- D: 2. ders (ayni gun) ---
 console.log("\nD. Ayni gun ikinci ders");
 await dersBaslat(sayfa, "2. ders");
 ok("Ayni gun ikinci ders acildi", (await sayfa.textContent("body")).includes("2. ders"));
 ok("Sari/kirmizi kart sifirlandi", (await kart("Ela")) === "YOK", await kart("Ela"));
-ok("Puan korundu (gecmis silinmedi)", (puan("Ela")) === 81, `puan=${puan("Ela")}`);
+ok("Puan korundu (gecmis silinmedi)", (puan("Ela")) === 71, `puan=${puan("Ela")}`);
 
 await bas("Ela", "IHLAL");
 ok("Yeni derste ilk ihlal yine SARI", (await kart("Ela")) === "SARI", await kart("Ela"));
-ok("Yeni derste ilk ihlal puan dusurmedi", (puan("Ela")) === 81, `puan=${puan("Ela")}`);
+ok("Yeni derste ilk ihlal puan dusurmedi", (puan("Ela")) === 71, `puan=${puan("Ela")}`);
 
 // --- E: Kalicilik ---
 console.log("\nE. Kalicilik");
 await sayfa.reload({ waitUntil: "networkidle" });
 ok("Yenilemeden sonra kart duruyor", (await kart("Ela")) === "SARI");
-ok("Yenilemeden sonra puan duruyor", (puan("Ela")) === 81);
+ok("Yenilemeden sonra puan duruyor", (puan("Ela")) === 71);
 
 await tarayici.close();
 console.log(`\n=== SONUC: ${gecti} gecti, ${kaldi} kaldi ===`);

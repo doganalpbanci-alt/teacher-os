@@ -145,6 +145,10 @@ model Student {
   parentConsentAt DateTime?
 
   // Cached value. Kaynak gerçek BehaviorLog kayıtlarıdır; loglardan yeniden hesaplanabilir.
+  // Gercek baslangic degeri `behavior-rules.ts`teki BASLANGIC_PUANI'dir;
+  // ogrenciEkle onu acikca yazar. Buradaki @default yalnizca dogrudan SQL ile
+  // eklenen satirlar icin (testler gibi) bir yedektir, kasitli olarak eski
+  // deger tutuluyor.
   performanceScore Int @default(90)
 
   isActive  Boolean  @default(true)
