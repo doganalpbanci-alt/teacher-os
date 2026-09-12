@@ -19,6 +19,7 @@ import { SinifCanliBildirimleri } from "@/components/SinifCanliBildirimleri";
 import { SinifYonetimi } from "@/components/SinifYonetimi";
 import { SinifHedefi } from "@/components/SinifHedefi";
 import { acikHedefiGetir, gecmisHedefleriGetir } from "@/lib/class-goal";
+import { ogrenciSeviyeleri, type SeviyeDurumu } from "@/lib/exp";
 import { turkceSirala } from "@/lib/siralama";
 import type { Sayimlar } from "@/lib/behavior";
 
@@ -107,6 +108,11 @@ export default async function SinifSayfasi({
   const [acikHedef, gecmisHedefler] = gamification
     ? await Promise.all([acikHedefiGetir(sinif.id), gecmisHedefleriGetir(sinif.id)])
     : [null, []];
+  // Seviye rozeti salt gösterimdir (kart/ceza gibi), kilitli tahtada da
+  // görünür -- yazma eylemi olan hedef formundan farklı.
+  const seviyeler: Map<string, SeviyeDurumu> = ogretmen.gamificationEnabled
+    ? await ogrenciSeviyeleri(ogrenciIdleri)
+    : new Map();
 
   return (
     <>
@@ -180,6 +186,7 @@ export default async function SinifSayfasi({
                     ceza={cezalar.get(ogrenci.id)}
                     kilitli={kilitli}
                     geriAlinabilir={geriAlinabilirler.has(ogrenci.id)}
+                    seviye={seviyeler.get(ogrenci.id)?.seviye}
                   />
                 </li>
               );

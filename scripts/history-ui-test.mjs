@@ -102,7 +102,7 @@ const o2 = await ozet();
 ok("Ozet: 1 sari kart", /1 sarı kart/.test(o2), o2);
 ok("Ozet: 1 kirmizi kart", /1 kırmızı kart/.test(o2), o2);
 ok("Ozet: 3 yildiz", /3 yıldız/.test(o2), o2);
-ok("Ozet: 86 puan (90 +1 -5)", /86 performans notu/.test(o2), o2);
+ok("Ozet: 76 puan (80 +1 -5)", /76 performans notu/.test(o2), o2);
 
 // --- D: Eski kayitlar korunuyor ---
 console.log("\nD. Sablon degisimi gecmisi bozmuyor");

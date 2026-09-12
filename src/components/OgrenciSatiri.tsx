@@ -47,6 +47,7 @@ export function OgrenciSatiri({
   ceza,
   kilitli = false,
   geriAlinabilir = false,
+  seviye,
 }: {
   ogrenciId: string;
   ad: string;
@@ -61,6 +62,8 @@ export function OgrenciSatiri({
   kilitli?: boolean;
   /** Süren derste bu öğrencinin geri alınabilecek bir kaydı var mı. */
   geriAlinabilir?: boolean;
+  /** EXP seviyesi. Yalnızca sınıf hedefleri gibi gamification açıkken gelir. */
+  seviye?: number;
 }) {
   const sunucudan: SatirDurumu = { kart, arti, eksi };
   const [gorunen, iyimserUygula] = useOptimistic(
@@ -95,6 +98,7 @@ export function OgrenciSatiri({
       </span>
 
       <span className="ogrenci-sag">
+        {seviye !== undefined && <span className="rozet rozet-seviye">Sv.{seviye}</span>}
         {!kartSistemi && (
           <span className="rozet">
             {gorunen.arti} artı · {gorunen.eksi} eksi

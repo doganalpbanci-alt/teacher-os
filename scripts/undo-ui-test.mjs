@@ -94,13 +94,13 @@ ok("Kaydi olmayan ogrencide geri alma dugmesi YOK", (await geriAl("Umut").count(
 console.log("\nB. Yildiz geri alma");
 await bas("Umut", /Yıldız ver|Artı ver/);
 ok("Yildiz yazildi", kayitSayisi("Umut") === 1, `kayit=${kayitSayisi("Umut")}`);
-ok("Puan 91 oldu", puan("Umut") === "91", `puan=${puan("Umut")}`);
+ok("Puan 81 oldu", puan("Umut") === "81", `puan=${puan("Umut")}`);
 ok("Geri alma dugmesi belirdi", (await geriAl("Umut").count()) === 1);
 ok("Kaydi olmayan digeri hala dugmesiz", (await geriAl("Zehra").count()) === 0);
 
 await alGeri("Umut");
 ok("Yildiz silindi", kayitSayisi("Umut") === 0, `kayit=${kayitSayisi("Umut")}`);
-ok("Puan 90'a dondu", puan("Umut") === "90", `puan=${puan("Umut")}`);
+ok("Puan 80'e dondu", puan("Umut") === "80", `puan=${puan("Umut")}`);
 ok("Dugme yeniden kayboldu", (await geriAl("Umut").count()) === 0);
 
 // --- C. Sari kart geri alma ---
@@ -118,13 +118,13 @@ await bas("Umut", "Kırmızı kart ver");
 ok("Kirmizi kart yazildi", turSayisi("Umut", "RED_CARD") === 1);
 ok("Eslik eden MINUS yazildi", turSayisi("Umut", "MINUS") === 1);
 ok("Ceza acildi (2 dk)", cezaSaniye("Umut") === "120", `saniye=${cezaSaniye("Umut")}`);
-ok("Puan 85 oldu", puan("Umut") === "85", `puan=${puan("Umut")}`);
+ok("Puan 75 oldu", puan("Umut") === "75", `puan=${puan("Umut")}`);
 
 await alGeri("Umut");
 ok("Kirmizi kart silindi", turSayisi("Umut", "RED_CARD") === 0);
 ok("MINUS de silindi", turSayisi("Umut", "MINUS") === 0, `minus=${turSayisi("Umut", "MINUS")}`);
 ok("Ceza da kalkti", cezaSaniye("Umut") === "-1", `saniye=${cezaSaniye("Umut")}`);
-ok("Puan 90'a dondu", puan("Umut") === "90", `puan=${puan("Umut")}`);
+ok("Puan 80'e dondu", puan("Umut") === "80", `puan=${puan("Umut")}`);
 
 // --- E. Ust uste kirmizilarda yalnizca sonuncusu geri alinir ---
 console.log("\nE. Ikinci kirmizi geri alinir, ilki durur");
@@ -135,7 +135,7 @@ ok("Ceza 2+3=5 dk", cezaSaniye("Umut") === "300", `saniye=${cezaSaniye("Umut")}`
 await alGeri("Umut");
 ok("Bir kirmizi kaldi", turSayisi("Umut", "RED_CARD") === 1, `kirmizi=${turSayisi("Umut", "RED_CARD")}`);
 ok("Ceza ilk karta ait 2 dk'ya dondu", cezaSaniye("Umut") === "120", `saniye=${cezaSaniye("Umut")}`);
-ok("Puan tek kirmiziya gore 85", puan("Umut") === "85", `puan=${puan("Umut")}`);
+ok("Puan tek kirmiziya gore 75", puan("Umut") === "75", `puan=${puan("Umut")}`);
 ok("Satir hala kirmizi", (await satir("Umut").innerText()).includes("Kırmızı kart"));
 
 // --- F. Sirali kayitlarda en son olan gider ---
