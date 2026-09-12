@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 4 Eylül 2026 · anlatılan kod durumu `main` = `265e694`
+Son güncelleme: 12 Eylül 2026 · anlatılan kod durumu `main` = `b9e6424`
 (üstündeki commit'ler yalnızca bu notun kendisi olabilir)
 
 ---
@@ -79,7 +79,7 @@ migration gerekmedi, yalnızca eksik olan action/düğme eklendi.
 
 ---
 
-## Migration'lar (11)
+## Migration'lar (12)
 
 ```
 20260821214524_init                    tablolar
@@ -93,11 +93,24 @@ migration gerekmedi, yalnızca eksik olan action/düğme eklendi.
 20260825205716_exam_components         ExamComponent + ExamResultComponent, scope, isAbsent
 20260831174322_board_lock              Teacher.boardPin/boardUnlockMinutes
 20260901092250_parent_consent          Student.parentName/parentPhone/parentConsentAt
+20260912180157_sinif_hedefleri         Teacher.gamificationEnabled + ClassGoal tablosu
 ```
 
 Hepsi hem production hem staging Supabase'inde uygulandı ve
-`verify-state.sql` ile doğrulandı (41 satır, hepsi TAMAM). Bekleyen
+`verify-state.sql` ile doğrulandı (45 satır, hepsi TAMAM). Bekleyen
 migration yok.
+
+**Staging'in `_prisma_migrations` geçmişinde bir boşluk çıktı (12 Eylül):**
+ilk 11 migration'ın şeması staging'de tamdı ama kaydı tablosunda yoktu —
+muhtemelen staging ilk kurulurken şema tek seferde push edilmiş, tek tek
+migration kaydı yazılmamış. Şemaya dokunmuyor, yalnızca bookkeeping; ama
+biri ileride staging'de `npm run db:deploy` (`prisma migrate deploy`)
+çalıştırırsa Prisma bu 11 migration'ı "hiç uygulanmamış" sanıp yeniden
+denemeye çalışır ve "zaten var" hatasıyla dururdu. `prisma/backfill-migration-history.sql`
+ile geriye dönük dolduruldu (yalnızca staging'de çalıştırıldı; production'da
+zaten bu boşluk yoktu). Not: Vercel'in build'i (`next build`) hiçbir zaman
+`prisma migrate deploy` çalıştırmaz — şema her zaman elle SQL Editor'e
+yapıştırılır — bu yüzden boşluk canlı uygulamayı hiç etkilemedi.
 
 ---
 
@@ -121,6 +134,9 @@ src/lib/
   parent-message.ts / parent-message-rules.ts
                          veli mesajı: WhatsApp bağlantısı, şablonlar, geçmiş
   account-reset.ts       tüm hesap verisini silme (öğretmen kalır)
+  class-goal.ts / class-goal-rules.ts
+                         sınıf hedefi: açık hedef + ilerleme (BehaviorLog'dan
+                         türetilir), geçmiş hedefler, hedef/ödül geçerliliği
   assignment.ts          ödev: oluşturma, atama, işaretleme, istatistik, gündem
   exam.ts                sınav: oluşturma, atama, not girme, ortalama, istatistik
   exam-rules.ts          sınav hesabının veritabanısız kısmı: şablonlar, net,
@@ -144,6 +160,9 @@ src/components/  (~35 dosya; öne çıkanlar)
   VeliMesajFormu.tsx       hazır şablon + WhatsApp bağlantısı + taslak/gönderildi
   OdevIslemleri.tsx / SinavIslemleri.tsx  düzenle · kopyala · arşivle · sil
   GundemPaneli.tsx         ana sayfadaki "Bugün kontrol edilecek"
+  GamificationFormu.tsx    Ayarlar'da sınıf hedeflerini aç/kapa anahtarı
+  SinifHedefi.tsx          sınıf sayfasında açık hedef (ilerleme çubuğu) ya da
+                           oluşturma formu + geçmiş hedefler listesi
 
 src/app/
   page.tsx                gündem paneli + sınıf listesi + arşivlenmiş sınıflar
@@ -156,10 +175,12 @@ src/app/
   veli/                   öğrenci seç → mesaj oluştur ekranı
   ogrenci/[id]/           öğrenci: özet, ad düzenleme, not girme, ödevler,
                           sınavlar, geçmiş, cezalar, veli mesajı, yönet
-  ayarlar/                davranış şablonu, tahta kilidi, tehlike bölgesi
+  ayarlar/                davranış şablonu, tahta kilidi, sınıf hedefleri
+                          anahtarı, tehlike bölgesi
   giris/ kurulum/         oturum ekranları
   api/ders/[dersId]/olaylar/  canlı yayının yokladığı uç nokta (middleware'den muaf)
-  actions.ts              sınıf, öğrenci, ders, davranış, ceza, arşiv/sil, sıfırlama
+  actions.ts              sınıf, öğrenci, ders, davranış, ceza, arşiv/sil,
+                          sıfırlama, sınıf hedefi oluştur/kapat, gamification aç/kapa
   odev-actions.ts         ödev action'ları (ayrı dosya; modül tek başına büyük)
   sinav-actions.ts        sınav action'ları
   kilit-actions.ts        tahta PIN kurulum/aç action'ları
@@ -266,6 +287,29 @@ Submission → Assignment → ParentMessage → BehaviorLog → BreakPenalty →
 Lesson → Student → Classroom) öğretmenin tüm verisini siler. `Teacher`
 satırının kendisi (giriş bilgisi, PIN, şablon tercihi) dokunulmadan kalır.
 
+### Sınıf hedefleri
+Roadmap'teki "Ekstra — Gamification" bölümünün ilk ve en basit parçası.
+`behaviorTemplate` gibi öğretmen bazlı açılıp kapanan ayrı bir modül
+(`Teacher.gamificationEnabled`, varsayılan kapalı); kapalıyken sınıf
+sayfasında hiçbir iz bırakmaz, hiç sorgulanmaz.
+
+- **İlerleme ayrıca tutulmaz.** Gerçek kaynak `BehaviorLog`'daki PLUS
+  kayıtlarıdır (basit şablonda artı, kart şablonunda yıldız — ikisi de aynı
+  tip); `ClassGoal` yalnızca bir pencerenin başlangıcını (`createdAt`) ve
+  kapanışını (`closedAt`) işaretler, sayım her istek anında canlı hesaplanır.
+- **Bir sınıfın aynı anda en fazla bir açık hedefi olur** — `Lesson`'daki
+  "tek açık ders" kuralıyla aynı mantık, ama burada veritabanı seviyesinde
+  bir kısıt yok, kontrol yalnızca action'da (`sinifHedefiOlustur`).
+- **Hedefe ulaşmak otomatik kapatmaz.** Öğretmen ödülü verdiğinde elle
+  "Hedefi kapat" der; o ana kadar tamamlanmış hedef sayfada "Hedefe
+  ulaşıldı!" rozetiyle açık durur, öğretmen istediği kadar bekleyebilir.
+- **Kapanan hedefler silinmez.** Sınıf sayfasında katlanır bir "Geçmiş
+  hedefler" listesinde kalır — tamamlanan ve erken kapatılan hedefler
+  ayrı ayrı işaretlenir (`· tamamlandı` / `· kapatıldı`).
+- Açık hedef varken sınıf sayfasında katlanmadan, doğrudan görünür (ders
+  sırasında motive edici olsun diye); hedef yokken oluşturma formu diğer
+  yönetim bölümleri gibi katlanır durur.
+
 ### Ödev kuralı
 **Ödev bir sınıfa değil öğretmene aittir** (`Assignment.teacherId`). Kime
 verildiği `Submission` satırlarında yazılıdır; sınıf üyeliği oradan türetilir,
@@ -343,8 +387,8 @@ okunmaz olur.
 
 ## Testler
 
-Yirmi arayüz testi (gerçek tarayıcıda, Playwright) ve iki saf hesap testi,
-toplam **~624 kontrol**. Hepsi geçiyor.
+Yirmi bir arayüz testi (gerçek tarayıcıda, Playwright) ve üç saf hesap testi,
+toplam **~663 kontrol**. Hepsi geçiyor.
 
 ```
 scripts/e2e-test.mjs                       sınıf/öğrenci ekleme, kalıcılık      35
@@ -367,16 +411,21 @@ scripts/parent-message-ui-test.mjs         veli mesajı, WhatsApp, taslak       
 scripts/undo-ui-test.mjs                   davranış kaydını geri alma           40
 scripts/student-name-edit-ui-test.mjs      öğrenci ad/soyad düzenleme           13
 scripts/class-student-delete-ui-test.mjs   arşivleme/silme, hesap sıfırlama     28
+scripts/class-goal-ui-test.mjs             sınıf hedefi aç/kapa, ilerleme,
+                                            tamamlanma, kapatma, geçmiş         18
 scripts/exam-rules-test.mjs                ağırlıklı puan, net, dönem           29
 scripts/parent-message-rules-test.mjs      telefon, WhatsApp, şablon üretimi    35
+scripts/class-goal-rules-test.mjs          hedef/ödül geçerliliği, ilerleme %   21
 ```
 
-`exam-rules-test.mjs` ve `parent-message-rules-test.mjs` diğerlerinden
-farklı: tarayıcı açmaz, sunucu gerektirmez. Veritabanına da ekrana da bağlı
-olmayan saf kurallar (ağırlıklı puan/net/dönem; telefon normalizasyonu,
-WhatsApp bağlantısı, şablon üretimi) doğrudan sınanır. Kurallar
-TypeScript'te yazılı olduğundan test önce ilgili `kurallar.ts` dosyasını
-geçici bir dizine derler. Tek başına da çalışır: `node scripts/<ad>.mjs`.
+`exam-rules-test.mjs`, `parent-message-rules-test.mjs` ve
+`class-goal-rules-test.mjs` diğerlerinden farklı: tarayıcı açmaz, sunucu
+gerektirmez. Veritabanına da ekrana da bağlı olmayan saf kurallar
+(ağırlıklı puan/net/dönem; telefon normalizasyonu, WhatsApp bağlantısı,
+şablon üretimi; hedef/ödül geçerliliği ve ilerleme yüzdesi) doğrudan
+sınanır. Kurallar TypeScript'te yazılı olduğundan test önce ilgili
+`kurallar.ts` dosyasını geçici bir dizine derler. Tek başına da çalışır:
+`node scripts/<ad>.mjs`.
 
 `test-oturum.mjs`, `test-ders.mjs`, `test-form.mjs` ve `test-kayit.mjs`
 testlerin ortak adımlarıdır (giriş, ders başlatma, katlı öğrenci formunu
@@ -425,7 +474,7 @@ veri yazar — **üretim veritabanına karşı çalıştırılmaz.**
 sıfırlar**; bu yüzden test dosyası içinde en sonda çalışır, ondan sonra
 aynı oturumda başka bir şey denenmemelidir.
 
-### Test yazarken beş tuzak
+### Test yazarken altı tuzak
 - **`textContent("body")` kullanma, `innerText("body")` kullan.** İlki
   Next.js'in sayfaya gömdüğü RSC veri script'ini de döndürür; ekranda
   olmayan isimler orada geçer ve "şu öğrenci listede yok" gibi kontroller
@@ -449,6 +498,13 @@ aynı oturumda başka bir şey denenmemelidir.
   gibi genel bir seçici, sayfaya ikinci bir katlanır bölüm (ör. "Sınıfı
   yönet") eklendiğinde strict-mode hatasına döner. Yeni testler
   `.filter({ hasText: "..." })` ile belirli bölümü seçer.
+- **`/ayarlar` sayfasında birden fazla form aynı düğme metnini kullanabilir.**
+  Sınıf hedefleri anahtarı eklenince sayfadaki ikinci "Kaydet" düğmesi,
+  davranış şablonu formunu hedefleyen ~10 mevcut testte strict-mode hatasına
+  yol açtı (`getByRole("button", { name: "Kaydet" })` iki eşleşme buldu).
+  Çözüm: `.locator(".sablon-formu").getByRole("button", ...)` gibi forma
+  özgü bir seçiciyle daralt. Aynı sayfaya yeni bir form eklerken var olan
+  testlerin düğme seçicilerini de gözden geçir.
 
 ---
 
@@ -477,7 +533,8 @@ yönetimi, ders ekranının telefon ve akıllı tahta için düzenlenmesi, akıl
 tahta PIN kilidi, telefondan verilen kartın tahtada canlı yansıması, **ödev
 modülü**, **sınav modülü**, **günlük gündem**, **veli iletişimi** (rıza
 akışı, WhatsApp taslakları, altı hazır şablon), hesap düzeyinde tam veri
-sıfırlama, ayrı bir staging ortamı ve dallanma akışı.
+sıfırlama, ayrı bir staging ortamı ve dallanma akışı, **sınıf hedefleri**
+(gamification'ın öğretmen bazlı açılıp kapanan ilk parçası).
 
 **Hız:** Vercel fonksiyonları `vercel.json` ile `dub1`'de (Dublin) çalışır —
 veritabanıyla aynı bölge. Varsayılan `iad1` (Washington) her sorguyu
