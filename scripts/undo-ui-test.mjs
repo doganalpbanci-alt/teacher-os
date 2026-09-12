@@ -70,7 +70,7 @@ const alGeri = (ad) => degisimiBekle(ad, () => geriAl(ad).click());
 console.log("\nA. Hazirlik");
 await sayfa.goto(`${T}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Kart sistemi/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 
 await sayfa.goto(T, { waitUntil: "networkidle" });
@@ -224,7 +224,7 @@ await sayfa.waitForFunction(() => document.body.innerText.includes("Kilit açık
 
 await sayfa.goto(`${T}/ayarlar`, { waitUntil: "networkidle" });
 await sayfa.getByRole("radio", { name: /Basit/ }).check();
-await sayfa.getByRole("button", { name: "Kaydet" }).click();
+await sayfa.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await sayfa.waitForSelector(".basari", { timeout: 10000 });
 
 await sayfa.goto(`${T}${SINIF_ADRESI}`, { waitUntil: "networkidle" });

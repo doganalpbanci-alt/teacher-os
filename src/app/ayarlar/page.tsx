@@ -3,6 +3,7 @@ import { SablonFormu } from "@/components/SablonFormu";
 import { UstMenu } from "@/components/UstMenu";
 import { TahtaPinFormu, TahtaSuresiFormu } from "@/components/TahtaAyarlari";
 import { HesapSifirlamaFormu } from "@/components/HesapSifirlamaFormu";
+import { GamificationFormu } from "@/components/GamificationFormu";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,9 @@ export default async function AyarlarSayfasi() {
         </p>
         <TahtaPinFormu pinVar={ogretmen.boardPin !== null} />
         <TahtaSuresiFormu dakika={ogretmen.boardUnlockMinutes} />
+
+        <h2>Sınıf hedefleri</h2>
+        <GamificationFormu acik={ogretmen.gamificationEnabled} />
       </main>
 
       <section className="kart tehlike-bolgesi">

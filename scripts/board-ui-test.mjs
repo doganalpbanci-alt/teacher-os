@@ -129,7 +129,7 @@ ok("Ses acilinca sayac artti", (await sesSayaci(tahta)) > sesOncesi);
 console.log("\nE. Kart sablonu");
 await telefon.goto(`${T}/ayarlar`, { waitUntil: "networkidle" });
 await telefon.getByRole("radio", { name: /Kart sistemi/ }).check();
-await telefon.getByRole("button", { name: "Kaydet" }).click();
+await telefon.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).click();
 await telefon.waitForSelector(".basari", { timeout: 10000 });
 await telefon.goto(`${T}${SINIF_ADRESI}`, { waitUntil: "networkidle" });
 await tahta.reload({ waitUntil: "networkidle" });

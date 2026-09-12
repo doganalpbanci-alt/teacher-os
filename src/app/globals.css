@@ -1456,3 +1456,39 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   cursor: pointer;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
+
+/* ---------- Sınıf hedefi ---------- */
+
+.hedef-blogu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hedef-kart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hedef-basligi {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.hedef-cubugu {
+  height: 0.625rem;
+  border-radius: 999px;
+  background: var(--zemin);
+  border: 1px solid var(--cizgi);
+  overflow: hidden;
+}
+
+.hedef-cubugu-dolu {
+  height: 100%;
+  background: var(--vurgu);
+  border-radius: 999px;
+  transition: width var(--gecis);
+}

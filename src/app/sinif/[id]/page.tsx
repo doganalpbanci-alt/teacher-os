@@ -17,6 +17,8 @@ import { kilitDurumu } from "@/lib/lock";
 import { TahtaKilidi } from "@/components/TahtaKilidi";
 import { SinifCanliBildirimleri } from "@/components/SinifCanliBildirimleri";
 import { SinifYonetimi } from "@/components/SinifYonetimi";
+import { SinifHedefi } from "@/components/SinifHedefi";
+import { acikHedefiGetir, gecmisHedefleriGetir } from "@/lib/class-goal";
 import { turkceSirala } from "@/lib/siralama";
 import type { Sayimlar } from "@/lib/behavior";
 
@@ -98,6 +100,13 @@ export default async function SinifSayfasi({
     kartSistemi ? bekleyenCezalar(ogrenciIdleri) : Promise.resolve(new Map()),
     aktifDers ? derstekiKayitliOgrenciler(aktifDers.id) : Promise.resolve(new Set()),
   ]);
+
+  // Sınıf hedefleri öğretmen bazlı açılıp kapanan ayrı bir modül; kapalıysa
+  // hiç sorgulanmaz. Kilitli tahtada da diğer yönetim bölümleri gibi gizlenir.
+  const gamification = ogretmen.gamificationEnabled && !kilitli;
+  const [acikHedef, gecmisHedefler] = gamification
+    ? await Promise.all([acikHedefiGetir(sinif.id), gecmisHedefleriGetir(sinif.id)])
+    : [null, []];
 
   return (
     <>
@@ -202,6 +211,20 @@ export default async function SinifSayfasi({
               </li>
             ))}
           </ul>
+        </details>
+      )}
+
+      {/* Açık hedef motive edici olsun diye doğrudan görünür; hedef yoksa
+          oluşturma formu diğer yönetim bölümleri gibi katlanır. */}
+      {gamification && acikHedef && (
+        <section className="kart">
+          <SinifHedefi sinifId={sinif.id} acikHedef={acikHedef} gecmis={gecmisHedefler} />
+        </section>
+      )}
+      {gamification && !acikHedef && (
+        <details className="kart katlanir">
+          <summary>Sınıf hedefi</summary>
+          <SinifHedefi sinifId={sinif.id} acikHedef={null} gecmis={gecmisHedefler} />
         </details>
       )}
 
