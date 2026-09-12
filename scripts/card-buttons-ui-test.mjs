@@ -78,19 +78,19 @@ await dersBaslat(sayfa);
 console.log("\nB. Dogrudan sari kart");
 await bas("Ali", "Sarı kart ver");
 ok("Sari kart sembolu geldi", (await kart("Ali")) === "SARI", await kart("Ali"));
-ok("Puan degismedi", (puan("Ali")) === 90, `puan=${puan("Ali")}`);
+ok("Puan degismedi", (puan("Ali")) === 80, `puan=${puan("Ali")}`);
 
 // --- C: Sari ustune sari -> kirmizi ---
 console.log("\nC. Sari ustune sari");
 await bas("Ali", "Sarı kart ver");
 ok("KIRMIZIYA dondu", (await kart("Ali")) === "KIRMIZI", await kart("Ali"));
-ok("-5 puan", (puan("Ali")) === 85, `puan=${puan("Ali")}`);
+ok("-5 puan", (puan("Ali")) === 75, `puan=${puan("Ali")}`);
 
 // --- D: Dogrudan kirmizi ---
 console.log("\nD. Dogrudan kirmizi kart");
 await bas("Ece", "Kırmızı kart ver");
 ok("Kart yokken bile kirmizi", (await kart("Ece")) === "KIRMIZI", await kart("Ece"));
-ok("-5 puan", (puan("Ece")) === 85, `puan=${puan("Ece")}`);
+ok("-5 puan", (puan("Ece")) === 75, `puan=${puan("Ece")}`);
 
 // --- E: Sari ustune dogrudan kirmizi ---
 console.log("\nE. Sari ustune dogrudan kirmizi");
@@ -98,19 +98,19 @@ await bas("Can", "Sarı kart ver");
 ok("Once sari", (await kart("Can")) === "SARI");
 await bas("Can", "Kırmızı kart ver");
 ok("Kirmiziya dondu", (await kart("Can")) === "KIRMIZI", await kart("Can"));
-ok("-5 puan", (puan("Can")) === 85, `puan=${puan("Can")}`);
+ok("-5 puan", (puan("Can")) === 75, `puan=${puan("Can")}`);
 
 // --- F: Yildiz ---
 console.log("\nF. Yildiz");
 await bas("Sude", "Yıldız ver");
-ok("Yildiz +1", (puan("Sude")) === 91, `puan=${puan("Sude")}`);
+ok("Yildiz +1", (puan("Sude")) === 81, `puan=${puan("Sude")}`);
 ok("Yildiz kart vermedi", (await kart("Sude")) === "YOK");
 
 // --- G: Yeni derste sifirlanma ---
 console.log("\nG. Yeni ders");
 await dersBaslat(sayfa);
 ok("Ali'nin karti sifirlandi", (await kart("Ali")) === "YOK", await kart("Ali"));
-ok("Ali'nin puani korundu", (puan("Ali")) === 85, `puan=${puan("Ali")}`);
+ok("Ali'nin puani korundu", (puan("Ali")) === 75, `puan=${puan("Ali")}`);
 await bas("Ali", "Sarı kart ver");
 ok("Yeni derste dogrudan sari yine SARI", (await kart("Ali")) === "SARI", await kart("Ali"));
 

@@ -154,13 +154,13 @@ const son = await satirMetni("Mert");
 ok("Yenilemeden sonra kirmizi kart duruyor",
    (await satir("Mert").locator(".kart-kirmizi").count()) === 1, son.replace(/\s+/g, " "));
 const puan = sql(`SELECT "performanceScore" FROM "Student" WHERE "firstName"='Mert';`);
-ok("Kirmizi kart -5 puan yazdi", puan === "85", `puan=${puan}`);
+ok("Kirmizi kart -5 puan yazdi", puan === "75", `puan=${puan}`);
 
 // Puan ogrenci sayfasinda okunur; ders ekraninda degil.
 await satir("Mert").getByRole("link", { name: /Mert/ }).click();
 await sayfa.getByRole("heading", { name: "Mert Bir" }).waitFor();
 ok("Puan OGRENCI sayfasinda gorunuyor",
-   (await sayfa.textContent("body")).includes("85"),
+   (await sayfa.textContent("body")).includes("75"),
    (await sayfa.textContent("body")).replace(/\s+/g, " ").slice(0, 200));
 
 await tarayici.close();
