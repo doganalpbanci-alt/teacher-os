@@ -1500,3 +1500,74 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   border-radius: 999px;
   transition: width var(--gecis);
 }
+
+/* ---------- Panel ---------- */
+
+.panel-aciklama {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+}
+
+/* Sınıf sayısı arttığında ya da dar ekranda tablo taşmasın: sayfanın
+   tamamı değil, yalnızca tablo yatay kayar. */
+.panel-tablo-sarmal {
+  overflow-x: auto;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
+}
+
+.panel-tablo {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.panel-tablo th,
+.panel-tablo td {
+  padding: 0.5rem 0.625rem;
+  text-align: right;
+  border-bottom: 1px solid var(--cizgi);
+}
+
+.panel-tablo thead th {
+  color: var(--soluk);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+/* İlk sütun sınıf adı: solda kalır ve satırın başlığıdır. */
+.panel-tablo th:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+
+.panel-tablo tbody tr:last-child th,
+.panel-tablo tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Dikkat listesindeki sebep etiketleri. Renk sebebi ayırt etmek için, tek
+   başına anlam taşımaz — yazı zaten sebebi söyler. */
+.sebep-rozet {
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sebep-DAVRANIS {
+  background: #fdecea;
+  color: var(--hata);
+}
+
+.sebep-ODEV {
+  background: #fdf4e3;
+  color: #8a5a00;
+}
+
+.sebep-SINAV {
+  background: var(--vurgu-soluk);
+  color: var(--vurgu);
+}
