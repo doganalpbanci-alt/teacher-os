@@ -88,6 +88,8 @@ eklendi:
   aksi hâlde arşiv; ödev modülündeki aynı desen)*
 - ✓ Ayarlardan tüm hesap verisini sıfırlama *(parola + yazılı onay ister,
   öğretmen hesabı kalır)*
+- ✓ Performans notu başlangıcı 90'dan 80'e indirildi *(yıldız +1, kırmızı
+  kart -5 aynı kaldı; merkezi sabit `behavior-rules.ts`)*
 
 ### Açık kalan küçük sorular
 - Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
@@ -133,23 +135,33 @@ kendi başına anlamlı, bir sonrakini beklemek zorunda değil:
 - ✓ Sınıf hedefleri *(toplu yıldız/kart sayacı bir eşiğe ulaşınca ödül —
   "100 yıldızda film günü" gibi; `Teacher.gamificationEnabled` ile açılıp
   kapanır, varsayılan kapalı)*
-- Tecrübe puanı (XP) ve seviye
+- ✓ Tecrübe puanı (EXP) ve seviye *(aynı anahtarla açılıp kapanır; performans
+  notundan tamamen bağımsız — kırmızı kart EXP'yi hiç etkilemez)*
 - Bireysel ödüller
 - Karakter özelleştirme
 - Öğrenciler arası düello
 
-Mimari not: kaynak veri `BehaviorLog`'daki PLUS kayıtlarıdır (yıldız/artı).
-XP ve seviye eklenirse `Student.performanceScore` ile aynı prensiple
-çalışacaktır — geçmiş kayıttan **türetilen**, hızlı erişim için tutulan bir
-değer; kayıtların kendisi hiçbir zaman silinip yeniden yazılmaz.
+Mimari not: sınıf hedeflerinin kaynağı `BehaviorLog`'daki PLUS kayıtlarıdır
+(yıldız/artı). EXP'nin kaynağı ayrı bir append-only tablo, `ExpEvent`
+(`YILDIZ`, `ODEV_TAMAMLANDI` — yeni bir kaynak eklemek yalnızca enum'a
+değer eklemek demektir). `Student.expTotal`, `Student.performanceScore` ile
+aynı prensiple çalışır — geçmiş kayıttan **türetilen**, hızlı erişim için
+tutulan bir değer; kayıtların kendisi hiçbir zaman silinip yeniden yazılmaz.
 
 Sınıf hedefleri canlıda: bir sınıfın aynı anda tek açık hedefi olur, hedefe
 ulaşılması otomatik kapatmaz (öğretmen ödülü verince kapatır), kapanan
-hedefler küçük bir başarı geçmişi olarak sınıf sayfasında kalır. Ayrıntısı
-`HANDOFF.md`'de. XP/seviyeden itibaren gelen kısım daha büyük bir mimari
-karar gerektirir (XP'nin kaynağı, performans notuyla ilişkisi, seviyenin
-neyi temsil ettiği) ve şimdilik yalnızca yer ayrılıyor; tasarımı iş sırası
-geldiğinde yapılır.
+hedefler küçük bir başarı geçmişi olarak sınıf sayfasında kalır.
+
+EXP canlıda: yıldız/artı +10, ödev zamanında tamamlama +20, geç tamamlama
++10; geriye dönük EXP verilmez (sistem açıldığı andan itibaren sayılır).
+Seviye formülü artan eşikli (her seviye bir öncekinden 20 fazla EXP ister).
+Aynı olaydan iki kez EXP yazılmaz (essiz kısıt korur). Ayrıntısı
+`HANDOFF.md`'de.
+
+Bireysel ödüller / karakter özelleştirme / düello henüz tasarlanmadı;
+daha büyük mimari kararlar gerektirir (ödülün ne olduğu, karakterin neyi
+temsil ettiği, düellonun puanlamaya karışıp karışmayacağı) ve iş sırası
+geldiğinde ele alınır.
 
 ---
 
