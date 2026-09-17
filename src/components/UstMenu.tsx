@@ -14,7 +14,7 @@ import { taslakSayisi } from "@/lib/parent-message";
 export async function UstMenu({
   aktif,
 }: {
-  aktif: "siniflar" | "odevler" | "sinavlar" | "veli" | "ayarlar";
+  aktif: "panel" | "siniflar" | "odevler" | "sinavlar" | "veli" | "ayarlar";
 }) {
   const ogretmen = await getCurrentTeacher();
   const [bekleyen, taslak] = await Promise.all([
@@ -25,6 +25,15 @@ export async function UstMenu({
   return (
     <nav className="ust-menu">
       <span className="ust-menu-baglantilar">
+        {/* Panel ilk sırada: menü genelden özele okunur. Ana sayfa yine
+            sınıf listesidir, panel ayrı bir adrestir (`/panel`). */}
+        <Link
+          className={`ust-sekme${aktif === "panel" ? " secili" : ""}`}
+          href="/panel"
+          aria-current={aktif === "panel" ? "page" : undefined}
+        >
+          Panel
+        </Link>
         <Link
           className={`ust-sekme${aktif === "siniflar" ? " secili" : ""}`}
           href="/"
