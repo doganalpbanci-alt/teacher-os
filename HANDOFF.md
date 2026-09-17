@@ -115,10 +115,12 @@ Kart şablonunda not `BASLANGIC_PUANI + SUM(BehaviorLog.points)` olarak
 zamanlarda. Bunu önlemek için `prisma/onetime-recompute-performance-score.sql`
 hazırlandı (CARD şablonundaki tüm öğrencilerin notunu tek seferde yeni
 tabana göre eşitler; SIMPLE şablonundaki elle girilen notlara dokunmaz).
-**Bu SQL'in production'da çalıştırıldığı bu oturumda teyit edilmedi** —
-yeni bir oturuma başlarken önce öğretmene sorup doğrulayın; çalıştırılmadıysa
-mevcut CARD öğrencilerinin notu hâlâ eski (90 tabanlı) sayılardan
-türetiliyor olabilir.
+**17 Eylül'de çözüldü:** öğretmen bu değişiklikten önce sınıflarını zaten
+baştan açmıştı (eski öğrenci/geçmiş kaydı yok), yani eski 90 tabanından
+etkilenecek bir veri hiç kalmamıştı; recompute SQL'i çalıştırmaya gerek
+kalmadı. Bu not, ileride taban tekrar değiştirilirse aynı riski (mevcut
+öğrencilerin notunun bir sonraki kayda kadar eski taban üzerinden kalması)
+hatırlamak için duruyor.
 
 **Staging'in `_prisma_migrations` geçmişinde bir boşluk çıktı (12 Eylül):**
 ilk 11 migration'ın şeması staging'de tamdı ama kaydı tablosunda yoktu —
