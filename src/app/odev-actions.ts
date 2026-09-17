@@ -226,7 +226,7 @@ export async function teslimDurumuGuncelle(
 
   try {
     const ogretmen = await getCurrentTeacher();
-    await teslimGuncelle(submissionId, ogretmen.id, durum);
+    await teslimGuncelle(submissionId, ogretmen.id, durum, ogretmen.gamificationEnabled);
   } catch (error) {
     if (error instanceof OdevHatasi) return hata(onceki, error.message);
     return hata(onceki, "Durum güncellenemedi. Veritabanına ulaşılamıyor olabilir.");
@@ -250,7 +250,7 @@ export async function topluDurumGuncelle(
 
   try {
     const ogretmen = await getCurrentTeacher();
-    await topluTeslimGuncelle(odevId, ogretmen.id, durum, sinifId || null);
+    await topluTeslimGuncelle(odevId, ogretmen.id, durum, sinifId || null, ogretmen.gamificationEnabled);
   } catch (error) {
     if (error instanceof OdevHatasi) return hata(onceki, error.message);
     return hata(onceki, "Durum güncellenemedi. Veritabanına ulaşılamıyor olabilir.");
