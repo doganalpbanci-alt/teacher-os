@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 12 Eylül 2026 · anlatılan kod durumu `main` = `b9e6424`
+Son güncelleme: 17 Eylül 2026 · anlatılan kod durumu `main` = `20f0321`
 (üstündeki commit'ler yalnızca bu notun kendisi olabilir)
 
 ---
@@ -79,7 +79,7 @@ migration gerekmedi, yalnızca eksik olan action/düğme eklendi.
 
 ---
 
-## Migration'lar (12)
+## Migration'lar (13)
 
 ```
 20260821214524_init                    tablolar
@@ -94,11 +94,31 @@ migration gerekmedi, yalnızca eksik olan action/düğme eklendi.
 20260831174322_board_lock              Teacher.boardPin/boardUnlockMinutes
 20260901092250_parent_consent          Student.parentName/parentPhone/parentConsentAt
 20260912180157_sinif_hedefleri         Teacher.gamificationEnabled + ClassGoal tablosu
+20260912192838_exp_sistemi             Student.expTotal + ExpEvent tablosu
 ```
 
 Hepsi hem production hem staging Supabase'inde uygulandı ve
-`verify-state.sql` ile doğrulandı (45 satır, hepsi TAMAM). Bekleyen
+`verify-state.sql` ile doğrulandı (53 satır, hepsi TAMAM). Bekleyen
 migration yok.
+
+**Performans notu tabanı 90'dan 80'e indirildi (12 Eylül) — bunun bir
+migration'ı YOK.** Yıldız +1, kırmızı kart -5 aynı kaldı; değişen tek şey
+`behavior-rules.ts`'teki `BASLANGIC_PUANI` sabiti, şemaya dokunmadı.
+Öğretmenin isteğiyle bu değişiklik **`staging` atlanarak doğrudan `main`'e**
+alındı — normalde geçerli olan "önce staging, sonra main" kuralının
+bilinçli, tek seferlik istisnasıydı, kalıcı bir politika değişikliği değil.
+
+Kart şablonunda not `BASLANGIC_PUANI + SUM(BehaviorLog.points)` olarak
+**her yeni kayıtta yeniden hesaplandığı için**, taban değişince var olan
+öğrencilerin notu kendiliğinden değişmez — yalnızca bir sonraki kayıtta
+(yıldız/kart verildiğinde) aniden 10 puan düşer, öğrenci öğrenci, farklı
+zamanlarda. Bunu önlemek için `prisma/onetime-recompute-performance-score.sql`
+hazırlandı (CARD şablonundaki tüm öğrencilerin notunu tek seferde yeni
+tabana göre eşitler; SIMPLE şablonundaki elle girilen notlara dokunmaz).
+**Bu SQL'in production'da çalıştırıldığı bu oturumda teyit edilmedi** —
+yeni bir oturuma başlarken önce öğretmene sorup doğrulayın; çalıştırılmadıysa
+mevcut CARD öğrencilerinin notu hâlâ eski (90 tabanlı) sayılardan
+türetiliyor olabilir.
 
 **Staging'in `_prisma_migrations` geçmişinde bir boşluk çıktı (12 Eylül):**
 ilk 11 migration'ın şeması staging'de tamdı ama kaydı tablosunda yoktu —
@@ -137,6 +157,9 @@ src/lib/
   class-goal.ts / class-goal-rules.ts
                          sınıf hedefi: açık hedef + ilerleme (BehaviorLog'dan
                          türetilir), geçmiş hedefler, hedef/ödül geçerliliği
+  exp.ts / exp-rules.ts sınıf hedefi ile aynı desende ama ayrı kaynak: EXP
+                         append-only ExpEvent'ten toplanır, seviye formülü
+                         (artan eşik) ve EXP sabitleri buradan okunur
   assignment.ts          ödev: oluşturma, atama, işaretleme, istatistik, gündem
   exam.ts                sınav: oluşturma, atama, not girme, ortalama, istatistik
   exam-rules.ts          sınav hesabının veritabanısız kısmı: şablonlar, net,
@@ -147,7 +170,8 @@ src/lib/
 
 src/components/  (~35 dosya; öne çıkanlar)
   UstMenu.tsx              Sınıflarım · Ödevler · Sınavlar · Veli · Ayarlar + sayaçlar
-  OgrenciSatiri.tsx        ders ekranındaki öğrenci satırı; iyimser güncelleme
+  OgrenciSatiri.tsx        ders ekranındaki öğrenci satırı; iyimser güncelleme;
+                           gamification açıksa "Sv.N" EXP rozeti de burada
   DavranisDugmeleri.tsx    şablona göre düğmeler, gönderimler sıraya girer
   GeriAlDugmesi.tsx        süren dersteki son kaydı geri alır
   DersKontrolu.tsx         duruma göre "Yeni ders başlat" ya da "Dersi bitir"
@@ -310,6 +334,34 @@ sayfasında hiçbir iz bırakmaz, hiç sorgulanmaz.
   sırasında motive edici olsun diye); hedef yokken oluşturma formu diğer
   yönetim bölümleri gibi katlanır durur.
 
+### EXP ve seviye
+Gamification'ın ikinci parçası, sınıf hedefleriyle aynı anahtarla
+(`Teacher.gamificationEnabled`) açılıp kapanır. **Performans notundan
+tamamen bağımsızdır** — kırmızı kart notu düşürür ama EXP'yi hiç etkilemez,
+EXP yalnızca artar.
+
+- **Kaynak `ExpEvent`, append-only bir olay günlüğü** (`BehaviorLog` ile
+  aynı felsefe, ama kendi tablosu): her satır bir kaynağı (`YILDIZ`,
+  `ODEV_TAMAMLANDI`) ve miktarı taşır. Yeni bir kaynak eklemek yalnızca
+  enum'a yeni bir değer eklemek demektir; toplama sorgusu (`SUM(amount)`)
+  hiç değişmez. `Student.expTotal` bu toplamın cache'i.
+- **Kazanma:** yıldız/artı +10 (şablon farketmez, ikisi de PLUS tipi),
+  ödev zamanında tamamlama (DONE) +20, geç tamamlama (LATE) +10. Geriye
+  dönük EXP verilmez — sistem açıldığı andan itibaren sayılır.
+  Sınav tamamlama şimdilik EXP vermiyor.
+- **Aynı olaydan iki kez EXP yazılmaz.** `(source, referenceId)` essiz
+  kısıtı bunu garanti eder: bir ödev PENDING'e çekilip yeniden DONE
+  yapılsa bile ikinci kez EXP eklenmez (`createMany({ skipDuplicates: true })`).
+- **Geri alma EXP'yi de geri alır.** Yıldız, davranış kaydıyla (`sonKaydiGeriAl`)
+  aynı transaction'da, SÜREN derste geri alınabildiği sürece; kırmızı kart
+  cezası gibi aynı desen.
+- **Seviye formülü artan eşikli**, `exp-rules.ts`'te `seviyeHesapla`: L.
+  seviyeye ulaşmak için toplam gereken EXP = `10 × L × (L-1)` (her seviye
+  bir öncekinden 20 fazla EXP ister). Seviye 1'de herkes 0 EXP ile başlar.
+- **Görünürlük:** ders ekranında öğrenci satırında "Sv.N" rozeti (salt
+  gösterim, kilitli tahtada da görünür — kart/ceza rozeti gibi); öğrenci
+  sayfasında performans notunun altında EXP çubuğu + seviye.
+
 ### Ödev kuralı
 **Ödev bir sınıfa değil öğretmene aittir** (`Assignment.teacherId`). Kime
 verildiği `Submission` satırlarında yazılıdır; sınıf üyeliği oradan türetilir,
@@ -387,8 +439,8 @@ okunmaz olur.
 
 ## Testler
 
-Yirmi bir arayüz testi (gerçek tarayıcıda, Playwright) ve üç saf hesap testi,
-toplam **~663 kontrol**. Hepsi geçiyor.
+Yirmi iki arayüz testi (gerçek tarayıcıda, Playwright) ve dört saf hesap
+testi, toplam **~700 kontrol**. Hepsi geçiyor.
 
 ```
 scripts/e2e-test.mjs                       sınıf/öğrenci ekleme, kalıcılık      35
@@ -413,17 +465,20 @@ scripts/student-name-edit-ui-test.mjs      öğrenci ad/soyad düzenleme        
 scripts/class-student-delete-ui-test.mjs   arşivleme/silme, hesap sıfırlama     28
 scripts/class-goal-ui-test.mjs             sınıf hedefi aç/kapa, ilerleme,
                                             tamamlanma, kapatma, geçmiş         18
+scripts/exp-ui-test.mjs                    EXP aç/kapa, yıldız/ödev EXP'i,
+                                            geri alma, cift-EXP korumasi        17
 scripts/exam-rules-test.mjs                ağırlıklı puan, net, dönem           29
 scripts/parent-message-rules-test.mjs      telefon, WhatsApp, şablon üretimi    35
 scripts/class-goal-rules-test.mjs          hedef/ödül geçerliliği, ilerleme %   21
+scripts/exp-rules-test.mjs                 EXP sabitleri, seviye formülü        20
 ```
 
-`exam-rules-test.mjs`, `parent-message-rules-test.mjs` ve
-`class-goal-rules-test.mjs` diğerlerinden farklı: tarayıcı açmaz, sunucu
+`exam-rules-test.mjs`, `parent-message-rules-test.mjs`, `class-goal-rules-test.mjs`
+ve `exp-rules-test.mjs` diğerlerinden farklı: tarayıcı açmaz, sunucu
 gerektirmez. Veritabanına da ekrana da bağlı olmayan saf kurallar
 (ağırlıklı puan/net/dönem; telefon normalizasyonu, WhatsApp bağlantısı,
-şablon üretimi; hedef/ödül geçerliliği ve ilerleme yüzdesi) doğrudan
-sınanır. Kurallar TypeScript'te yazılı olduğundan test önce ilgili
+şablon üretimi; hedef/ödül geçerliliği ve ilerleme yüzdesi; EXP sabitleri
+ve seviye formülü) doğrudan sınanır. Kurallar TypeScript'te yazılı olduğundan test önce ilgili
 `kurallar.ts` dosyasını geçici bir dizine derler. Tek başına da çalışır:
 `node scripts/<ad>.mjs`.
 
@@ -534,7 +589,9 @@ tahta PIN kilidi, telefondan verilen kartın tahtada canlı yansıması, **ödev
 modülü**, **sınav modülü**, **günlük gündem**, **veli iletişimi** (rıza
 akışı, WhatsApp taslakları, altı hazır şablon), hesap düzeyinde tam veri
 sıfırlama, ayrı bir staging ortamı ve dallanma akışı, **sınıf hedefleri**
-(gamification'ın öğretmen bazlı açılıp kapanan ilk parçası).
+ve **EXP/seviye sistemi** (gamification'ın öğretmen bazlı açılıp kapanan
+iki parçası, aynı anahtarla), performans notu tabanının 90'dan 80'e
+indirilmesi.
 
 **Hız:** Vercel fonksiyonları `vercel.json` ile `dub1`'de (Dublin) çalışır —
 veritabanıyla aynı bölge. Varsayılan `iad1` (Washington) her sorguyu
@@ -630,6 +687,12 @@ anlamsızlaşır.
   vardı; `getByLabel` alt-dize eşleşmesi yaptığı için birini diğerinden
   ayırt edecek şekilde etiketleri **gerçekten farklı** yaz (yalnızca ekli
   parantez yetmez — "Hesap parolanız (X)" hâlâ "Hesap parolanız"ı içerir).
+- **Öğretmene verilen "bunu SQL Editor'de çalıştır" görevleri takip
+  kaybedebilir.** Bir oturumda arka arkaya birkaç manuel SQL istendiğinde
+  (migration + bir de veri düzeltmesi gibi), bir sonrakine geçince öncekinin
+  gerçekten çalıştırıldığı teyit edilmeden unutulabilir (bkz. yukarıdaki
+  performans notu recompute notu). Her manuel adımdan sonra açıkça "çalıştı
+  mı?" diye sorup onay almadan bir sonraki işe geçme.
 
 ### Derlemenin yakalayamadığı iki hata sınıfı
 Sınav modülünde ikisi de yaşandı; `npm run build` temiz geçtiği hâlde sayfa
