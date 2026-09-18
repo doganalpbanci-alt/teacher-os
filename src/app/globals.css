@@ -1637,3 +1637,35 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 }
 
 .qr-giris-formu button:hover { border-color: var(--vurgu); }
+
+/* ---------- Gelişim görünümü ---------- */
+
+.gelisim-basi { margin: 0 0 0.5rem; font-size: 0.875rem; }
+
+.gelisim-satir .satir-sag {
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.gelisim-degerler {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gelisim-ok {
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Renk İYİLEŞMEYİ söyler, okun yönünü değil: eksi azalınca ok aşağı bakar
+   ama satır yeşildir. İkisi aynı şeye bağlansaydı "eksi azaldı" kırmızı
+   görünürdü. */
+.gelisim-iyi { background: #eaf6ef; color: var(--basari); }
+.gelisim-kotu { background: #fdecea; color: var(--hata); }
+.gelisim-ayni { background: var(--zemin); color: var(--soluk); }
+.gelisim-yetersiz { background: var(--zemin); color: var(--soluk); font-weight: 400; }
