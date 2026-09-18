@@ -90,6 +90,12 @@ eklendi:
   öğretmen hesabı kalır)*
 - ✓ Performans notu başlangıcı 90'dan 80'e indirildi *(yıldız +1, kırmızı
   kart -5 aynı kaldı; merkezi sabit `behavior-rules.ts`)*
+- ✓ QR ile akıllı tahta girişi *(tahtada QR çıkar, öğretmen telefonundan
+  okutup onaylar; parola sınıfın önünde hiç görünmez)*
+- ✓ Giriş sonrası dönüş *(`?devam=`: korumalı bir sayfaya gidilmek istenip
+  girişe düşülünce, giriş sonrası oraya dönülür)*
+- ✓ Ders yokken açılan tahtanın canlı yayını başlamıyordu — düzeltildi
+  *(canlı katman artık derse değil sınıfa bağlı; ders değişimini de yakalar)*
 
 ### Açık kalan küçük sorular
 - Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
@@ -98,9 +104,22 @@ eklendi:
   yeniden ele alınabilir.
 
 ## v0.6 — Dashboard & Raporlama
-- Genel dashboard
+- ✓ Genel dashboard *(üst menüde "Panel"; bekleyen işler, dikkat gereken
+  öğrenciler, sınıf karşılaştırması, son 30 günün özeti)*
 - Öğrenci/sınıf raporları
 - Gelişim görünümü
+
+Panel canlıda. Şema değişikliği gerektirmedi: her sayı mevcut kayıtlardan
+(BehaviorLog, Submission, ExamResult, Lesson, ParentMessage) hesaplanır.
+
+"Dikkat gereken öğrenci" kriterleri `Student.performanceScore` üzerinden
+DEĞİL, doğrudan davranış kayıtlarından hesaplanır — Basit şablonda notu
+öğretmen elle girdiği için nota bakan bir kriter orada sessizce yanlış
+çalışırdı. Eşikler `dashboard-rules.ts`'te tek yerde: 2+ gecikmiş ödev,
+resmî sınav ortalaması %50 altı, kırmızı kart ya da eksi > artı.
+
+Grafikler hâlâ bilerek yok (v0.4'teki aynı gerekçe): panel önce sayılarla
+çalışsın, grafik neyin izlendiği belli olunca gelsin.
 
 ## v0.7 — AI Assistant
 - Öğrenci ve sınıf verilerini analiz etme
