@@ -1571,3 +1571,69 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   background: var(--vurgu-soluk);
   color: var(--vurgu);
 }
+
+/* ---------- QR ile tahta girişi ---------- */
+
+.qr-sayfasi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.qr-sayfasi h1 { margin-bottom: 0; }
+
+.qr-adimlar {
+  margin: 0;
+  padding-left: 1.25rem;
+  text-align: left;
+  color: var(--soluk);
+  font-size: 0.875rem;
+}
+
+/* QR beyaz zemin ister: koyu bir kart üstünde okunmaz. */
+.qr-kutu {
+  background: #ffffff;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--cizgi);
+  line-height: 0;
+}
+
+.qr-kutu svg { display: block; width: 100%; height: auto; max-width: 20rem; }
+
+.qr-kod-etiket {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--soluk);
+}
+
+/* Tahtanın karşısından okunacak: büyük ve aralıklı. */
+.qr-kod {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  /* Aralık son hanenin sağına da eklenir; sayı ortalı dursun diye geri alınır. */
+  text-indent: 0.35em;
+  font-variant-numeric: tabular-nums;
+}
+
+.qr-durum { margin: 0; }
+.qr-not { margin: 0; font-size: 0.8125rem; }
+
+/* Giris sayfasindaki ikincil eylem. Iki sinifli secici bilerek: tek sinifli
+   olsaydi baska yerlerdeki `.form button` tip secicisi onu ezebilirdi
+   (HANDOFF'ta yazili tuzak). */
+.qr-giris-formu { margin-top: 0.75rem; }
+
+.qr-giris-formu button {
+  width: 100%;
+  background: var(--kart);
+  color: var(--vurgu);
+  border: 1px solid var(--cizgi);
+  font-weight: 600;
+}
+
+.qr-giris-formu button:hover { border-color: var(--vurgu); }

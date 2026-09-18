@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import type { FormState } from "@/lib/form-state";
+import { guvenliDevamYolu } from "@/lib/devam-yolu";
 import {
   EN_KISA_PAROLA,
   KURULUM_BEKLIYOR,
@@ -31,6 +32,9 @@ export async function girisYap(
   const eposta = metin(formData.get("eposta")).toLowerCase();
   const parola = metin(formData.get("parola"));
   const girilen = { eposta };
+  // Adres cubugundan gelir, yani saldirganin yazabildigi bir degerdir;
+  // `guvenliDevamYolu` site disina cikan her seyi ana sayfaya dusurur.
+  const devam = guvenliDevamYolu(metin(formData.get("devam")));
 
   if (!eposta || !parola) {
     return hata(onceki, "E-posta ve parola gerekli.", girilen);
@@ -49,7 +53,7 @@ export async function girisYap(
   }
 
   // redirect bir istisna firlatir; try blogunun disinda cagrilmali.
-  redirect("/");
+  redirect(devam);
 }
 
 export async function kurulumuTamamla(

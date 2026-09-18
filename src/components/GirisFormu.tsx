@@ -4,11 +4,13 @@ import { useActionState } from "react";
 import { girisYap } from "@/app/oturum-actions";
 import { BOS_FORM } from "@/lib/form-state";
 
-export function GirisFormu() {
+export function GirisFormu({ devam }: { devam?: string }) {
   const [durum, gonder, bekliyor] = useActionState(girisYap, BOS_FORM);
 
   return (
     <form className="form" action={gonder}>
+      {/* Giristen sonra donulecek adres. Sunucu bunu yine de dogrular. */}
+      {devam && <input type="hidden" name="devam" value={devam} />}
       <input
         name="eposta"
         type="email"

@@ -114,7 +114,14 @@ await s.getByRole("button", { name: "Çıkış" }).click();
 await s.waitForURL(/\/giris$/, { timeout: 10000 });
 ok("Cikis giris sayfasina goturdu", s.url().endsWith("/giris"));
 await s.goto(`${T}/sinif/c-eski`, { waitUntil: "networkidle" });
-ok("Cikis sonrasi sayfalar korumali", s.url().endsWith("/giris"), s.url());
+// Adres artik `?devam=` tasiyor, o yuzden yol karsilastirilir: korumali sayfa
+// girise gonderilmeli VE nereye gitmek istedigi kaybolmamali.
+ok("Cikis sonrasi sayfalar korumali", new URL(s.url()).pathname === "/giris", s.url());
+ok(
+  "Istenen adres giris sayfasina tasindi",
+  new URL(s.url()).searchParams.get("devam") === "/sinif/c-eski",
+  s.url(),
+);
 
 // --- E: Giris ---
 console.log("\nE. Giris");
@@ -131,7 +138,14 @@ ok("Olmayan hesap AYNI mesaji verdi", (await s.textContent(".hata")) === "E-post
 await s.getByLabel("E-posta").fill("test@ornek.com");
 await s.getByLabel("Parola").fill("uzunparola1");
 await s.getByRole("button", { name: "Giriş yap" }).click();
-await s.waitForURL(`${T}/`, { timeout: 20000 });
+// Giris oncesinde /sinif/c-eski istenmisti; oturum acilinca oraya DONULUR.
+// Adres `?devam=` ile tasinir (bkz. devam-yolu.ts): QR'i okutan telefonun
+// oturumu kapaliysa giris sayfasinda kalmasin diye eklendi, ama her korumali
+// sayfa icin gecerli.
+await s.waitForURL(`${T}/sinif/c-eski`, { timeout: 20000 });
+ok("Giristen sonra istenen sayfaya donuldu", s.url() === `${T}/sinif/c-eski`, s.url());
+
+await s.goto(T, { waitUntil: "networkidle" });
 ok("Dogru parola ile girildi", (await s.textContent("body")).includes("12-A"));
 
 // --- F: Veri ayrimi ---
