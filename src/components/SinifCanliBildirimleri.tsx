@@ -69,11 +69,15 @@ function secimiYaz(secim: Secim): void {
 }
 
 export function SinifCanliBildirimleri({
+  sinifId,
   dersId,
   sablon,
   baslangicZamani,
   kilitli,
 }: {
+  sinifId: string;
+  /** Sayfa sunucuda render edilirken aktif olan ders; yalnızca başlangıç
+   *  değeri. Gerçek ders id'si her yoklamada sunucudan gelir. */
   dersId: string | null;
   sablon: BehaviorTemplate;
   /** Sunucuda üretilmiş ISO zaman damgası. İstemcinin kendi saati asla
@@ -93,6 +97,9 @@ export function SinifCanliBildirimleri({
   const sonKontrol = useRef(baslangicZamani);
   const kuyruk = useRef<Olay[]>([]);
   const gosteriliyor = useRef(false);
+  // Tahtanın o an hangi dersi izlediği. Sunucudan gelen ders id'si bundan
+  // farklıysa ders değişmiştir (başladı, bitti ya da yenisi açıldı).
+  const izlenenDers = useRef(dersId);
 
   // Kilitli cihaz TANIM GEREĞİ tahtadır: öğretmen onu bilerek kilitledi,
   // sınıfın önünde duran ekran o. Genişlik yalnızca bir tahmindi ve gerçek
@@ -145,19 +152,19 @@ export function SinifCanliBildirimleri({
     }, BILDIRIM_SURESI_MS);
   }, []);
 
-  // İmleç yalnızca DERS değişince sıfırlanır, her yeni `baslangicZamani`
-  // değerinde değil: aşağıdaki `router.refresh()` sunucudan taze bir zaman
-  // damgası getirir ve bu effect ona da bağlı olsaydı imleç ileri atlar,
-  // tazeleme ile bir sonraki yoklama arasına düşen olaylar hiç görünmezdi.
-  // İlk değer zaten `useRef(baslangicZamani)` ile mount'ta alınıyor.
-  useEffect(() => {
-    sonKontrol.current = baslangicZamani;
-    kuyruk.current = [];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dersId]);
+  // İmleç HİÇBİR ZAMAN geri ya da ileri atlatılmaz; yalnızca sunucunun
+  // döndürdüğü değerle ilerler. Ders değişiminde sıfırlayan bir effect
+  // vardı; kaldırıldı çünkü `router.refresh()` sunucudan taze bir
+  // `baslangicZamani` getiriyor ve imleç ona çekilseydi, tazeleme ile bir
+  // sonraki yoklama arasına düşen olaylar hiç görünmezdi. Ders kimliğini
+  // imleç değil `izlenenDers` takip eder.
 
   useEffect(() => {
-    if (!etkin || !dersId) return;
+    // `dersId` KOŞUL DEĞİL: tahta ders başlamadan açılıp kilitlenir, dersin
+    // başladığını ancak yoklayarak öğrenebilir. Burada ders şartı arandığı
+    // sürece ders yokken açılan tahta hiç yoklamıyor, dolayısıyla dersin
+    // başladığını hiç öğrenemiyordu.
+    if (!etkin) return;
 
     async function yokla() {
       // Sekme arka plandayken durur: pil ve ağ boşuna tüketilmesin.
@@ -167,21 +174,30 @@ export function SinifCanliBildirimleri({
       }
       try {
         const yanit = await fetch(
-          `/api/ders/${dersId}/olaylar?sonrasi=${encodeURIComponent(sonKontrol.current)}`,
+          `/api/sinif/${sinifId}/canli?sonrasi=${encodeURIComponent(sonKontrol.current)}`,
         );
         if (!yanit.ok) return;
-        const veri: { olaylar: Olay[]; sonKontrol: string | null } = await yanit.json();
+        const veri: { dersId: string | null; olaylar: Olay[]; sonKontrol: string | null } =
+          await yanit.json();
+
+        // Ders başladı, bitti ya da yenisi açıldı. Olaylar ATILMAZ: yeni
+        // dersin imleçten sonraki kayıtları zaten gösterilmesi gerekenler.
+        const dersDegisti = veri.dersId !== izlenenDers.current;
+        if (dersDegisti) izlenenDers.current = veri.dersId;
+
         if (veri.sonKontrol) sonKontrol.current = veri.sonKontrol;
         if (veri.olaylar.length > 0) {
           kuyruk.current.push(...veri.olaylar);
           siradakiniGoster();
-          // Bildirim geçicidir; altındaki liste (kimde kaç yıldız, kartı ne
-          // renkte) sayfa yüklendiği andaki hâlinde donuk kalırdı. Tahta bir
-          // ilan panosu gibi açık dururken sınıfın oradan okuduğu şey bu
-          // liste, o yüzden olay geldikçe tazelenir. Yalnızca gerçekten yeni
-          // olay varken çağrılır: boş yoklamada sunucuya iş çıkarmaz.
-          router.refresh();
         }
+
+        // Bildirim geçicidir; altındaki liste (kimde kaç yıldız, kartı ne
+        // renkte) sayfa yüklendiği andaki hâlinde donuk kalırdı. Tahta bir
+        // ilan panosu gibi açık dururken sınıfın oradan okuduğu şey bu
+        // liste, o yüzden olay geldikçe tazelenir. Ders değişiminde de
+        // tazelenir: ekranın "Aktif ders yok"tan derse geçmesi buna bağlı.
+        // Boş yoklamada çağrılmaz, sunucuya boşuna iş çıkmasın.
+        if (dersDegisti || veri.olaylar.length > 0) router.refresh();
       } catch {
         // Ağ hatası: bir sonraki yoklamada tekrar denenir, sessizce geçilir.
       }
@@ -189,7 +205,7 @@ export function SinifCanliBildirimleri({
 
     const zamanlayici = setInterval(yokla, YOKLAMA_ARALIGI_MS);
     return () => clearInterval(zamanlayici);
-  }, [etkin, dersId, router, siradakiniGoster]);
+  }, [etkin, sinifId, router, siradakiniGoster]);
 
   async function sesiAc() {
     if (!sesBaglami.current) sesBaglami.current = new AudioContext();

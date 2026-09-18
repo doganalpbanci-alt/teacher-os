@@ -211,18 +211,18 @@ ok("Tekrar gorununce yoklama devam etti", (await yoklamaSayaci(tahta)) > gizliyk
 
 // --- H. Yetki: oturumsuz ve baska ogretmen ---
 console.log("\nH. Yetki");
-const dersId = sql(`SELECT id FROM "Lesson" WHERE "endedAt" IS NULL LIMIT 1;`);
-ok("Aktif ders bulundu", dersId.length > 0);
+const sinifId = SINIF_ADRESI.split("/").pop();
+ok("Sinif id bulundu", Boolean(sinifId) && sinifId.length > 0, String(sinifId));
 
 const oturumsuzBaglami = await tarayici.newContext();
 const oturumsuz = await oturumsuzBaglami.newPage();
 await oturumsuz.goto(`${T}/giris`, { waitUntil: "networkidle" });
 const oturumsuzYanit = await oturumsuz.evaluate(
   async (id) => {
-    const r = await fetch(`/api/ders/${id}/olaylar`);
+    const r = await fetch(`/api/sinif/${id}/canli`);
     return { durum: r.status };
   },
-  dersId,
+  sinifId,
 );
 ok("Oturumsuz istek 401 doner", oturumsuzYanit.durum === 401, JSON.stringify(oturumsuzYanit));
 await oturumsuzBaglami.close();
@@ -242,13 +242,15 @@ await ikinci.waitForURL(`${T}/`, { timeout: 20000 });
 
 const ikinciYanit = await ikinci.evaluate(
   async (id) => {
-    const r = await fetch(`/api/ders/${id}/olaylar`);
+    const r = await fetch(`/api/sinif/${id}/canli`);
     return { durum: r.status, gövde: await r.json() };
   },
-  dersId,
+  sinifId,
 );
-ok("Baska ogretmenin dersi bos doner (bulundugu sizdirilmaz)",
-  ikinciYanit.durum === 200 && ikinciYanit.gövde.olaylar.length === 0,
+ok("Baska ogretmenin sinifi bos doner (bulundugu sizdirilmaz)",
+  ikinciYanit.durum === 200 &&
+    ikinciYanit.gövde.olaylar.length === 0 &&
+    ikinciYanit.gövde.dersId === null,
   JSON.stringify(ikinciYanit));
 await ikinciBaglami.close();
 
@@ -325,6 +327,108 @@ ok(
   `yoklama=${await yoklamaSayaci(darTahta)}`,
 );
 await darBaglam.close();
+
+// --- K. Ders YOKKEN acilan tahta, ders baslayinca yakalar ---
+// Gercek kullanim sirasi bu: ogretmen tahtayi kurar, kilitler, DERSI SONRA
+// baslatir. Onceki surumde canli katman ders id'si olmadan hic yoklamiyordu;
+// tahta dersin basladigini ogrenemedigi icin ders boyunca sessiz kaliyordu.
+// Tazelenmek icin olay bekliyor, olay almak icin tazelenmesi gerekiyordu.
+console.log("\nK. Ders yokken acilan tahta");
+{
+  // Temiz bir sinif: bu senaryo "hic aktif ders yok" ile baslamali.
+  const kurulum = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  const kSayfa = await kurulum.newPage();
+  await oturumHazirla(kSayfa, T);
+  await kSayfa.goto(T, { waitUntil: "networkidle" });
+  await kSayfa.getByLabel("Sınıf adı").fill("Sonra-Ders");
+  await kSayfa.getByRole("button", { name: "Sınıf ekle" }).click();
+  await kSayfa.waitForFunction(() => document.body.innerText.includes("Sonra-Ders"), null, { timeout: 10000 });
+  await kSayfa.getByRole("link", { name: /Sonra-Ders/ }).click();
+  await kSayfa.waitForURL(/\/sinif\//, { timeout: 10000 });
+  const YENI_YOL = new URL(kSayfa.url()).pathname;
+  await ogrenciFormunuAc(kSayfa);
+  await kSayfa.getByLabel("Ad", { exact: true }).fill("Kerem");
+  await kSayfa.getByLabel("Soyad").fill("Yilmaz");
+  await kSayfa.getByRole("button", { name: "Öğrenci ekle" }).click();
+  await kSayfa.waitForFunction(() => document.body.innerText.includes("Kerem"), null, { timeout: 10000 });
+  await kurulum.close();
+
+  // Tahta: ders YOKKEN ac ve kilitle.
+  const kTahtaB = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  const kTahta = await kTahtaB.newPage();
+  await oturumHazirla(kTahta, T);
+  await kTahta.goto(`${T}${YENI_YOL}`, { waitUntil: "networkidle" });
+  ok("Tahta derssiz acildi", (await kTahta.innerText("body")).includes("Aktif ders yok"));
+  await kTahta.getByRole("button", { name: /Bu cihazı kilitle/ }).click();
+  await kTahta.waitForFunction(() => document.body.innerText.includes("Tahta kilitli"), null, { timeout: 10000 });
+
+  // ASIL KONTROL: ders yokken de yoklama calismali.
+  await kTahta.waitForFunction(() => (window.__tahtaYoklamaSayaci ?? 0) > 0, null, { timeout: 8000 }).catch(() => {});
+  ok(
+    "Ders yokken de yoklama calisiyor",
+    (await yoklamaSayaci(kTahta)) > 0,
+    `yoklama=${await yoklamaSayaci(kTahta)} (0 ise tahta dersin basladigini hic ogrenemez)`,
+  );
+
+  // Telefondan dersi baslat ve yildiz ver.
+  const kTelefonB = await tarayici.newContext({ viewport: { width: 390, height: 844 } });
+  const kTelefon = await kTelefonB.newPage();
+  await oturumHazirla(kTelefon, T);
+  await kTelefon.goto(`${T}${YENI_YOL}`, { waitUntil: "networkidle" });
+  await kTelefon.getByRole("button", { name: "Yeni ders başlat" }).click();
+  await kTelefon.waitForFunction(() => document.body.innerText.includes(". ders"), null, { timeout: 10000 });
+
+  // Tahta dersin basladigini kendiliginden gormeli (bildirim beklemeden).
+  await kTahta
+    .waitForFunction(() => !document.body.innerText.includes("Aktif ders yok"), null, { timeout: 10000 })
+    .catch(() => {});
+  ok(
+    "Tahta dersin basladigini kendiliginden gordu",
+    !(await kTahta.innerText("body")).includes("Aktif ders yok"),
+    "ders degisimi tazelemeyi tetiklemeli",
+  );
+
+  await kTelefon.waitForTimeout(400);
+  await satir(kTelefon, "Kerem").getByRole("button", { name: /Yıldız ver|Artı ver/ }).click();
+  await kTahta
+    .waitForFunction(() => document.querySelector(".canli-bildirim") !== null, null, { timeout: 10000 })
+    .catch(() => {});
+  ok(
+    "Sonradan baslayan derste bildirim geldi",
+    (await kTahta.locator(".canli-bildirim").count()) === 1,
+    "asil hata buydu: ders yokken kilitlenen tahta hic bildirim almiyordu",
+  );
+
+  // --- L. Ders bitip yenisi baslayinca tahta yeni derse gecer ---
+  console.log("\nL. Ders degisimi");
+  await kTahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 6000 }).catch(() => {});
+  await kTelefon.getByRole("button", { name: "Dersi bitir" }).click();
+  await kTelefon.waitForFunction(() => document.body.innerText.includes("Aktif ders yok"), null, { timeout: 10000 });
+  await kTelefon.getByRole("button", { name: "Yeni ders başlat" }).click();
+  await kTelefon.waitForFunction(() => document.body.innerText.includes("2. ders"), null, { timeout: 10000 });
+
+  await kTahta
+    .waitForFunction(() => document.body.innerText.includes("2. ders"), null, { timeout: 10000 })
+    .catch(() => {});
+  ok(
+    "Tahta yeni derse gecti",
+    (await kTahta.innerText("body")).includes("2. ders"),
+    "eski ders id'sine takili kalmamali",
+  );
+
+  await kTelefon.waitForTimeout(400);
+  await satir(kTelefon, "Kerem").getByRole("button", { name: /Yıldız ver|Artı ver/ }).click();
+  await kTahta
+    .waitForFunction(() => document.querySelector(".canli-bildirim") !== null, null, { timeout: 10000 })
+    .catch(() => {});
+  ok(
+    "Yeni derste de bildirim geliyor",
+    (await kTahta.locator(".canli-bildirim").count()) === 1,
+  );
+
+  await kTahtaB.close();
+  await kTelefonB.close();
+}
 
 console.log(`\nSonuc: ${gecti} gecti, ${kaldi} kaldi\n`);
 await tarayici.close();

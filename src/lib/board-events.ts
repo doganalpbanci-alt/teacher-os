@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { BehaviorType } from "@prisma/client";
+import { aktifDersiGetir } from "@/lib/lesson";
 
 // Tahtanın canlı yayınının veri kaynağı. Telefondan verilen bir kart, tahtayı
 // açık tutan cihaz tarafından buradan öğrenilir (yoklama ile, websocket değil
@@ -76,4 +77,38 @@ export async function dersOlaylari(
     olaylar,
     sonKontrol: kayitlar[kayitlar.length - 1].createdAt.toISOString(),
   };
+}
+
+export type CanliDurum = OlaySonucu & {
+  /** Sınıfın ŞU ANDAKİ aktif dersi; ders yoksa null. */
+  dersId: string | null;
+};
+
+/**
+ * Tahtanın yokladığı asıl uç noktanın verisi. Derse değil SINIFA bağlıdır ve
+ * aktif dersi her yoklamada sunucu tarafında yeniden bulur.
+ *
+ * Neden ders değil sınıf: tahta, ders başlamadan önce açılıp kilitlenir.
+ * Sorgu derse bağlı olsaydı tahtanın elinde ders id'si olmaz, yoklama hiç
+ * başlamaz ve tahta dersin başladığını ASLA öğrenemezdi — tazelenmek için
+ * olay beklerdi, olay almak için tazelenmesi gerekirdi. Bu kilitlenme
+ * gerçekten yaşandı: ders yokken kilitlenen tahta ders boyunca sessiz kaldı.
+ *
+ * Aynı nedenle ders değişimi de buradan yakalanır: ders bitip yenisi
+ * başladığında dönen `dersId` değişir, istemci imlecini sıfırlayıp sayfayı
+ * tazeler.
+ *
+ * Sahiplik sorgunun parçası: sınıf başka bir öğretmene aitse ya da hiç yoksa
+ * sessizce boş döner.
+ */
+export async function sinifCanliDurumu(
+  sinifId: string,
+  ogretmenId: string,
+  sonrasi: Date,
+): Promise<CanliDurum> {
+  const aktif = await aktifDersiGetir(sinifId, ogretmenId);
+  if (!aktif) return { dersId: null, olaylar: [], sonKontrol: null };
+
+  const sonuc = await dersOlaylari(aktif.id, ogretmenId, sonrasi);
+  return { dersId: aktif.id, ...sonuc };
 }

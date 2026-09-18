@@ -70,7 +70,15 @@ ok("Bitir dugmesi YOK", (await sayfa.getByRole("button", { name: "Dersi bitir" }
 ok("Davranis dugmesi pasif", await satir("Ada").getByRole("button", { name: "Artı ver" }).isDisabled());
 
 // Ikinci sekme bu haliyle bekletilir: icindeki "ders baslat" formu eskiyecek.
+//
+// Dar ekran BILEREK: canli katman (tahta modu) 1280px ve uzerinde kendini
+// acar ve ders degisimini gorunce sayfayi tazeler -- yani genis bir sekme
+// artik kendi kendini duzeltir, "eskimis form" durumu hic olusmaz. Bu testin
+// amaci sunucunun eskimis bir istegi reddettigini dogrulamak, o yuzden sekme
+// tahta sayilmayacak bir genislikte tutulur. Playwright'in varsayilan
+// genisligi tam 1280 oldugu icin bu satir gerekli.
 const ikinci = await baglam.newPage();
+await ikinci.setViewportSize({ width: 390, height: 844 });
 await ikinci.goto(sinifAdresi, { waitUntil: "networkidle" });
 
 await sayfa.getByRole("link", { name: /Ders geçmişi/ }).click();
