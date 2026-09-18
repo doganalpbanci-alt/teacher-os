@@ -96,6 +96,7 @@ model Teacher {
   assignments    Assignment[]
   exams          Exam[]
   parentMessages ParentMessage[]
+  devicePairings DevicePairing[]
 }
 
 model Classroom {
@@ -189,12 +190,12 @@ model Student {
 /// yildizin BehaviorLog kaydiyla birlikte geri alinmasi istisnadir (bkz.
 /// `sonKaydiGeriAl`).
 model ExpEvent {
-  id        String     @id @default(cuid())
-  studentId String
-  source    ExpKaynagi
-  amount    Int
+  id          String     @id @default(cuid())
+  studentId   String
+  source      ExpKaynagi
+  amount      Int
   referenceId String
-  createdAt DateTime   @default(now())
+  createdAt   DateTime   @default(now())
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -478,4 +479,40 @@ model ParentMessage {
 
   @@index([studentId, createdAt])
   @@index([teacherId])
+}
+
+/// Akilli tahtada parolasiz giris icin tek kullanimlik eslesme.
+///
+/// QR kodu sinifin tamami gorur, o yuzden QR yalnizca `id`yi tasir; tek
+/// basina ise yaramaz. Eslesme olusturulurken TAHTANIN tarayicisina ayri bir
+/// gizli deger httpOnly cerez olarak yazilir, buraya yalnizca SHA-256 ozeti
+/// konur. Oturumu ancak o cerezi tasiyan tarayici alabilir; QR'in fotografini
+/// ceken cihaz, ogretmen onaylasa bile alamaz.
+///
+/// Durum ayri bir kolonda TUTULMAZ, kayittan turetilir (bkz. pairing-rules.ts):
+/// onay ve kullanim birer zaman damgasidir. Kart durumunun ders kayitlarindan
+/// hesaplanmasiyla ayni prensip -- "durumu guncelle" diye bir yazma yok.
+model DevicePairing {
+  id String @id @default(cuid())
+
+  /// Tahtanin cerezindeki gizli degerin SHA-256 ozeti. Gizin kendisi
+  /// veritabaninda hicbir zaman durmaz.
+  verifierHash String
+
+  /// Tahtada ve telefonda ayni anda gosterilen dogrulama kodu. Ogretmenin
+  /// baskasinin ekranindaki QR'i onaylamasini engeller.
+  code String
+
+  /// Onaylayan ogretmen; onaylanana kadar null. Oturum bu ogretmen icin acilir.
+  teacherId String?
+
+  expiresAt  DateTime
+  approvedAt DateTime?
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  /// Suresi gecmis kayitlar yeni eslesme olusturulurken temizlenir.
+  @@index([expiresAt])
 }

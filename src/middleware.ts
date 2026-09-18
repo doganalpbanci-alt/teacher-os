@@ -32,7 +32,12 @@ export async function middleware(istek: NextRequest) {
     // sayılır, kilit onu sınıfa, oturum kontrolü sınıfı girişe yollar ve
     // tarayıcı iki adres arasında sonsuza kadar dönerdi.
     if (acikYol) return NextResponse.next();
-    return NextResponse.redirect(new URL("/giris", istek.url));
+
+    // Nereye gitmek istediği taşınır: QR'ı okutan telefonun oturumu
+    // kapanmışsa giriş sayfasında kalmasın, onay ekranına dönsün.
+    const giris = new URL("/giris", istek.url);
+    giris.searchParams.set("devam", `${yol}${istek.nextUrl.search}`);
+    return NextResponse.redirect(giris);
   }
 
   // Kilitli cihaz yalnızca kilitlendiği sınıfın ekranını görür. Yalnızca
