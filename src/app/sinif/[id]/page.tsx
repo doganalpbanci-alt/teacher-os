@@ -250,6 +250,7 @@ export default async function SinifSayfasi({
           sayılacak kadar genişse (globals.css'teki aynı 1280px eşiği)
           kendini etkinleştirir. Telefon bunu hiç görmez. */}
       <SinifCanliBildirimleri
+        sinifId={sinif.id}
         dersId={aktifDers?.id ?? null}
         sablon={ogretmen.behaviorTemplate}
         baslangicZamani={new Date().toISOString()}
