@@ -17,7 +17,7 @@ export async function middleware(istek: NextRequest) {
   // API rotaları burada denetlenmez: sayfa yönlendirmesi (giriş/kilit) bir
   // `fetch` isteğine HTML döndürür, çağıran taraf onu JSON sanıp patlar. Her
   // API rotası kendi oturum ve sahiplik kontrolünü kendi yapar — bkz.
-  // src/app/api/ders/[dersId]/olaylar/route.ts. Yeni bir API rotası eklenirse
+  // src/app/api/sinif/[sinifId]/canli/route.ts. Yeni bir API rotası eklenirse
   // bu kontrolü kendisi yapmak zorundadır, buradan bedava gelmez.
   if (yol.startsWith("/api/")) return NextResponse.next();
 
