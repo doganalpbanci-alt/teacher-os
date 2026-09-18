@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 17 Eylül 2026 · anlatılan kod durumu `main` = `20f0321`
+Son güncelleme: 18 Eylül 2026 · anlatılan kod durumu `main` = `d12f131`
 (üstündeki commit'ler yalnızca bu notun kendisi olabilir)
 
 ---
@@ -79,7 +79,7 @@ migration gerekmedi, yalnızca eksik olan action/düğme eklendi.
 
 ---
 
-## Migration'lar (13)
+## Migration'lar (14)
 
 ```
 20260821214524_init                    tablolar
@@ -95,11 +95,24 @@ migration gerekmedi, yalnızca eksik olan action/düğme eklendi.
 20260901092250_parent_consent          Student.parentName/parentPhone/parentConsentAt
 20260912180157_sinif_hedefleri         Teacher.gamificationEnabled + ClassGoal tablosu
 20260912192838_exp_sistemi             Student.expTotal + ExpEvent tablosu
+20260918191012_qr_ile_tahta_girisi     DevicePairing tablosu (QR ile tahta girişi)
 ```
 
 Hepsi hem production hem staging Supabase'inde uygulandı ve
-`verify-state.sql` ile doğrulandı (53 satır, hepsi TAMAM). Bekleyen
+`verify-state.sql` ile doğrulandı (59 satır, hepsi TAMAM). Bekleyen
 migration yok.
+
+**Staging bir süre EXP migration'ı olmadan çalıştı (18 Eylül'de yakalandı).**
+`20260912192838_exp_sistemi` production'a uygulanmış ama staging'e hiç
+gitmemişti: staging'de `ExpEvent` tablosu ve `Student.expTotal` yoktu, kod
+ise onları arıyordu — orada gamification açıkken yıldız vermek ya da
+öğrenci sayfasını açmak hata verirdi. QR migration'ı için verify çıktısı
+istendiğinde ortaya çıktı ve aynı SQL staging'de çalıştırılarak kapatıldı.
+
+Not: EXP, staging'e QR'dan SONRA uygulandı, yani migration sırası bozuldu.
+İkisi bağımsız olduğu için sorun değil (EXP `Student`'a, QR `Teacher`'a
+dokunur, aralarında bağımlılık yok) — ama varsayılmadı: staging'in tam
+durumu yerelde kurulup EXP sıra dışı uygulanarak önce denendi.
 
 **Performans notu tabanı 90'dan 80'e indirildi (12 Eylül) — bunun bir
 migration'ı YOK.** Yıldız +1, kırmızı kart -5 aynı kaldı; değişen tek şey
@@ -166,12 +179,22 @@ src/lib/
   exam.ts                sınav: oluşturma, atama, not girme, ortalama, istatistik
   exam-rules.ts          sınav hesabının veritabanısız kısmı: şablonlar, net,
                          ağırlıklı puan, dönem, bileşen form satırı
+  dashboard.ts / dashboard-rules.ts
+                         genel panel: bekleyen işler, dikkat gereken
+                         öğrenciler, sınıf karşılaştırması, 30 günlük özet.
+                         Eşikler ve "dikkat" kararı kurallar dosyasında
+  pairing.ts / pairing-rules.ts
+                         QR ile tahta girişi: eşleşme aç/onayla/tüket.
+                         Durum ayrı kolonda değil, üç zaman damgasından
+                         türetilir
+  devam-yolu.ts          giriş sonrası dönülecek adres + açık yönlendirme
+                         koruması (edge-safe: middleware de kullanır)
   student-history.ts     öğrenci geçmişi ve dönem toplamları
   siralama.ts            Türkçe alfabe sıralaması
   form-state.ts          form durumu tipi
 
 src/components/  (~35 dosya; öne çıkanlar)
-  UstMenu.tsx              Sınıflarım · Ödevler · Sınavlar · Veli · Ayarlar + sayaçlar
+  UstMenu.tsx              Panel · Sınıflarım · Ödevler · Sınavlar · Veli · Ayarlar + sayaçlar
   OgrenciSatiri.tsx        ders ekranındaki öğrenci satırı; iyimser güncelleme;
                            gamification açıksa "Sv.N" EXP rozeti de burada
   DavranisDugmeleri.tsx    şablona göre düğmeler, gönderimler sıraya girer
@@ -189,9 +212,15 @@ src/components/  (~35 dosya; öne çıkanlar)
   GamificationFormu.tsx    Ayarlar'da sınıf hedeflerini aç/kapa anahtarı
   SinifHedefi.tsx          sınıf sayfasında açık hedef (ilerleme çubuğu) ya da
                            oluşturma formu + geçmiş hedefler listesi
+  Panel.tsx                panelin dört bloğu (bekleyen işler, dikkat gereken
+                           öğrenciler, sınıf tablosu, 30 günlük özet)
+  QrEkrani.tsx             tahtadaki QR ekranının yoklayan kısmı; onaylanınca
+                           oturumu alır ve ana sayfaya geçer
+  EslesmeOnayi.tsx         telefondaki onay ekranı (kod karşılaştırma + Onayla)
 
 src/app/
   page.tsx                gündem paneli + sınıf listesi + arşivlenmiş sınıflar
+  panel/                  genel bakış (v0.6): dört blok, son 30 gün
   sinif/[id]/             sınıf detayı: ders, davranış düğmeleri, ceza rozeti,
                           canlı yayın, arşivlenmiş öğrenciler, sınıfı yönet
   sinif/[id]/dersler/     ders geçmişi ve tek dersin kayıtları
@@ -204,15 +233,21 @@ src/app/
   ayarlar/                davranış şablonu, tahta kilidi, sınıf hedefleri
                           anahtarı, tehlike bölgesi
   giris/ kurulum/         oturum ekranları
-  api/ders/[dersId]/olaylar/  canlı yayının yokladığı uç nokta (middleware'den muaf)
+  giris/qr/               akıllı tahtada QR ile parolasız giriş ekranı
+  eslestir/[id]/          telefonun QR'ı okutunca açtığı onay ekranı
+  api/sinif/[sinifId]/canli/   canlı yayının yokladığı uç nokta (middleware'den muaf)
+  api/eslestirme/[id]/         eşleşme durumu (salt okuma)
+  api/eslestirme/[id]/al/      onaylanmış eşleşmenin oturumunu alır (POST)
   actions.ts              sınıf, öğrenci, ders, davranış, ceza, arşiv/sil,
                           sıfırlama, sınıf hedefi oluştur/kapat, gamification aç/kapa
   odev-actions.ts         ödev action'ları (ayrı dosya; modül tek başına büyük)
   sinav-actions.ts        sınav action'ları
   kilit-actions.ts        tahta PIN kurulum/aç action'ları
   veli-actions.ts         veli mesajı action'ları
-  oturum-actions.ts       giriş / kurulum / çıkış
-  middleware.ts           oturumsuz istekleri /giris'e, kilitli cihazı sınıf
+  oturum-actions.ts       giriş / kurulum / çıkış (giriş `?devam=` onurlandırır)
+  eslestirme-actions.ts   QR oluştur (gizi çereze yazar) + eşleşmeyi onayla
+  middleware.ts           oturumsuz istekleri /giris'e (nereye gitmek istediğini
+                          `?devam=` ile taşıyarak), kilitli cihazı sınıf
                           sayfasına yönlendirir; /api/* muaf (bkz. kod içi not)
 ```
 
@@ -262,13 +297,36 @@ sanıp patlardı. Her API rotası kendi auth kontrolünü yapar.
 
 ### Canlı tahta yansıması
 Telefondan verilen bir kart, tahtada 2 saniyede bir yoklama (`board-events.ts`
-+ `/api/ders/[dersId]/olaylar`) ile görünür ve 8-bit bir ses çalar
++ `/api/sinif/[sinifId]/canli`) ile görünür ve 8-bit bir ses çalar
 (`board-sound.ts`, WebAudio). Websocket/Supabase Realtime kullanılmaz:
 tarayıcıdan doğrudan veritabanına erişim sahiplik kontrolünü atlardı.
 
 Etkinlik üç şeyden birine bağlıdır: ekran 1280px eşiğini geçmişse, öğretmen
 elle "Tahta modu" açmışsa, ya da **cihaz kilitliyse** (kilitli cihaz tanım
 gereği tahtadır — genişlik tahmini yanılabilir, kilit her zaman kazanır).
+
+**Uç nokta derse değil SINIFA bağlıdır** ve aktif dersi her yoklamada sunucu
+tarafında kendisi bulur; ders id'si istekte değil YANITTA gelir. Bunun
+sebebi 18 Eylül'de yakalanan bir kilitlenme:
+
+Canlı katman eskiden ders id'si yoksa yoklamayı hiç başlatmıyordu. Tahta
+ders BAŞLAMADAN açılıp kilitlendiğinde (gerçek kullanım sırası tam bu:
+tahtayı kur, kilitle, derse sonra başla) elinde ders id'si olmuyordu. Yeni
+dersi ancak sayfa tazelenince öğrenebilirdi, tazeleme ise yalnızca yoklama
+olay getirince yapılıyordu — yani tazelenmek için olay bekliyor, olay almak
+için tazelenmesi gerekiyordu. Sonuç: ders boyunca hiçbir bildirim gelmiyor,
+ekran "Aktif ders yok"ta kalıyordu.
+
+Aynı kök nedenin ikinci sonucu: ders bitip yenisi başlayınca tahta eski ders
+id'sini yoklamaya devam ediyor, yeni dersten haber alamıyordu.
+
+Mevcut test bunu kaçırmıştı çünkü dersi başlatıp SONRA kilitliyordu. Sıra
+tersine çevrilince hata hemen çıktı. Ders yokken açılan tahta ve ders
+değişimi artık `board-ui-test.mjs`'in K ve L bölümlerinde sınanıyor.
+
+Yan etki (bilinçli): geniş bir ekranda açık duran eskimiş ikinci sekme artık
+kendini düzeltir. `lesson-ui-test`'teki "eskimiş form" senaryosu bu yüzden
+dar ekrana alındı.
 
 ### Ders kuralı
 Bir sınıfın bitmemiş dersi (`Lesson.endedAt` boş) aktif derstir. Sınıfın aynı
@@ -437,19 +495,89 @@ hâlâ işaretlenmemiş öğrenci var. Tarihsiz ödev hiç düşmez. Yapacak iş
 panel **hiç render edilmez** — her gün duran boş kutu bir süre sonra
 okunmaz olur.
 
+### Genel panel (v0.6)
+`/panel`, üst menünün ilk sekmesi. Ana sayfa bilerek yerinde bırakıldı:
+derse girerken en hızlı ulaşılması gereken şey sınıf listesidir.
+
+Dört blok, hepsi **son 30 günlük kayan pencere**: bekleyen işler → dikkat
+gereken öğrenciler → sınıf karşılaştırması → 30 günün özeti. Yapılacak
+işten genel resme doğru.
+
+**Yeni veri modeli yok.** Her sayı mevcut kayıtlardan hesaplanır; migration
+gerekmedi. Mevcut indeksler (`BehaviorLog @@index([teacherId])`,
+`@@index([classroomId, createdAt])`) bu sorgulara yetiyor.
+
+"Dikkat gereken öğrenci" üç kriterden herhangi biriyle listeye girer ve
+sebep rozeti sayıyı da söyler ("2 ödev", "%30", "1 kırmızı"):
+- **davranış** — pencerede kırmızı kart almış ya da eksi > artı
+- **ödev** — süresi geçmiş, hâlâ tamamlanmamış 2+ teslimi var
+- **sınav** — penceredeki resmî sınav ortalaması %50 altı
+
+İki karar:
+
+- Kriterler `Student.performanceScore` üzerinden DEĞİL, doğrudan
+  `BehaviorLog`'dan hesaplanır. Basit şablonda notu öğretmen elle girer,
+  kayıtlarla ilgisi yoktur; nota bakan bir kriter orada sessizce yanlış
+  çalışırdı. Kayıttan saymak iki şablonda da doğrudur.
+- **Gecikmiş ödev sayımı 30 günlük pencereye bakmaz.** Teslim edilmemiş bir
+  ödev 30 gün geçince önemsizleşmez; panelin diğer sayıları penceredir, bu
+  biriken iştir.
+
+Şablon farkı arayüze de yansır: Basit şablonda kart sütunu ve kart ölçümleri
+hiç gösterilmez ("Yıldız" yerine "Artı"), ortalama performans notu sütunu da
+yoktur — o şablonda sınıf ortalaması olarak anlam taşımaz.
+
+### QR ile akıllı tahta girişi
+Tahtada `/giris` → "QR ile gir" → QR + 4 haneli kod. Öğretmen telefonundan
+okutur, koddan doğrular, onaylar; tahta kendiliğinden girer. Parola sınıfın
+önünde hiç görünmez.
+
+**Tehdit modeli: QR'ı sınıfın tamamı görür ve fotoğraflayabilir.** Tasarımın
+özü bunun etrafında:
+
+- QR yalnızca eşleşmenin herkese açık `id`'sini taşır, tek başına işe yaramaz.
+- Eşleşme açılırken TAHTANIN tarayıcısına ayrı bir giz httpOnly çerez olarak
+  yazılır; veritabanında yalnızca SHA-256 özeti durur. **Oturumu ancak o
+  çerezi geri getirebilen tarayıcı alabilir** — fotoğrafı çeken cihaz,
+  öğretmen onaylasa bile alamaz.
+- Onay için oturum şarttır; girişi olmayan cihaz onay ekranını açabilir ama
+  onaylayamaz.
+- Tahtada ve telefonda aynı 4 haneli kod görünür: öğretmenin, öğrencinin
+  kendi ekranındaki bir QR'ı yanlışlıkla onaylamasını engeller.
+- Tek kullanımlık ve 5 dakika geçerli. Tüketme koşullu yazmayla yapılır.
+- Başarısız bir alma denemesi eşleşmeyi TÜKETMEZ; tahtanın hakkı durur.
+
+Eşleşmenin durumu ayrı bir kolonda tutulmaz, üç zaman damgasından türetilir
+(`expiresAt` / `approvedAt` / `consumedAt`) — kart durumunun ders
+kayıtlarından hesaplanmasıyla aynı prensip. Tutarlılığı veritabanı kısıtları
+korur: onaysız kayıt kullanılmış olamaz, onaylanmış kaydın öğretmeni olmak
+zorundadır.
+
+QR sayfada değil EYLEMDE üretilir: giz tahtanın çerezine yazılmalı, sunucu
+bileşenleri ise çerez yazamaz. Sayfa yalnızca çerezdeki eşleşmeyi gösterir.
+
+**Giriş sonrası dönüş (`?devam=`)** bu iş sırasında eklendi. QR'ı okutan
+telefonun oturumu kapalıysa giriş sayfasına düşüp orada kalıyordu; artık
+onay ekranına döner. Açık yönlendirme koruması ayrı ve saf bir modülde
+(`devam-yolu.ts`): `devam` adres çubuğundan gelen, saldırganın yazabildiği
+bir değerdir, site dışına çıkan her şey ana sayfaya düşürülür.
+
+Bağımlılık: `qrcode-svg` (bağımlılığı yok, sunucuda çalışır, istemci
+paketine girmez). QR'ı elde kodlamak Reed-Solomon demekti.
+
 ---
 
 ## Testler
 
-Yirmi iki arayüz testi (gerçek tarayıcıda, Playwright) ve dört saf hesap
-testi, toplam **~700 kontrol**. Hepsi geçiyor.
+Yirmi dört arayüz testi (gerçek tarayıcıda, Playwright) ve altı saf hesap
+testi, toplam **847 kontrol**. Hepsi geçiyor.
 
 ```
 scripts/e2e-test.mjs                       sınıf/öğrenci ekleme, kalıcılık      35
 scripts/template-ui-test.mjs               şablonlar, elle not                  25
 scripts/behavior-ui-test.mjs               kart kuralları                       24
 scripts/history-ui-test.mjs                öğrenci geçmişi                      16
-scripts/auth-ui-test.mjs                   giriş ve veri ayrımı                 26
+scripts/auth-ui-test.mjs                   giriş ve veri ayrımı, `devam` dönüşü  28
 scripts/card-buttons-ui-test.mjs           kart şablonunun düğmeleri            24
 scripts/penalty-ui-test.mjs                teneffüs cezası ve kronometre        22
 scripts/lesson-ui-test.mjs                 ders başlat/bitir, geçmiş, kısıt     39
@@ -460,7 +588,8 @@ scripts/assignment-admin-ui-test.mjs       düzenleme, arşiv, silme, kopyalama 
 scripts/agenda-ui-test.mjs                 günlük gündem ve sayaç               24
 scripts/exam-ui-test.mjs                   sınav açma, not girme, girmedi       40
 scripts/lock-ui-test.mjs                   tahta PIN kilidi                     44
-scripts/board-ui-test.mjs                  canlı tahta yansıması + ses          30
+scripts/board-ui-test.mjs                  canlı tahta yansıması + ses; ders
+                                            yokken açılan tahta, ders değişimi   36
 scripts/parent-message-ui-test.mjs         veli mesajı, WhatsApp, taslak        25
 scripts/undo-ui-test.mjs                   davranış kaydını geri alma           40
 scripts/student-name-edit-ui-test.mjs      öğrenci ad/soyad düzenleme           13
@@ -473,14 +602,23 @@ scripts/exam-rules-test.mjs                ağırlıklı puan, net, dönem      
 scripts/parent-message-rules-test.mjs      telefon, WhatsApp, şablon üretimi    35
 scripts/class-goal-rules-test.mjs          hedef/ödül geçerliliği, ilerleme %   21
 scripts/exp-rules-test.mjs                 EXP sabitleri, seviye formülü        20
+scripts/panel-ui-test.mjs                  genel panel: dört blok, üç kriter,
+                                            pencere sınırı, öğretmen ayrımı     40
+scripts/qr-login-ui-test.mjs               QR ile tahta girişi; fotoğraflayan
+                                            cihazın oturumu alamaması           30
+scripts/dashboard-rules-test.mjs           panel eşikleri ve dikkat kararı      30
+scripts/pairing-rules-test.mjs             eşleşme durumu, kod biçimi, çerez,
+                                            açık yönlendirme koruması           39
 ```
 
-`exam-rules-test.mjs`, `parent-message-rules-test.mjs`, `class-goal-rules-test.mjs`
-ve `exp-rules-test.mjs` diğerlerinden farklı: tarayıcı açmaz, sunucu
+`exam-rules-test.mjs`, `parent-message-rules-test.mjs`,
+`class-goal-rules-test.mjs`, `exp-rules-test.mjs`, `dashboard-rules-test.mjs`
+ve `pairing-rules-test.mjs` diğerlerinden farklı: tarayıcı açmaz, sunucu
 gerektirmez. Veritabanına da ekrana da bağlı olmayan saf kurallar
 (ağırlıklı puan/net/dönem; telefon normalizasyonu, WhatsApp bağlantısı,
 şablon üretimi; hedef/ödül geçerliliği ve ilerleme yüzdesi; EXP sabitleri
-ve seviye formülü) doğrudan sınanır. Kurallar TypeScript'te yazılı olduğundan test önce ilgili
+ve seviye formülü; panel eşikleri; eşleşme durumu ve açık yönlendirme
+koruması) doğrudan sınanır. Kurallar TypeScript'te yazılı olduğundan test önce ilgili
 `kurallar.ts` dosyasını geçici bir dizine derler. Tek başına da çalışır:
 `node scripts/<ad>.mjs`.
 
@@ -531,7 +669,7 @@ veri yazar — **üretim veritabanına karşı çalıştırılmaz.**
 sıfırlar**; bu yüzden test dosyası içinde en sonda çalışır, ondan sonra
 aynı oturumda başka bir şey denenmemelidir.
 
-### Test yazarken altı tuzak
+### Test yazarken yedi tuzak
 - **`textContent("body")` kullanma, `innerText("body")` kullan.** İlki
   Next.js'in sayfaya gömdüğü RSC veri script'ini de döndürür; ekranda
   olmayan isimler orada geçer ve "şu öğrenci listede yok" gibi kontroller
@@ -562,6 +700,12 @@ aynı oturumda başka bir şey denenmemelidir.
   Çözüm: `.locator(".sablon-formu").getByRole("button", ...)` gibi forma
   özgü bir seçiciyle daralt. Aynı sayfaya yeni bir form eklerken var olan
   testlerin düğme seçicilerini de gözden geçir.
+- **Arka planda dönen bir yoklama, kontrolünü yarışa sokabilir.** QR
+  testinde "başarısız hırsızlık eşleşmeyi yakmadı" kontrolü kırmızı yandı;
+  sebep kod değildi — tahtanın 2 saniyelik yoklaması eşleşmeyi bu arada
+  MEŞRU şekilde tüketmişti. Böyle bir durumda kontrolü gevşetme; yoklayan
+  sayfayı geçici olarak bırak (`goto("about:blank")`), ölçümü yap, sonra
+  geri dön. Çerez bağlamda kaldığı için akış kaldığı yerden devam eder.
 
 ---
 
@@ -593,7 +737,8 @@ akışı, WhatsApp taslakları, altı hazır şablon), hesap düzeyinde tam veri
 sıfırlama, ayrı bir staging ortamı ve dallanma akışı, **sınıf hedefleri**
 ve **EXP/seviye sistemi** (gamification'ın öğretmen bazlı açılıp kapanan
 iki parçası, aynı anahtarla), performans notu tabanının 90'dan 80'e
-indirilmesi.
+indirilmesi, **genel panel** (v0.6'nın ilk adımı), **QR ile akıllı tahta
+girişi** ve giriş sonrası dönüş.
 
 **Hız:** Vercel fonksiyonları `vercel.json` ile `dub1`'de (Dublin) çalışır —
 veritabanıyla aynı bölge. Varsayılan `iad1` (Washington) her sorguyu
@@ -607,9 +752,17 @@ iletişimi) canlıda ama henüz birkaç haftalık gerçek kullanımla tam
 sınanmadı. Akıllı tahta kilidi ve canlı yansıma en az bir gerçek ders
 oturumunda denendi.
 
-**Sırada:** `ROADMAP.md`'de resmî sıradaki adım v0.6 (Dashboard &
-Raporlama); ROADMAP'in "Açık kalan küçük sorular" bölümünde de gerçek
-kullanımdan gelebilecek küçük iyileştirmeler var.
+**Sırada:** v0.6'nın kalan iki adımı — **gelişim görünümü** (zaman içindeki
+değişim; şu an yalnızca sınav dönem ortalamaları var, o da öğrenci
+sayfasında) ve **öğrenci/sınıf raporları** (yazdırılabilir/paylaşılabilir
+döküm; uygulamada hiç yazdırma ya da dışa aktarma yok). ROADMAP'in "Açık
+kalan küçük sorular" bölümünde de gerçek kullanımdan gelebilecek küçük
+iyileştirmeler var.
+
+Panel canlıda ama **eşikleri gerçek kullanımla ayarlanmadı**. "Dikkat
+gereken öğrenciler" listesi ya bomboş ya herkesle dolu çıkıyorsa eşikler
+`dashboard-rules.ts`'te tek satırda değişir. QR akışı da gerçek bir akıllı
+tahtada henüz denenmedi.
 
 ### Açık kalan küçük sorular
 - Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
@@ -695,6 +848,21 @@ anlamsızlaşır.
   gerçekten çalıştırıldığı teyit edilmeden unutulabilir (bkz. yukarıdaki
   performans notu recompute notu). Her manuel adımdan sonra açıkça "çalıştı
   mı?" diye sorup onay almadan bir sonraki işe geçme.
+- **Bu ders ikinci kez yaşandı ve bu sefer maliyeti staging'di.** EXP
+  migration'ında yalnızca production onayı alındı, staging sorulmadı; staging
+  günlerce eksik şemayla çalıştı (bkz. yukarıdaki migration notu). Şema
+  değişikliği **iki** veritabanına gider — tek bir "tamam" cevabı yetmez,
+  **hangi veritabanı** olduğu sorulmalı. Yalnızca verify çıktısının tamamını
+  istemek yeterli değildi; hangi projeden geldiğini de sor.
+- **Öğretmen "staging'e gerek yok, direkt main" diyebilir — şema
+  değişikliği varsa bu ayrı bir şeydir.** Kodun staging'de test edilmemesi
+  öğretmenin kararıdır; ama migration yine de iki veritabanına da
+  uygulanmalı, yoksa staging'in şeması sürüklenir ve oraya bir sonraki
+  merge'de orası kırılır. QR işinde tam bu ayrım yapıldı: test staging'de
+  yapılmadı, SQL yine de ikisine de gitti.
+- **`sleep`'i beklemek için kullanma; ortam engelliyor.** Bir koşulu
+  beklemek gerekiyorsa `until <kontrol>; do sleep 5; done` gibi bir döngü
+  kullan (Vercel deploy'unu beklemek için gerekti).
 
 ### Derlemenin yakalayamadığı iki hata sınıfı
 Sınav modülünde ikisi de yaşandı; `npm run build` temiz geçtiği hâlde sayfa
