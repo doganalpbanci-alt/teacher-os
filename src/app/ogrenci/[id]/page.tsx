@@ -18,6 +18,8 @@ import {
 } from "@/lib/exam";
 import { ogrenciMesajGecmisi } from "@/lib/parent-message";
 import { seviyeHesapla } from "@/lib/exp";
+import { ogrenciGelisimi } from "@/lib/progress";
+import { Gelisim } from "@/components/Gelisim";
 import { NotFormu } from "@/components/NotFormu";
 import { OgrenciAdiFormu } from "@/components/OgrenciAdiFormu";
 import { OgrenciYonetimi } from "@/components/OgrenciYonetimi";
@@ -79,17 +81,27 @@ export default async function OgrenciSayfasi({
   // Hepsi aynı öğrenciye bakar, birbirini beklemez.
   // Teneffüs cezaları yalnızca kart sisteminde oluşur; basit sisteme geçilse
   // bile geçmişte kalanlar gösterilir.
-  const [ozet, gecmis, cezalar, odevler, odevOzeti, sinavlar, donemler, veliMesajlari] =
-    await Promise.all([
-      ogrenciOzeti(ogrenci.id),
-      ogrenciGecmisi(ogrenci.id),
-      ogrenciCezalari(ogrenci.id),
-      ogrenciOdevleri(ogrenci.id, ogretmen.id),
-      ogrenciOdevIstatistigi(ogrenci.id, ogretmen.id),
-      ogrenciSinavlari(ogrenci.id, ogretmen.id),
-      ogrenciDonemOzetleri(ogrenci.id, ogretmen.id),
-      ogrenciMesajGecmisi(ogrenci.id, ogretmen.id),
-    ]);
+  const [
+    ozet,
+    gecmis,
+    cezalar,
+    odevler,
+    odevOzeti,
+    sinavlar,
+    donemler,
+    veliMesajlari,
+    gelisim,
+  ] = await Promise.all([
+    ogrenciOzeti(ogrenci.id),
+    ogrenciGecmisi(ogrenci.id),
+    ogrenciCezalari(ogrenci.id),
+    ogrenciOdevleri(ogrenci.id, ogretmen.id),
+    ogrenciOdevIstatistigi(ogrenci.id, ogretmen.id),
+    ogrenciSinavlari(ogrenci.id, ogretmen.id),
+    ogrenciDonemOzetleri(ogrenci.id, ogretmen.id),
+    ogrenciMesajGecmisi(ogrenci.id, ogretmen.id),
+    ogrenciGelisimi(ogrenci.id, ogretmen.id, ogretmen.behaviorTemplate),
+  ]);
 
   // Basit sistemde kartlar gündemde değil; kart sisteminde yıldız/kart öne çıkar.
   const olcumler = kartSistemi
@@ -199,6 +211,11 @@ export default async function OgrenciSayfasi({
           </>
         )}
       </section>
+
+      {/* Gelişim, dönem özetinin ÜSTÜNDE: özet önce, ayrıntı sonra. Dönem
+          özeti tüm dönemleri listeler; bu blok son ikisini karşılaştırıp
+          yön söyler. */}
+      <Gelisim sonuc={gelisim} sablon={ogretmen.behaviorTemplate} />
 
       {/* Dönem özeti: karneye giren ortalama ile deneme ortalaması AYRI.
           İkisi tek sayıya karışırsa ikisi de anlamını yitirir. Dönem sınavın
