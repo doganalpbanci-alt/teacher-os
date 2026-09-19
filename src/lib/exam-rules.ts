@@ -389,3 +389,20 @@ function donem(yil: number, sira: 1 | 2): Donem {
 export function ayniDonem(a: Donem, b: Donem): boolean {
   return a.yil === b.yil && a.sira === b.sira;
 }
+
+/**
+ * Dönemin adres çubuğunda ve eşleştirmede kullanılan kısa anahtarı: "2025-1".
+ * Etiket değil anahtar: etiket ("2025-2026 · 1. dönem") okunmak içindir,
+ * bu karşılaştırmak ve URL'de taşımak için.
+ */
+export function donemAnahtari(d: Donem): string {
+  return `${d.yil}-${d.sira}`;
+}
+
+/** Anahtardan dönem. Biçim bozuksa null — adres çubuğundan gelir, güvenilmez. */
+export function donemCozumle(anahtar: string | null | undefined): Donem | null {
+  if (!anahtar) return null;
+  const eslesme = /^(\d{4})-([12])$/.exec(anahtar);
+  if (!eslesme) return null;
+  return donem(Number(eslesme[1]), Number(eslesme[2]) === 1 ? 1 : 2);
+}

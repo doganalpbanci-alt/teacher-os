@@ -1,6 +1,6 @@
 import type { BehaviorTemplate, BehaviorType, SubmissionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { donemBul, type Donem } from "@/lib/exam-rules";
+import { donemAnahtari, donemBul, type Donem } from "@/lib/exam-rules";
 import { sayimlariHesapla } from "@/lib/assignment";
 import {
   degisimHesapla,
@@ -68,10 +68,6 @@ export type GelisimSonucu =
       olculer: GelisimOlcusu[];
     };
 
-function donemAnahtari(donem: Donem): string {
-  return `${donem.yil}-${donem.sira}`;
-}
-
 function kova(kovalar: Map<string, DonemKovasi>, tarih: Date): DonemKovasi {
   const donem = donemBul(tarih);
   const anahtar = donemAnahtari(donem);
@@ -103,11 +99,16 @@ function ortalama(degerler: number[]): number | null {
  *
  * Bir ölçü dönemlerden yalnızca birinde varsa o ölçü için ok çıkmaz
  * (`YETERSIZ`): eksik veriden yön üretilmez.
+ *
+ * `hedefDonem` verilirse o dönem ile ONDAN ÖNCEKİ dönem karşılaştırılır.
+ * Rapor için gerekli: geçmiş bir dönemin raporunu alırken "son iki dönem"
+ * değil, o dönemin kendi hikâyesi anlatılmalı.
  */
 export async function ogrenciGelisimi(
   ogrenciId: string,
   ogretmenId: string,
   sablon: BehaviorTemplate,
+  hedefDonem?: Donem | null,
 ): Promise<GelisimSonucu> {
   const ogrenci = await prisma.student.findFirst({
     where: { id: ogrenciId, classroom: { teacherId: ogretmenId } },
@@ -192,10 +193,19 @@ export async function ogrenciGelisimi(
   );
 
   if (sirali.length === 0) return { durum: "VERI_YOK" };
-  if (sirali.length === 1) return { durum: "TEK_DONEM", donem: sirali[0].donem };
 
-  const onceki = sirali[sirali.length - 2];
-  const simdi = sirali[sirali.length - 1];
+  // Hedef dönem verilmemişse en yenisi; verilmişse onun sırası bulunur.
+  const hedefSira = hedefDonem
+    ? sirali.findIndex((k) => donemAnahtari(k.donem) === donemAnahtari(hedefDonem))
+    : sirali.length - 1;
+
+  // Hedef dönemin hiç verisi yoksa karşılaştırılacak bir şey de yoktur.
+  if (hedefSira < 0) return { durum: "VERI_YOK" };
+  // Öncesinde dönem yoksa ok uydurulmaz; ilk dönem kendisiyle kıyaslanamaz.
+  if (hedefSira === 0) return { durum: "TEK_DONEM", donem: sirali[0].donem };
+
+  const onceki = sirali[hedefSira - 1];
+  const simdi = sirali[hedefSira];
 
   const olcu = (
     anahtar: OlcuAnahtari,

@@ -129,12 +129,18 @@ export default async function OgrenciSayfasi({
 
   return (
     <>
-      <Link
-        className="geri"
-        href={ogrenci.classroom ? `/sinif/${ogrenci.classroom.id}` : "/"}
-      >
-        ← {ogrenci.classroom ? ogrenci.classroom.name : "Sınıflarım"}
-      </Link>
+      <div className="ogrenci-basi-araclar">
+        <Link
+          className="geri"
+          href={ogrenci.classroom ? `/sinif/${ogrenci.classroom.id}` : "/"}
+        >
+          ← {ogrenci.classroom ? ogrenci.classroom.name : "Sınıflarım"}
+        </Link>
+        {/* Rapor: veli toplantısında masaya konacak yazdırılabilir döküm. */}
+        <Link className="baglanti" href={`/ogrenci/${ogrenci.id}/rapor`}>
+          Rapor →
+        </Link>
+      </div>
 
       <main className="kart">
         <OgrenciAdiFormu
