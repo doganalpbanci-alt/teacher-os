@@ -106,8 +106,10 @@ eklendi:
 ## v0.6 — Dashboard & Raporlama
 - ✓ Genel dashboard *(üst menüde "Panel"; bekleyen işler, dikkat gereken
   öğrenciler, sınıf karşılaştırması, son 30 günün özeti)*
-- Öğrenci/sınıf raporları
-- Gelişim görünümü
+- ◐ Öğrenci/sınıf raporları *(öğrenci raporu yazdırılabilir hâlde; sınıf
+  raporu henüz yok)*
+- ◐ Gelişim görünümü *(öğrenci bazında son iki dönem karşılaştırması; sınıf
+  gelişimi henüz yok)*
 
 Panel canlıda. Şema değişikliği gerektirmedi: her sayı mevcut kayıtlardan
 (BehaviorLog, Submission, ExamResult, Lesson, ParentMessage) hesaplanır.
@@ -118,8 +120,25 @@ DEĞİL, doğrudan davranış kayıtlarından hesaplanır — Basit şablonda no
 çalışırdı. Eşikler `dashboard-rules.ts`'te tek yerde: 2+ gecikmiş ödev,
 resmî sınav ortalaması %50 altı, kırmızı kart ya da eksi > artı.
 
-Grafikler hâlâ bilerek yok (v0.4'teki aynı gerekçe): panel önce sayılarla
-çalışsın, grafik neyin izlendiği belli olunca gelsin.
+Gelişim görünümü canlıda: öğrenci sayfasında son iki dönem karşılaştırılır,
+her ölçü için sayı ve yön oku çıkar. Davranış **ders başına** hesaplanır —
+ham sayı karşılaştırması ders sayısı dönemden döneme değiştiği için sessizce
+yanlış olurdu. Yön sayının yönü, renk ise iyileşme olup olmadığıdır: eksi
+azalınca ok aşağı bakar ama satır yeşildir. Karşılaştıracak ikinci dönem
+yoksa ok uydurulmaz.
+
+Öğrenci raporu canlıda: `/ogrenci/[id]/rapor`, dönem seçilebilir, dört bölüm
+(davranış, sınavlar, ödevler, gelişim). Ayrı bir PDF üretici YOK — sayfa
+yazdırmaya hazır kurulur, "Yazdır / PDF" düğmesi tarayıcının kendi yazdırma
+penceresini açar ve oradan kağıda ya da PDF'e gidilir. Tablette de çalışır.
+
+Kalan: **sınıf raporu** ve **sınıf gelişimi**. İkisi de öğrenci tarafının
+altyapısına kurulacak, ayrı bir veri modeli gerektirmiyor.
+
+Grafikler hâlâ bilerek yok (v0.4'teki aynı gerekçe): ekranlar önce sayılarla
+çalışsın, grafik neyin izlendiği belli olunca gelsin. Gelişim görünümünde de
+bilerek kullanılmadı — iki nokta arasına çizilen bir çizgi zaten grafik
+değildir.
 
 ## v0.7 — AI Assistant
 - Öğrenci ve sınıf verilerini analiz etme
