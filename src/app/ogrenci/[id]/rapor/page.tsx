@@ -57,7 +57,7 @@ export default async function RaporSayfasi({
         </Link>
         <div className="rapor-araclar-sag">
           <RaporDonemSecici
-            ogrenciId={id}
+            temelAdres={`/ogrenci/${id}/rapor`}
             donemler={rapor.donemler}
             secilen={rapor.secilenDonem}
           />
