@@ -12,11 +12,12 @@ import { donemAnahtari } from "@/lib/exam-rules";
 // liste anlamsızdır, üstelik hangi dönemin seçili olduğu başlıkta zaten yazar.
 
 export function RaporDonemSecici({
-  ogrenciId,
+  temelAdres,
   donemler,
   secilen,
 }: {
-  ogrenciId: string;
+  /** Raporun adresi, sorgu dizesi olmadan (ör. `/sinif/abc/rapor`). */
+  temelAdres: string;
   donemler: Donem[];
   secilen: Donem;
 }) {
@@ -31,7 +32,7 @@ export function RaporDonemSecici({
       <select
         value={donemAnahtari(secilen)}
         onChange={(olay) => {
-          router.push(`/ogrenci/${ogrenciId}/rapor?donem=${olay.target.value}`);
+          router.push(`${temelAdres}?donem=${olay.target.value}`);
         }}
       >
         {donemler.map((donem) => (
