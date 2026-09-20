@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 18 Eylül 2026 · anlatılan kod durumu `main` = `d12f131`
+Son güncelleme: 20 Eylül 2026 · anlatılan kod durumu `main` = `cfc6ac9`
 (üstündeki commit'ler yalnızca bu notun kendisi olabilir)
 
 ---
@@ -189,6 +189,13 @@ src/lib/
                          türetilir
   devam-yolu.ts          giriş sonrası dönülecek adres + açık yönlendirme
                          koruması (edge-safe: middleware de kullanır)
+  progress.ts / progress-rules.ts
+                         öğrenci gelişimi: son iki dönemi karşılaştırır.
+                         Eşikler, "iyi yön" ve ders başına normalleştirme
+                         kurallar dosyasında
+  report.ts              öğrenci raporu: seçilen dönemin dökümü. Sınav ve
+                         ödev satırları mevcut sorgulardan gelir, burada
+                         yalnızca döneme süzülür
   student-history.ts     öğrenci geçmişi ve dönem toplamları
   siralama.ts            Türkçe alfabe sıralaması
   form-state.ts          form durumu tipi
@@ -217,6 +224,10 @@ src/components/  (~35 dosya; öne çıkanlar)
   QrEkrani.tsx             tahtadaki QR ekranının yoklayan kısmı; onaylanınca
                            oturumu alır ve ana sayfaya geçer
   EslesmeOnayi.tsx         telefondaki onay ekranı (kod karşılaştırma + Onayla)
+  Gelisim.tsx              son iki dönem + yön okları; öğrenci sayfasında ve
+                           raporda AYNI bileşen kullanılır
+  RaporDonemSecici.tsx     rapordaki dönem açılır listesi (`?donem=2025-1`)
+  YazdirDugmesi.tsx        raporda "Yazdır / PDF"; window.print() çağırır
 
 src/app/
   page.tsx                gündem paneli + sınıf listesi + arşivlenmiş sınıflar
@@ -228,8 +239,9 @@ src/app/
   sinif/[id]/sinavlar/    sınıfın sınavları + ortalama + öğrenci dökümü
   odevler/, sinavlar/     ödev/sınav listeleri, yeni/düzenle sayfaları
   veli/                   öğrenci seç → mesaj oluştur ekranı
-  ogrenci/[id]/           öğrenci: özet, ad düzenleme, not girme, ödevler,
-                          sınavlar, geçmiş, cezalar, veli mesajı, yönet
+  ogrenci/[id]/           öğrenci: özet, ad düzenleme, not girme, gelişim,
+                          ödevler, sınavlar, geçmiş, cezalar, veli mesajı
+  ogrenci/[id]/rapor/     yazdırılabilir dönem raporu
   ayarlar/                davranış şablonu, tahta kilidi, sınıf hedefleri
                           anahtarı, tehlike bölgesi
   giris/ kurulum/         oturum ekranları
@@ -565,12 +577,76 @@ bir değerdir, site dışına çıkan her şey ana sayfaya düşürülür.
 Bağımlılık: `qrcode-svg` (bağımlılığı yok, sunucuda çalışır, istemci
 paketine girmez). QR'ı elde kodlamak Reed-Solomon demekti.
 
+### Gelişim görünümü
+Öğrenci sayfasındaki "Gelişim" bloğu **son iki dönemi** karşılaştırır ve üç
+ölçüde sayı + yön oku verir: karne ortalaması, davranış, ödev tamamlama.
+Dönem ayrı bir tabloda durmaz, `donemBul` ile tarihten türetilir — sınav
+için zaten böyleydi, davranış ve ödev de aynı saf fonksiyona verilir.
+
+Dört karar, her biri bir tuzağı kapatıyor:
+
+- **Karşılaştırılan iki dönem bugünün tarihinden seçilmez**, veride kayıt
+  bulunan son iki dönemden. Dönem ortasında bugüne bakmak, henüz verisi
+  olmayan bir dönemi "düştü" gibi gösterirdi. Tek dönem varsa ok
+  UYDURULMAZ, "en az iki dönem gerekir" yazar.
+- **Davranış ders başına normalleştirilir.** 12 artı, 30 derslik bir dönemde
+  ile 10 derslik bir dönemde aynı şey değil; ham sayı karşılaştırması
+  sessizce yanlış olurdu. Test bunu özellikle sınıyor: ham sayı 10'dan 12'ye
+  ÇIKARKEN ders sayısı 10'dan 20'ye çıktığı için yoğunluk düşer, ok aşağı
+  bakar.
+- **Yön sayının yönü, RENK iyileşmedir.** Eksi/kart azalınca ok aşağı bakar
+  ama satır yeşildir; ikisi aynı şeye bağlansaydı "eksi azaldı" kırmızı
+  görünürdü. Her ölçünün `iyiYon`'u kurallar dosyasında.
+- **Kart şablonunda olumsuz sayı MINUS'tan gelmez.** Orada eksi düğmesi
+  yoktur, her kırmızı kart yanında otomatik bir MINUS yazar, yani
+  `MINUS - RED_CARD` her zaman sıfır çıkar ve ölçü sürekli boş görünürdü.
+  Anlamlı sayı verilen kartlardır (sarı + kırmızı).
+
+Eşikler: yüzdelerde 2 puan, ders başında 0.1; altındaki fark "aynı" sayılır,
+yoksa %61'den %62'ye çıkış "gelişme" diye görünür ve ok anlamını yitirir.
+Eşik karşılaştırmasında **kayan nokta payı** var: `0.6 - 0.5` ikili tabanda
+tam 0.1 etmez (0.09999999999999998), pay olmadan TAM eşikteki değişim
+sessizce "aynı" sayılıyordu — testte yakalandı.
+
+Grafik bilerek yok: iki nokta arasına çizilen bir çizgi zaten grafik değil.
+
+### Öğrenci raporu
+`/ogrenci/[id]/rapor` — veli toplantısında masaya konacak ya da veliye
+verilecek tek belge. Dört bölüm (davranış, sınavlar, ödevler, gelişim),
+dönem açılır listeden seçilir ve seçim adreste taşınır (`?donem=2025-1`).
+
+**Ayrı bir PDF üretici YOK.** Sayfa yazdırmaya hazır kurulur; "Yazdır / PDF"
+düğmesi tarayıcının kendi yazdırma penceresini açar, oradan kağıda ya da
+"PDF olarak kaydet"e gidilir. Tablette de çalışır. Puppeteer benzeri ağır
+bir bağımlılık ve Vercel'de boyut/süre sınırı riski alınmadı.
+
+Düğme sonradan eklendi ve gerekliydi: sayfanın yazdırılabilir olması
+yetmiyor, tarayıcıların yazdır seçeneği menülerin içinde gömülü (Paylaş →
+Yazdır) ve öğretmen onu arıyordu. **Yazdırılabilir bir sayfa yaparken ona
+ulaşan düğmeyi de koy.**
+
+Ekranda işe yarayıp kağıtta anlamsız olan her şey `yazdirma-gizle` sınıfını
+taşır; kuralı `globals.css`'teki `@media print` bloğu uygular (menü, araç
+çubuğu, dönem seçici, yazdır düğmesi, kart çerçeveleri).
+
+Üç ayrıntı:
+
+- **Varsayılan dönem bugünden değil, verisi olan en yeni dönemden** seçilir.
+- **Rapordaki gelişim SEÇİLEN dönemi anlatır**, "son iki dönemi" değil:
+  `ogrenciGelisimi` bunun için isteğe bağlı hedef dönem alır. Parametresiz
+  çağrıldığında eski davranışı sürer.
+- **Tarihsiz ödev hiçbir döneme düşmez**; hangi döneme ait olduğu bilinmiyor,
+  rapora katmak onu keyfî bir döneme yazmak olurdu.
+
+Gelişim bloğu öğrenci sayfasındakiyle aynı bileşendir; rapor ayrı bir
+"gelişim" tanımı üretmez.
+
 ---
 
 ## Testler
 
-Yirmi dört arayüz testi (gerçek tarayıcıda, Playwright) ve altı saf hesap
-testi, toplam **847 kontrol**. Hepsi geçiyor.
+Yirmi altı arayüz testi (gerçek tarayıcıda, Playwright) ve yedi saf hesap
+testi, toplam **962 kontrol**. Hepsi geçiyor.
 
 ```
 scripts/e2e-test.mjs                       sınıf/öğrenci ekleme, kalıcılık      35
@@ -609,16 +685,21 @@ scripts/qr-login-ui-test.mjs               QR ile tahta girişi; fotoğraflayan
 scripts/dashboard-rules-test.mjs           panel eşikleri ve dikkat kararı      30
 scripts/pairing-rules-test.mjs             eşleşme durumu, kod biçimi, çerez,
                                             açık yönlendirme koruması           39
+scripts/progress-ui-test.mjs               gelişim: iki dönem, ders başına
+                                            normalleştirme, iyi yön, tek dönem  30
+scripts/report-ui-test.mjs                 rapor: dönem seçimi, yazdırma kipi,
+                                            yazdır düğmesi, öğretmen ayrımı     45
+scripts/progress-rules-test.mjs            gelişim eşikleri ve yön kararı       40
 ```
 
 `exam-rules-test.mjs`, `parent-message-rules-test.mjs`,
-`class-goal-rules-test.mjs`, `exp-rules-test.mjs`, `dashboard-rules-test.mjs`
-ve `pairing-rules-test.mjs` diğerlerinden farklı: tarayıcı açmaz, sunucu
-gerektirmez. Veritabanına da ekrana da bağlı olmayan saf kurallar
+`class-goal-rules-test.mjs`, `exp-rules-test.mjs`, `dashboard-rules-test.mjs`,
+`pairing-rules-test.mjs` ve `progress-rules-test.mjs` diğerlerinden farklı:
+tarayıcı açmaz, sunucu gerektirmez. Veritabanına da ekrana da bağlı olmayan saf kurallar
 (ağırlıklı puan/net/dönem; telefon normalizasyonu, WhatsApp bağlantısı,
 şablon üretimi; hedef/ödül geçerliliği ve ilerleme yüzdesi; EXP sabitleri
 ve seviye formülü; panel eşikleri; eşleşme durumu ve açık yönlendirme
-koruması) doğrudan sınanır. Kurallar TypeScript'te yazılı olduğundan test önce ilgili
+koruması; gelişim eşikleri ve yön kararı) doğrudan sınanır. Kurallar TypeScript'te yazılı olduğundan test önce ilgili
 `kurallar.ts` dosyasını geçici bir dizine derler. Tek başına da çalışır:
 `node scripts/<ad>.mjs`.
 
@@ -669,7 +750,7 @@ veri yazar — **üretim veritabanına karşı çalıştırılmaz.**
 sıfırlar**; bu yüzden test dosyası içinde en sonda çalışır, ondan sonra
 aynı oturumda başka bir şey denenmemelidir.
 
-### Test yazarken yedi tuzak
+### Test yazarken dokuz tuzak
 - **`textContent("body")` kullanma, `innerText("body")` kullan.** İlki
   Next.js'in sayfaya gömdüğü RSC veri script'ini de döndürür; ekranda
   olmayan isimler orada geçer ve "şu öğrenci listede yok" gibi kontroller
@@ -706,6 +787,19 @@ aynı oturumda başka bir şey denenmemelidir.
   MEŞRU şekilde tüketmişti. Böyle bir durumda kontrolü gevşetme; yoklayan
   sayfayı geçici olarak bırak (`goto("about:blank")`), ölçümü yap, sonra
   geri dön. Çerez bağlamda kaldığı için akış kaldığı yerden devam eder.
+- **Kurulum SQL'ini satır sayısıyla DOĞRULA.** `psql` ifade hatasında da 0
+  çıkış kodu döndürdüğü için hatalı bir INSERT sessizce düşer ve test sonra
+  anlamsız bir sonuca bakar. Bu gerçekten oldu: enum kolonuna `CASE` ile
+  yazarken cast unutulmuştu (`CASE ... END` sonucu `text`tir, enum'a örtük
+  dönüşmez), teslimler hiç oluşmadı ve ölçü "karşılaştırılamaz" çıktı.
+  Doğru assertion yakaladı; artık veri kuran testler `count(*)` ile kendi
+  kurulumunu sınıyor.
+- **Davranışı TAHMİN ETME, ölç.** Yazdırma için "CSS'e baktım, herhalde
+  gizlenir" demek yeterli değildi: `emulateMedia({ media: "print" })` ile
+  tarayıcı gerçekten yazdırma kipine alınıp menünün kaybolduğu, içeriğin
+  durduğu doğrulanıyor. Aynı şekilde "yazdır düğmesi var" demek yerine
+  `window.print` bir sayaçla değiştirilip düğmenin onu gerçekten çağırdığı
+  ölçülüyor.
 
 ---
 
@@ -737,7 +831,8 @@ akışı, WhatsApp taslakları, altı hazır şablon), hesap düzeyinde tam veri
 sıfırlama, ayrı bir staging ortamı ve dallanma akışı, **sınıf hedefleri**
 ve **EXP/seviye sistemi** (gamification'ın öğretmen bazlı açılıp kapanan
 iki parçası, aynı anahtarla), performans notu tabanının 90'dan 80'e
-indirilmesi, **genel panel** (v0.6'nın ilk adımı), **QR ile akıllı tahta
+indirilmesi, **genel panel**, **öğrenci gelişim görünümü** ve
+**yazdırılabilir öğrenci raporu** (v0.6'nın üç adımı), **QR ile akıllı tahta
 girişi** ve giriş sonrası dönüş.
 
 **Hız:** Vercel fonksiyonları `vercel.json` ile `dub1`'de (Dublin) çalışır —
@@ -752,17 +847,21 @@ iletişimi) canlıda ama henüz birkaç haftalık gerçek kullanımla tam
 sınanmadı. Akıllı tahta kilidi ve canlı yansıma en az bir gerçek ders
 oturumunda denendi.
 
-**Sırada:** v0.6'nın kalan iki adımı — **gelişim görünümü** (zaman içindeki
-değişim; şu an yalnızca sınav dönem ortalamaları var, o da öğrenci
-sayfasında) ve **öğrenci/sınıf raporları** (yazdırılabilir/paylaşılabilir
-döküm; uygulamada hiç yazdırma ya da dışa aktarma yok). ROADMAP'in "Açık
-kalan küçük sorular" bölümünde de gerçek kullanımdan gelebilecek küçük
-iyileştirmeler var.
+**Sırada:** v0.6'nın öğrenci tarafı bitti, **sınıf tarafı açık** —
+**sınıf raporu** ve **sınıf gelişimi**. İkisi de öğrenci tarafının
+altyapısına kurulacak, yeni bir veri modeli gerektirmiyor. Grafikler v0.4'ten
+beri bilerek bekliyor. ROADMAP'in "Açık kalan küçük sorular" bölümünde de
+gerçek kullanımdan gelebilecek küçük iyileştirmeler var.
 
-Panel canlıda ama **eşikleri gerçek kullanımla ayarlanmadı**. "Dikkat
-gereken öğrenciler" listesi ya bomboş ya herkesle dolu çıkıyorsa eşikler
-`dashboard-rules.ts`'te tek satırda değişir. QR akışı da gerçek bir akıllı
-tahtada henüz denenmedi.
+**Son dört özellik gerçek veriyle hiç denenmedi** ve bu, sıradaki işten daha
+önemli olabilir:
+- Panelin eşikleri ayarlanmadı. "Dikkat gereken öğrenciler" listesi ya
+  bomboş ya herkesle dolu çıkıyorsa `dashboard-rules.ts`'te tek satır.
+- Gelişim oklarının gerçek veride mantıklı çıkıp çıkmadığı görülmedi;
+  eşikler `progress-rules.ts`'te.
+- Rapor bir veli toplantısında kullanılmadı; kağıt çıktısının gerçekten işe
+  yarayıp yaramadığı bilinmiyor.
+- QR akışı gerçek bir akıllı tahtada denenmedi.
 
 ### Açık kalan küçük sorular
 - Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
