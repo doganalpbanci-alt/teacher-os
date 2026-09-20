@@ -159,6 +159,10 @@ export default async function SinifSayfasi({
               <Link className="baglanti" href={`/sinif/${sinif.id}/dersler`}>
                 Ders geçmişi →
               </Link>
+              {/* Sınıf raporu: dönemlik döküm, yazdırılabilir. */}
+              <Link className="baglanti" href={`/sinif/${sinif.id}/rapor`}>
+                Rapor →
+              </Link>
               <DersKontrolu sinifId={sinif.id} aktifDersId={aktifDers?.id ?? null} />
             </div>
           )}
