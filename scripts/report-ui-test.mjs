@@ -136,6 +136,27 @@ console.log("\nB. Varsayilan donem");
   ok("2. donem odev tamamlanma %100", g.includes("%100"));
 }
 
+// --- C0. Yazdir dugmesi ---
+// Sayfanin yazdirilabilir olmasi yetmiyordu: tarayicilarin yazdir secenegi
+// menulerin icinde gomulu ve ogretmen onu bulamiyordu. Dugme GERCEKTEN
+// window.print() cagiriyor mu, sayac ile olculur -- "dugme var" demek yeterli
+// bir kontrol degil.
+console.log("\nC0. Yazdir dugmesi");
+{
+  await sayfa.evaluate(() => {
+    window.__yazdirmaSayaci = 0;
+    window.print = () => { window.__yazdirmaSayaci += 1; };
+  });
+  const dugme = sayfa.getByRole("button", { name: /Yazdır/ });
+  ok("Yazdir dugmesi var", (await dugme.count()) === 1);
+  await dugme.click();
+  ok(
+    "Dugme yazdirmayi tetikledi",
+    (await sayfa.evaluate(() => window.__yazdirmaSayaci ?? 0)) === 1,
+    "window.print cagrilmali",
+  );
+}
+
 // --- C. YAZDIRMA kipi gercekten olculuyor ---
 console.log("\nC. Yazdirma kipi");
 {
@@ -148,6 +169,11 @@ console.log("\nC. Yazdirma kipi");
   await sayfa.emulateMedia({ media: "print" });
   ok("Yazdirmada arac cubugu GIZLI", !(await geriGorunur()), "yazdirma-gizle uygulanmali");
   ok("Yazdirmada ust menu GIZLI", !(await menuGorunur()));
+  ok(
+    "Yazdirmada yazdir dugmesi de GIZLI",
+    !(await sayfa.getByRole("button", { name: /Yazdır/ }).isVisible().catch(() => false)),
+    "kagida dusen belgede dugme olmaz",
+  );
   ok("Yazdirmada ogrenci adi DURUYOR", await baslikGorunur(), "icerik kaybolmamali");
   {
     const g = await govde();

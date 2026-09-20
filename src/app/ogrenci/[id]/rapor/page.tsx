@@ -6,6 +6,7 @@ import { ogrenciRaporu } from "@/lib/report";
 import { sinavTarihiYazisi } from "@/lib/exam";
 import { odevTarihiYazisi } from "@/lib/assignment";
 import { RaporDonemSecici } from "@/components/RaporDonemSecici";
+import { YazdirDugmesi } from "@/components/YazdirDugmesi";
 import { Gelisim } from "@/components/Gelisim";
 
 export const dynamic = "force-dynamic";
@@ -54,11 +55,14 @@ export default async function RaporSayfasi({
         <Link className="geri" href={`/ogrenci/${id}`}>
           ← Öğrenci sayfası
         </Link>
-        <RaporDonemSecici
-          ogrenciId={id}
-          donemler={rapor.donemler}
-          secilen={rapor.secilenDonem}
-        />
+        <div className="rapor-araclar-sag">
+          <RaporDonemSecici
+            ogrenciId={id}
+            donemler={rapor.donemler}
+            secilen={rapor.secilenDonem}
+          />
+          <YazdirDugmesi />
+        </div>
       </div>
 
       <main className="kart rapor">

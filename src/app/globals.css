@@ -1795,3 +1795,25 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
    boşluk kapsayıcıya devredilir. */
 .ogrenci-basi-araclar .geri { margin-bottom: 0; }
 .ogrenci-basi-araclar { margin-bottom: 1rem; }
+
+.rapor-araclar-sag {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* İki sınıflı seçici bilerek: tek sınıflı olsaydı `.form button` tip
+   seçicisi onu ezebilirdi (HANDOFF'ta yazılı tuzak). */
+.rapor-araclar .yazdir-dugmesi {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  background: var(--kart);
+  color: var(--vurgu);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rapor-araclar .yazdir-dugmesi:hover { border-color: var(--vurgu); }
