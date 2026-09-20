@@ -1669,3 +1669,151 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 .gelisim-kotu { background: #fdecea; color: var(--hata); }
 .gelisim-ayni { background: var(--zemin); color: var(--soluk); }
 .gelisim-yetersiz { background: var(--zemin); color: var(--soluk); font-weight: 400; }
+
+/* ---------- Öğrenci raporu ---------- */
+
+.rapor-araclar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.rapor-donem-secici {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.rapor-donem-secici select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  background: var(--kart);
+  color: var(--metin);
+  font: inherit;
+}
+
+.rapor-basi { margin-bottom: 1rem; }
+.rapor-basi h1 { margin-bottom: 0.25rem; }
+.rapor-basi p { margin: 0; }
+
+.rapor-bolum { margin-top: 1.5rem; }
+.rapor-bolum > h2 { margin-bottom: 0.5rem; }
+.rapor-not { margin: 0.5rem 0 0; font-size: 0.8125rem; }
+
+/* Rapordaki gelişim bloğu sayfanın kendi kartı değil, raporun bir bölümü:
+   iki kat çerçeve olmasın. İki sınıflı seçici bilerek (bkz. CSS tuzağı). */
+.rapor-bolum > .kart {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.rapor-tablo {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.rapor-tablo th,
+.rapor-tablo td {
+  padding: 0.4rem 0.5rem;
+  text-align: right;
+  border-bottom: 1px solid var(--cizgi);
+  vertical-align: top;
+}
+
+.rapor-tablo thead th {
+  color: var(--soluk);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.rapor-tablo th:first-child { text-align: left; font-weight: 600; }
+
+.rapor-alti {
+  margin: 1.5rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cizgi);
+  font-size: 0.8125rem;
+}
+
+/* ---------- Yazdırma ----------
+   Ayrı bir PDF üretici yok: sayfa kağıda hazır kurulur, tarayıcının kendi
+   "yazdır"ı işi bitirir. Ekranda işe yarayan ama kağıtta anlamsız olan her
+   şey (menü, düğmeler, seçiciler, bağlantı süslemesi) burada kalkar. */
+@media print {
+  .yazdirma-gizle,
+  .ust-menu,
+  .canli-yayin {
+    display: none !important;
+  }
+
+  body {
+    padding: 0;
+    background: #ffffff;
+  }
+
+  .sayfa { max-width: none; }
+
+  /* Kartın ekrandaki çerçevesi ve gölgesi kağıtta mürekkep israfı. */
+  .kart {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    background: #ffffff;
+  }
+
+  /* Bölümler sayfa ortasından ikiye bölünmesin. */
+  .rapor-bolum { break-inside: avoid; }
+  .rapor-tablo { break-inside: auto; }
+  .rapor-tablo tr { break-inside: avoid; }
+
+  /* Tarayıcılar varsayılan olarak arka plan rengi basmaz; gelişim
+     rozetlerinin anlamı renkte olduğu için basılması istenir. */
+  .gelisim-ok {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+.ogrenci-basi-araclar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* `.geri` normalde kendi alt boşluğunu taşır; satır içinde iki öğe olunca
+   boşluk kapsayıcıya devredilir. */
+.ogrenci-basi-araclar .geri { margin-bottom: 0; }
+.ogrenci-basi-araclar { margin-bottom: 1rem; }
+
+.rapor-araclar-sag {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* İki sınıflı seçici bilerek: tek sınıflı olsaydı `.form button` tip
+   seçicisi onu ezebilirdi (HANDOFF'ta yazılı tuzak). */
+.rapor-araclar .yazdir-dugmesi {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--cizgi);
+  border-radius: 0.5rem;
+  background: var(--kart);
+  color: var(--vurgu);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rapor-araclar .yazdir-dugmesi:hover { border-color: var(--vurgu); }
