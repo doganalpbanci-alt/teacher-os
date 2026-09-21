@@ -72,23 +72,41 @@ export const OLCU_IYI_YON: Record<OlcuAnahtari, IyiYon> = {
 };
 
 /**
- * Ölçü etiketleri şablona göre değişir: kayıt tipi aynı (PLUS/MINUS), değişen
+ * Ölçü adları şablona göre değişir: kayıt tipi aynı (PLUS/MINUS), değişen
  * yalnızca öğretmenin ona ne dediği. `OLAY_GORUNUMU` ile aynı fikir.
  */
-export const OLCU_ETIKETLERI: Record<BehaviorTemplate, Record<OlcuAnahtari, string>> = {
-  SIMPLE: {
-    SINAV: "Karne ortalaması",
-    ARTI: "Artı (ders başına)",
-    EKSI: "Eksi (ders başına)",
-    ODEV: "Ödev tamamlama",
-  },
-  CARD: {
-    SINAV: "Karne ortalaması",
-    ARTI: "Yıldız (ders başına)",
-    EKSI: "Kart (ders başına)",
-    ODEV: "Ödev tamamlama",
-  },
+export const OLCU_ADI: Record<BehaviorTemplate, Record<OlcuAnahtari, string>> = {
+  SIMPLE: { SINAV: "Karne ortalaması", ARTI: "Artı", EKSI: "Eksi", ODEV: "Ödev tamamlama" },
+  CARD: { SINAV: "Karne ortalaması", ARTI: "Yıldız", EKSI: "Kart", ODEV: "Ödev tamamlama" },
 };
+
+/** Gelişim kimin için hesaplanıyor. Birim buna göre değişir. */
+export type Kapsam = "OGRENCI" | "SINIF";
+
+/**
+ * Davranış ölçülerinin birimi.
+ *
+ * Sınıfta öğrenci sayısına da bölünür: 25 kişilik bir sınıf doğal olarak
+ * 10 kişilikten çok yıldız toplar. Öğrenci başına indirgeyince sayı
+ * ÖĞRENCİ GELİŞİMİNDEKİYLE AYNI birime gelir — bir öğrencinin 0.6'sı
+ * sınıfın 0.4'üyle doğrudan karşılaştırılabilir.
+ */
+export const BIRIM_ACIKLAMASI: Record<Kapsam, string> = {
+  OGRENCI: "ders başına",
+  SINIF: "ders başına öğrenci",
+};
+
+/** Ekranda görünen tam etiket: "Yıldız (ders başına öğrenci)" gibi. */
+export function olcuEtiketi(
+  anahtar: OlcuAnahtari,
+  sablon: BehaviorTemplate,
+  kapsam: Kapsam,
+): string {
+  const ad = OLCU_ADI[sablon][anahtar];
+  // Yüzde ölçülerinin birimi zaten adında; parantez eklemek gürültü olurdu.
+  if (anahtar === "SINAV" || anahtar === "ODEV") return ad;
+  return `${ad} (${BIRIM_ACIKLAMASI[kapsam]})`;
+}
 
 /** Ham sayının yanında yazan kelime; "22 yıldız / 18 ders" gibi. */
 export const OLCU_ADET_KELIMESI: Record<BehaviorTemplate, Record<OlcuAnahtari, string>> = {

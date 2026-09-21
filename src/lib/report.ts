@@ -13,7 +13,7 @@ import {
   type OdevSayimlari,
   type OgrenciOdevSatiri,
 } from "@/lib/assignment";
-import { ogrenciGelisimi, type GelisimSonucu } from "@/lib/progress";
+import { ogrenciGelisimi, sinifGelisimi, type GelisimSonucu } from "@/lib/progress";
 import { turkceSirala } from "@/lib/siralama";
 
 // Öğrenci raporunun veri katmanı: veli toplantısında masaya konacak ya da
@@ -214,6 +214,7 @@ export type SinifRaporu = {
 
   /** Türkçe alfabeye göre sıralı. Resmî bir belgede beklenen sıra budur. */
   satirlar: SinifRaporSatiri[];
+  gelisim: GelisimSonucu;
   uretimTarihi: Date;
 };
 
@@ -385,6 +386,9 @@ export async function sinifRaporu(
     odevOrani: tumTeslimler.length === 0 ? null : sayimlariHesapla(tumTeslimler).oran,
 
     satirlar: turkceSirala(satirlar, (s) => s.ad),
+    // Rapor SEÇİLEN dönemi anlatır; gelişim de o dönemle bir öncekini
+    // karşılaştırır (öğrenci raporundaki aynı kural).
+    gelisim: await sinifGelisimi(sinifId, ogretmenId, sablon, secilenDonem),
     uretimTarihi: new Date(),
   };
 }

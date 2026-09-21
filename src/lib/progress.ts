@@ -65,6 +65,8 @@ export type GelisimSonucu =
       simdi: Donem;
       oncekiDers: number;
       simdiDers: number;
+      /** Yalnızca sınıf gelişiminde dolu: davranış birimi buna da bölünür. */
+      ogrenciSayisi?: number;
       olculer: GelisimOlcusu[];
     };
 
@@ -260,6 +262,210 @@ export async function ogrenciGelisimi(
         dersBasina(olumsuzSayisi(simdi.sayimlar, sablon), simdi.dersSayisi),
         olumsuzSayisi(onceki.sayimlar, sablon),
         olumsuzSayisi(simdi.sayimlar, sablon),
+      ),
+      olcu(
+        "ODEV",
+        "YUZDE",
+        oran(onceki.teslimDurumlari),
+        oran(simdi.teslimDurumlari),
+        onceki.teslimDurumlari.length,
+        simdi.teslimDurumlari.length,
+      ),
+    ],
+  };
+}
+
+// ---------- Sınıf gelişimi ----------
+
+/**
+ * Bir sınıfın son iki dönemi. Öğrenci gelişimiyle aynı kurallar, tek farkla:
+ * davranış sayıları ders sayısının YANINDA öğrenci sayısına da bölünür.
+ *
+ * Neden: 25 kişilik bir sınıf doğal olarak 10 kişilikten çok yıldız toplar,
+ * ve mevcut dönemden döneme değişebilir. Öğrenci başına indirgeyince sayı
+ * öğrenci gelişimindekiyle AYNI birime gelir — bir öğrencinin 0.6'sı sınıfın
+ * 0.4'üyle doğrudan karşılaştırılabilir.
+ *
+ * Mevcut sayısı BUGÜNÜN aktif öğrenci sayısıdır; dönem dönem sınıf mevcudu
+ * tutulmuyor. İki dönem için de aynı bölen kullanıldığından okun YÖNÜ bundan
+ * etkilenmez, yalnızca sayının büyüklüğü yaklaşıktır.
+ *
+ * Karne ortalaması sınıf raporundaki ile aynı şekilde hesaplanır (önce
+ * öğrenci ortalaması, sonra öğrenciler arası ortalama) — aynı uygulamada iki
+ * farklı "sınıf karne ortalaması" olmasın.
+ */
+export async function sinifGelisimi(
+  sinifId: string,
+  ogretmenId: string,
+  sablon: BehaviorTemplate,
+  hedefDonem?: Donem | null,
+): Promise<GelisimSonucu> {
+  const sinif = await prisma.classroom.findFirst({
+    where: { id: sinifId, teacherId: ogretmenId },
+    select: { students: { where: { isActive: true }, select: { id: true } } },
+  });
+  if (!sinif) return { durum: "VERI_YOK" };
+
+  const ogrenciIdleri = sinif.students.map((o) => o.id);
+  const ogrenciSayisi = ogrenciIdleri.length;
+
+  const [kayitlar, dersler, sonuclar, teslimler] = await Promise.all([
+    prisma.behaviorLog.findMany({
+      where: { classroomId: sinifId, teacherId: ogretmenId },
+      select: { type: true, createdAt: true },
+    }),
+    prisma.lesson.findMany({
+      where: { classroomId: sinifId, classroom: { teacherId: ogretmenId } },
+      select: { date: true },
+    }),
+    ogrenciIdleri.length === 0
+      ? Promise.resolve([])
+      : prisma.examResult.findMany({
+          where: {
+            studentId: { in: ogrenciIdleri },
+            isAbsent: false,
+            score: { not: null },
+            exam: { teacherId: ogretmenId, scope: "OFFICIAL" },
+          },
+          select: {
+            studentId: true,
+            score: true,
+            exam: { select: { examDate: true, maxScore: true } },
+          },
+        }),
+    ogrenciIdleri.length === 0
+      ? Promise.resolve([])
+      : prisma.submission.findMany({
+          where: {
+            studentId: { in: ogrenciIdleri },
+            assignment: { teacherId: ogretmenId },
+          },
+          select: { status: true, assignment: { select: { dueDate: true } } },
+        }),
+  ]);
+
+  const kovalar = new Map<string, DonemKovasi>();
+  // Karne ortalaması için dönem → öğrenci → yüzdeler.
+  const donemOgrenciYuzdeleri = new Map<string, Map<string, number[]>>();
+
+  for (const kayit of kayitlar) {
+    kova(kovalar, kayit.createdAt).sayimlar[kayit.type] += 1;
+  }
+  for (const ders of dersler) {
+    kova(kovalar, ders.date).dersSayisi += 1;
+  }
+  for (const sonuc of sonuclar) {
+    if (sonuc.score === null || sonuc.exam.maxScore <= 0) continue;
+    const k = kova(kovalar, sonuc.exam.examDate);
+    const anahtar = donemAnahtari(k.donem);
+    let ogrenciler = donemOgrenciYuzdeleri.get(anahtar);
+    if (!ogrenciler) {
+      ogrenciler = new Map();
+      donemOgrenciYuzdeleri.set(anahtar, ogrenciler);
+    }
+    const liste = ogrenciler.get(sonuc.studentId) ?? [];
+    liste.push((sonuc.score / sonuc.exam.maxScore) * 100);
+    ogrenciler.set(sonuc.studentId, liste);
+  }
+  for (const teslim of teslimler) {
+    // Tarihsiz ödev hiçbir döneme düşmez (rapordaki aynı kural).
+    if (!teslim.assignment.dueDate) continue;
+    kova(kovalar, teslim.assignment.dueDate).teslimDurumlari.push(teslim.status);
+  }
+
+  /** Bir dönemin karne ortalaması: önce öğrenci, sonra öğrenciler arası. */
+  const karne = (k: DonemKovasi): number | null => {
+    const ogrenciler = donemOgrenciYuzdeleri.get(donemAnahtari(k.donem));
+    if (!ogrenciler || ogrenciler.size === 0) return null;
+    const ogrenciOrtalamalari = [...ogrenciler.values()]
+      .map((liste) => ortalama(liste))
+      .filter((d): d is number => d !== null);
+    return ortalama(ogrenciOrtalamalari);
+  };
+
+  const dolu = [...kovalar.values()].filter(
+    (k) =>
+      karne(k) !== null ||
+      k.sayimlar.PLUS > 0 ||
+      olumsuzSayisi(k.sayimlar, sablon) > 0 ||
+      k.teslimDurumlari.length > 0,
+  );
+  const sirali = dolu.sort(
+    (a, b) => a.donem.yil - b.donem.yil || a.donem.sira - b.donem.sira,
+  );
+
+  if (sirali.length === 0) return { durum: "VERI_YOK" };
+
+  const hedefSira = hedefDonem
+    ? sirali.findIndex((k) => donemAnahtari(k.donem) === donemAnahtari(hedefDonem))
+    : sirali.length - 1;
+  if (hedefSira < 0) return { durum: "VERI_YOK" };
+  if (hedefSira === 0) return { durum: "TEK_DONEM", donem: sirali[0].donem };
+
+  const onceki = sirali[hedefSira - 1];
+  const simdi = sirali[hedefSira];
+
+  /** Ders başına öğrenci başına. Bölenlerden biri sıfırsa null. */
+  const ogrenciDersBasina = (adet: number, dersSayisi: number): number | null =>
+    ogrenciSayisi <= 0 ? null : dersBasina(adet, dersSayisi * ogrenciSayisi);
+
+  const olcu = (
+    anahtar: OlcuAnahtari,
+    birim: "YUZDE" | "DERS_BASI",
+    oncekiDeger: number | null,
+    simdiDeger: number | null,
+    oncekiAdet: number,
+    simdiAdet: number,
+  ): GelisimOlcusu => ({
+    anahtar,
+    birim,
+    degisim: degisimHesapla(
+      oncekiDeger,
+      simdiDeger,
+      olcuEsigi(anahtar),
+      OLCU_IYI_YON[anahtar],
+    ),
+    oncekiAdet,
+    simdiAdet,
+  });
+
+  const oran = (durumlar: SubmissionStatus[]) =>
+    durumlar.length === 0 ? null : sayimlariHesapla(durumlar).oran;
+
+  const oncekiOlumsuz = olumsuzSayisi(onceki.sayimlar, sablon);
+  const simdiOlumsuz = olumsuzSayisi(simdi.sayimlar, sablon);
+
+  return {
+    durum: "KARSILASTIRMA",
+    onceki: onceki.donem,
+    simdi: simdi.donem,
+    oncekiDers: onceki.dersSayisi,
+    simdiDers: simdi.dersSayisi,
+    ogrenciSayisi,
+    olculer: [
+      olcu(
+        "SINAV",
+        "YUZDE",
+        karne(onceki),
+        karne(simdi),
+        donemOgrenciYuzdeleri.get(donemAnahtari(onceki.donem))?.size ?? 0,
+        donemOgrenciYuzdeleri.get(donemAnahtari(simdi.donem))?.size ?? 0,
+      ),
+      olcu(
+        "ARTI",
+        "DERS_BASI",
+        ogrenciDersBasina(onceki.sayimlar.PLUS, onceki.dersSayisi),
+        ogrenciDersBasina(simdi.sayimlar.PLUS, simdi.dersSayisi),
+        onceki.sayimlar.PLUS,
+        simdi.sayimlar.PLUS,
+      ),
+      olcu(
+        "EKSI",
+        "DERS_BASI",
+        ogrenciDersBasina(oncekiOlumsuz, onceki.dersSayisi),
+        ogrenciDersBasina(simdiOlumsuz, simdi.dersSayisi),
+        oncekiOlumsuz,
+        simdiOlumsuz,
       ),
       olcu(
         "ODEV",
