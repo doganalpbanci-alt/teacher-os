@@ -106,10 +106,9 @@ eklendi:
 ## v0.6 — Dashboard & Raporlama
 - ✓ Genel dashboard *(üst menüde "Panel"; bekleyen işler, dikkat gereken
   öğrenciler, sınıf karşılaştırması, son 30 günün özeti)*
-- ◐ Öğrenci/sınıf raporları *(öğrenci raporu yazdırılabilir hâlde; sınıf
-  raporu henüz yok)*
-- ◐ Gelişim görünümü *(öğrenci bazında son iki dönem karşılaştırması; sınıf
-  gelişimi henüz yok)*
+- ✓ Öğrenci/sınıf raporları *(ikisi de yazdırılabilir, dönem seçilebilir)*
+- ✓ Gelişim görünümü *(öğrenci ve sınıf; son iki dönem karşılaştırması)*
+- Grafikler *(v0.4'ten devreden madde; hâlâ bilerek bekliyor)*
 
 Panel canlıda. Şema değişikliği gerektirmedi: her sayı mevcut kayıtlardan
 (BehaviorLog, Submission, ExamResult, Lesson, ParentMessage) hesaplanır.
@@ -132,8 +131,20 @@ yoksa ok uydurulmaz.
 yazdırmaya hazır kurulur, "Yazdır / PDF" düğmesi tarayıcının kendi yazdırma
 penceresini açar ve oradan kağıda ya da PDF'e gidilir. Tablette de çalışır.
 
-Kalan: **sınıf raporu** ve **sınıf gelişimi**. İkisi de öğrenci tarafının
-altyapısına kurulacak, ayrı bir veri modeli gerektirmiyor.
+Sınıf raporu canlıda: `/sinif/[id]/rapor`, öğrenci başına bir satır. Sıralama
+**alfabetik, başarıya göre değil** — ekranda "kime bakmalı" sıralaması
+işe yarar ama kâğıda dökülüp paylaşılan bir belgede aynı sıra bir başarı
+sıralamasına dönüşür. Aynı gerekçeyle "dikkat gereken öğrenciler" listesi de
+rapora girmez: rapor bir döküm, bir değerlendirme değil.
+
+Sınıf gelişimi canlıda: hem sınıf sayfasında hem raporda. Birim **ders başına
+öğrenci başına** — 25 kişilik sınıf doğal olarak 10 kişilikten çok yıldız
+toplar. Böylece sayı öğrenci gelişimindekiyle aynı birime gelir ve bir
+öğrencinin 0.6'sı sınıfın 0.4'üyle doğrudan karşılaştırılabilir. Mevcut
+sayısı bugünün aktif öğrenci sayısıdır (dönem dönem mevcut tutulmuyor); iki
+dönem için de aynı bölen kullanıldığından okun yönü etkilenmez.
+
+v0.6'nın öğrenci ve sınıf tarafı tamamlandı.
 
 Grafikler hâlâ bilerek yok (v0.4'teki aynı gerekçe): ekranlar önce sayılarla
 çalışsın, grafik neyin izlendiği belli olunca gelsin. Gelişim görünümünde de
