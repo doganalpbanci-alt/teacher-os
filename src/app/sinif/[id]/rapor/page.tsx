@@ -5,6 +5,7 @@ import { donemCozumle } from "@/lib/exam-rules";
 import { sinifRaporu } from "@/lib/report";
 import { RaporDonemSecici } from "@/components/RaporDonemSecici";
 import { YazdirDugmesi } from "@/components/YazdirDugmesi";
+import { Gelisim } from "@/components/Gelisim";
 
 export const dynamic = "force-dynamic";
 
@@ -158,6 +159,16 @@ export default async function SinifRaporSayfasi({
             görünür.
           </p>
         </section>
+
+        {/* Gelişim bloğu öğrenci raporundakiyle AYNI bileşen; yalnızca
+            kapsam farklı (birim öğrenci başına da bölünür). */}
+        <div className="rapor-bolum">
+          <Gelisim
+            sonuc={rapor.gelisim}
+            sablon={ogretmen.behaviorTemplate}
+            kapsam="SINIF"
+          />
+        </div>
 
         <footer className="rapor-alti soluk">
           {rapor.ogretmenAdi} ·{" "}
