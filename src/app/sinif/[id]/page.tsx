@@ -20,6 +20,8 @@ import { SinifYonetimi } from "@/components/SinifYonetimi";
 import { SinifHedefi } from "@/components/SinifHedefi";
 import { acikHedefiGetir, gecmisHedefleriGetir } from "@/lib/class-goal";
 import { ogrenciSeviyeleri, type SeviyeDurumu } from "@/lib/exp";
+import { sinifGelisimi, type GelisimSonucu } from "@/lib/progress";
+import { Gelisim } from "@/components/Gelisim";
 import { turkceSirala } from "@/lib/siralama";
 import type { Sayimlar } from "@/lib/behavior";
 
@@ -113,6 +115,12 @@ export default async function SinifSayfasi({
   const seviyeler: Map<string, SeviyeDurumu> = ogretmen.gamificationEnabled
     ? await ogrenciSeviyeleri(ogrenciIdleri)
     : new Map();
+
+  // Sınıf gelişimi kilitli tahtada sorgulanmaz: yönetim bilgisidir, ders
+  // sırasında sınıfın önündeki ekranda işi yok ve boşuna sorgu açmasın.
+  const gelisim: GelisimSonucu | null = kilitli
+    ? null
+    : await sinifGelisimi(sinif.id, ogretmen.id, ogretmen.behaviorTemplate);
 
   return (
     <>
@@ -253,6 +261,10 @@ export default async function SinifSayfasi({
       {/* Ayrı bir "tahta sayfası" yok: bu bileşen ekran zaten tahta
           sayılacak kadar genişse (globals.css'teki aynı 1280px eşiği)
           kendini etkinleştirir. Telefon bunu hiç görmez. */}
+      {/* Gelişim: öğrenci listesinin altında, ders sırasında yolda durmasın.
+          Rapordakiyle aynı bileşen, aynı kapsam. */}
+      {gelisim && <Gelisim sonuc={gelisim} sablon={ogretmen.behaviorTemplate} kapsam="SINIF" />}
+
       <SinifCanliBildirimleri
         sinifId={sinif.id}
         dersId={aktifDers?.id ?? null}

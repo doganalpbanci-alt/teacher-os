@@ -5,7 +5,9 @@ import {
   dersBasina,
   olcuEsigi,
   OLCU_IYI_YON,
-  OLCU_ETIKETLERI,
+  OLCU_ADI,
+  olcuEtiketi,
+  BIRIM_ACIKLAMASI,
   OLCU_ADET_KELIMESI,
 } from "../../src/lib/progress-rules";
 
@@ -92,11 +94,24 @@ ok(
 );
 
 // --- Sablona gore etiketler ---
-ok("Basit sablonda 'Artı'", OLCU_ETIKETLERI.SIMPLE.ARTI.startsWith("Artı"));
-ok("Kart sablonunda 'Yıldız'", OLCU_ETIKETLERI.CARD.ARTI.startsWith("Yıldız"));
-ok("Basit sablonda olumsuz 'Eksi'", OLCU_ETIKETLERI.SIMPLE.EKSI.startsWith("Eksi"));
-ok("Kart sablonunda olumsuz 'Kart'", OLCU_ETIKETLERI.CARD.EKSI.startsWith("Kart"));
-ok("Karne etiketi iki sablonda ayni", OLCU_ETIKETLERI.SIMPLE.SINAV === OLCU_ETIKETLERI.CARD.SINAV);
+ok("Basit sablonda 'Artı'", OLCU_ADI.SIMPLE.ARTI === "Artı");
+ok("Kart sablonunda 'Yıldız'", OLCU_ADI.CARD.ARTI === "Yıldız");
+ok("Basit sablonda olumsuz 'Eksi'", OLCU_ADI.SIMPLE.EKSI === "Eksi");
+ok("Kart sablonunda olumsuz 'Kart'", OLCU_ADI.CARD.EKSI === "Kart");
+ok("Karne etiketi iki sablonda ayni", OLCU_ADI.SIMPLE.SINAV === OLCU_ADI.CARD.SINAV);
+
+// --- Etiket: kapsama gore birim degisir ---
+ok("Ogrenci kapsaminda 'ders başına'",
+   olcuEtiketi("ARTI", "SIMPLE", "OGRENCI") === "Artı (ders başına)",
+   olcuEtiketi("ARTI", "SIMPLE", "OGRENCI"));
+ok("Sinif kapsaminda 'ders başına öğrenci'",
+   olcuEtiketi("ARTI", "CARD", "SINIF") === "Yıldız (ders başına öğrenci)",
+   olcuEtiketi("ARTI", "CARD", "SINIF"));
+ok("Yuzde olculerine birim eklenmez",
+   olcuEtiketi("SINAV", "SIMPLE", "SINIF") === "Karne ortalaması" &&
+   olcuEtiketi("ODEV", "CARD", "OGRENCI") === "Ödev tamamlama");
+ok("Sinif birimi ogrenci sayisini da icerir",
+   BIRIM_ACIKLAMASI.SINIF.includes("öğrenci") && !BIRIM_ACIKLAMASI.OGRENCI.includes("öğrenci"));
 ok("Adet kelimesi sablona gore degisir",
    OLCU_ADET_KELIMESI.SIMPLE.ARTI === "artı" && OLCU_ADET_KELIMESI.CARD.ARTI === "yıldız");
 

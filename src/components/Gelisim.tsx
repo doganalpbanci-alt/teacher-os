@@ -1,9 +1,11 @@
 import type { BehaviorTemplate } from "@prisma/client";
 import type { GelisimOlcusu, GelisimSonucu } from "@/lib/progress";
 import {
+  BIRIM_ACIKLAMASI,
   OLCU_ADET_KELIMESI,
-  OLCU_ETIKETLERI,
+  olcuEtiketi,
   YUZDE_ESIGI,
+  type Kapsam,
 } from "@/lib/progress-rules";
 
 // Öğrenci sayfasındaki "Gelişim" bloğu: son iki dönem yan yana, her ölçü için
@@ -51,26 +53,31 @@ function Ok({ olcu }: { olcu: GelisimOlcusu }) {
 function Satir({
   olcu,
   sablon,
+  kapsam,
   oncekiDers,
   simdiDers,
+  ogrenciSayisi,
 }: {
   olcu: GelisimOlcusu;
   sablon: BehaviorTemplate;
+  kapsam: Kapsam;
   oncekiDers: number;
   simdiDers: number;
+  ogrenciSayisi?: number;
 }) {
   const kelime = OLCU_ADET_KELIMESI[sablon][olcu.anahtar];
   // Ham sayı okun nereden geldiğini gösterir: "1.2/ders" tek başına, 22
   // yıldızın mı 3 yıldızın mı sonucu olduğunu söylemez.
   const ayrinti =
     olcu.birim === "DERS_BASI"
-      ? `${olcu.oncekiAdet} → ${olcu.simdiAdet} ${kelime} · ${oncekiDers} → ${simdiDers} ders`
+      ? `${olcu.oncekiAdet} → ${olcu.simdiAdet} ${kelime} · ${oncekiDers} → ${simdiDers} ders` +
+        (ogrenciSayisi === undefined ? "" : ` · ${ogrenciSayisi} öğrenci`)
       : `${olcu.oncekiAdet} → ${olcu.simdiAdet} ${kelime}`;
 
   return (
     <li className="satir satir-durgun gelisim-satir">
       <span className="satir-ad">
-        {OLCU_ETIKETLERI[sablon][olcu.anahtar]}
+        {olcuEtiketi(olcu.anahtar, sablon, kapsam)}
         <span className="soluk odev-tarih">{ayrinti}</span>
       </span>
       <span className="satir-sag">
@@ -86,9 +93,12 @@ function Satir({
 export function Gelisim({
   sonuc,
   sablon,
+  kapsam = "OGRENCI",
 }: {
   sonuc: GelisimSonucu;
   sablon: BehaviorTemplate;
+  /** Sınıf gelişiminde birim öğrenci başına da bölünür. */
+  kapsam?: Kapsam;
 }) {
   // Hiç kayıt yoksa blok çıkmaz: boş kutu her sayfada yer kaplar ve bir süre
   // sonra okunmaz olur (gündem panelindeki aynı kural).
@@ -119,16 +129,19 @@ export function Gelisim({
             key={olcu.anahtar}
             olcu={olcu}
             sablon={sablon}
+            kapsam={kapsam}
             oncekiDers={sonuc.oncekiDers}
             simdiDers={sonuc.simdiDers}
+            ogrenciSayisi={sonuc.ogrenciSayisi}
           />
         ))}
       </ul>
 
       <p className="soluk panel-aciklama">
-        Davranış sayıları ders başına hesaplanır; ders sayısı dönemden döneme
-        değiştiği için ham sayı tek başına karşılaştırılamaz. Yüzdelerde{" "}
-        {YUZDE_ESIGI} puandan küçük fark “aynı” sayılır.
+        Davranış sayıları {BIRIM_ACIKLAMASI[kapsam]} hesaplanır; ders sayısı
+        {kapsam === "SINIF" ? " ve mevcut " : " "}
+        dönemden döneme değiştiği için ham sayı tek başına karşılaştırılamaz.
+        Yüzdelerde {YUZDE_ESIGI} puandan küçük fark “aynı” sayılır.
       </p>
     </section>
   );
