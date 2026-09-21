@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 20 Eylül 2026 · anlatılan kod durumu `main` = `cfc6ac9`
+Son güncelleme: 21 Eylül 2026 · anlatılan kod durumu `main` = `5d10d14`
 (üstündeki commit'ler yalnızca bu notun kendisi olabilir)
 
 ---
@@ -190,12 +190,13 @@ src/lib/
   devam-yolu.ts          giriş sonrası dönülecek adres + açık yönlendirme
                          koruması (edge-safe: middleware de kullanır)
   progress.ts / progress-rules.ts
-                         öğrenci gelişimi: son iki dönemi karşılaştırır.
-                         Eşikler, "iyi yön" ve ders başına normalleştirme
-                         kurallar dosyasında
-  report.ts              öğrenci raporu: seçilen dönemin dökümü. Sınav ve
-                         ödev satırları mevcut sorgulardan gelir, burada
-                         yalnızca döneme süzülür
+                         öğrenci VE sınıf gelişimi: son iki dönemi
+                         karşılaştırır. Eşikler, "iyi yön" ve normalleştirme
+                         kurallar dosyasında; birim kapsama göre değişir
+                         (öğrenci: ders başına, sınıf: ders başına öğrenci)
+  report.ts              öğrenci ve sınıf raporu: seçilen dönemin dökümü.
+                         Sınav ve ödev satırları mevcut sorgulardan gelir,
+                         burada yalnızca döneme süzülür
   student-history.ts     öğrenci geçmişi ve dönem toplamları
   siralama.ts            Türkçe alfabe sıralaması
   form-state.ts          form durumu tipi
@@ -224,8 +225,9 @@ src/components/  (~35 dosya; öne çıkanlar)
   QrEkrani.tsx             tahtadaki QR ekranının yoklayan kısmı; onaylanınca
                            oturumu alır ve ana sayfaya geçer
   EslesmeOnayi.tsx         telefondaki onay ekranı (kod karşılaştırma + Onayla)
-  Gelisim.tsx              son iki dönem + yön okları; öğrenci sayfasında ve
-                           raporda AYNI bileşen kullanılır
+  Gelisim.tsx              son iki dönem + yön okları. Öğrenci sayfası,
+                           sınıf sayfası ve iki rapor AYNI bileşeni kullanır;
+                           `kapsam` yalnızca birimi değiştirir
   RaporDonemSecici.tsx     rapordaki dönem açılır listesi (`?donem=2025-1`)
   YazdirDugmesi.tsx        raporda "Yazdır / PDF"; window.print() çağırır
 
@@ -237,6 +239,7 @@ src/app/
   sinif/[id]/dersler/     ders geçmişi ve tek dersin kayıtları
   sinif/[id]/odevler/     sınıfın ödevleri + sınıf istatistiği + öğrenci dökümü
   sinif/[id]/sinavlar/    sınıfın sınavları + ortalama + öğrenci dökümü
+  sinif/[id]/rapor/       yazdırılabilir sınıf raporu (öğrenci başına satır)
   odevler/, sinavlar/     ödev/sınav listeleri, yeni/düzenle sayfaları
   veli/                   öğrenci seç → mesaj oluştur ekranı
   ogrenci/[id]/           öğrenci: özet, ad düzenleme, not girme, gelişim,
@@ -610,6 +613,21 @@ sessizce "aynı" sayılıyordu — testte yakalandı.
 
 Grafik bilerek yok: iki nokta arasına çizilen bir çizgi zaten grafik değil.
 
+**Sınıf gelişimi** aynı bileşen ve aynı kurallarla çalışır; tek fark birim.
+Davranış sayıları ders sayısının yanında **öğrenci sayısına da** bölünür:
+25 kişilik bir sınıf doğal olarak 10 kişilikten çok yıldız toplar ve mevcut
+dönemden döneme değişebilir. Öğrenci başına indirgeyince sayı öğrenci
+gelişimindekiyle aynı birime gelir — bir öğrencinin 0.6'sı sınıfın 0.4'üyle
+doğrudan karşılaştırılabilir.
+
+Bilinen yaklaşıklık: mevcut sayısı BUGÜNÜN aktif öğrenci sayısıdır, dönem
+dönem sınıf mevcudu tutulmuyor. İki dönem için de aynı bölen kullanıldığından
+okun YÖNÜ bundan etkilenmez, yalnızca sayının büyüklüğü yaklaşıktır.
+
+Sınıf gelişimi hem sınıf sayfasında (öğrenci listesinin altında) hem sınıf
+raporunda görünür; kilitli tahtada hiç sorgulanmaz ve çıkmaz — yönetim
+bilgisidir.
+
 ### Öğrenci raporu
 `/ogrenci/[id]/rapor` — veli toplantısında masaya konacak ya da veliye
 verilecek tek belge. Dört bölüm (davranış, sınavlar, ödevler, gelişim),
@@ -641,12 +659,34 @@ taşır; kuralı `globals.css`'teki `@media print` bloğu uygular (menü, araç
 Gelişim bloğu öğrenci sayfasındakiyle aynı bileşendir; rapor ayrı bir
 "gelişim" tanımı üretmez.
 
+### Sınıf raporu
+`/sinif/[id]/rapor` — aynı altyapı (dönem seçici, yazdırma, `@media print`),
+öğrenci başına bir satır: yıldız/artı, kart/eksi, performans notu, karne
+ortalaması, ödev oranı. Üstünde sınıf geneli özeti, altında sınıf gelişimi.
+
+Üç karar:
+
+- **Sıralama ALFABETİK, başarıya göre değil.** Sınıf sayfalarındaki "en düşük
+  üstte" mantığı ekranda öğretmene "kime bakmalı" der; kâğıda dökülüp
+  paylaşılan bir belgede aynı sıra bir başarı sıralamasına dönüşür.
+- **"Dikkat gereken öğrenciler" listesi rapora girmez.** Rapor bir döküm, bir
+  değerlendirme değil; o etiket kâğıda dökülüp başkasının eline geçince
+  öğrenciyi damgalar. Sayılar zaten tabloda, liste panelde duruyor.
+- **Sınıf ödev oranı öğrenci oranlarının ortalaması DEĞİL, bütün teslimlerin
+  oranı.** Tek ödevi olup onu yapan bir öğrenci sınıf oranını olduğundan iyi
+  göstermesin. Testte iki hesap birbirinden ayırt ediliyor (doğrusu %80,
+  yanlışı %88) ve yanlış sonucun ekranda OLMADIĞI da kontrol ediliyor.
+
+Karne ortalaması hem raporda hem sınıf gelişiminde aynı formülle hesaplanır
+(önce öğrenci ortalaması, sonra öğrenciler arası) — aynı uygulamada iki farklı
+"sınıf karne ortalaması" olmasın.
+
 ---
 
 ## Testler
 
-Yirmi altı arayüz testi (gerçek tarayıcıda, Playwright) ve yedi saf hesap
-testi, toplam **962 kontrol**. Hepsi geçiyor.
+Yirmi sekiz arayüz testi (gerçek tarayıcıda, Playwright) ve yedi saf hesap
+testi, toplam **1030 kontrol**. Hepsi geçiyor.
 
 ```
 scripts/e2e-test.mjs                       sınıf/öğrenci ekleme, kalıcılık      35
@@ -689,7 +729,12 @@ scripts/progress-ui-test.mjs               gelişim: iki dönem, ders başına
                                             normalleştirme, iyi yön, tek dönem  30
 scripts/report-ui-test.mjs                 rapor: dönem seçimi, yazdırma kipi,
                                             yazdır düğmesi, öğretmen ayrımı     45
-scripts/progress-rules-test.mjs            gelişim eşikleri ve yön kararı       40
+scripts/progress-rules-test.mjs            gelişim eşikleri, yön kararı,
+                                            kapsama göre etiket               44
+scripts/class-report-ui-test.mjs           sınıf raporu: alfabetik sıra,
+                                            teslim bazlı oran, yazdırma       38
+scripts/class-progress-ui-test.mjs         sınıf gelişimi: öğrenci başına
+                                            normalleştirme, kilitli tahta     26
 ```
 
 `exam-rules-test.mjs`, `parent-message-rules-test.mjs`,
@@ -831,9 +876,9 @@ akışı, WhatsApp taslakları, altı hazır şablon), hesap düzeyinde tam veri
 sıfırlama, ayrı bir staging ortamı ve dallanma akışı, **sınıf hedefleri**
 ve **EXP/seviye sistemi** (gamification'ın öğretmen bazlı açılıp kapanan
 iki parçası, aynı anahtarla), performans notu tabanının 90'dan 80'e
-indirilmesi, **genel panel**, **öğrenci gelişim görünümü** ve
-**yazdırılabilir öğrenci raporu** (v0.6'nın üç adımı), **QR ile akıllı tahta
-girişi** ve giriş sonrası dönüş.
+indirilmesi, **genel panel**, **gelişim görünümü** (öğrenci ve sınıf),
+**yazdırılabilir raporlar** (öğrenci ve sınıf), **QR ile akıllı tahta
+girişi** ve giriş sonrası dönüş. v0.6'nın öğrenci ve sınıf tarafı bitti.
 
 **Hız:** Vercel fonksiyonları `vercel.json` ile `dub1`'de (Dublin) çalışır —
 veritabanıyla aynı bölge. Varsayılan `iad1` (Washington) her sorguyu
@@ -847,21 +892,27 @@ iletişimi) canlıda ama henüz birkaç haftalık gerçek kullanımla tam
 sınanmadı. Akıllı tahta kilidi ve canlı yansıma en az bir gerçek ders
 oturumunda denendi.
 
-**Sırada:** v0.6'nın öğrenci tarafı bitti, **sınıf tarafı açık** —
-**sınıf raporu** ve **sınıf gelişimi**. İkisi de öğrenci tarafının
-altyapısına kurulacak, yeni bir veri modeli gerektirmiyor. Grafikler v0.4'ten
-beri bilerek bekliyor. ROADMAP'in "Açık kalan küçük sorular" bölümünde de
-gerçek kullanımdan gelebilecek küçük iyileştirmeler var.
+**Sırada:** v0.6'dan geriye yalnızca **grafikler** kaldı; v0.4'ten beri
+bilerek bekliyorlar. Numaralı sırada sonraki adım **v0.7 (AI Assistant)** —
+bu öncekilerden nitelik olarak daha büyük bir iş. ROADMAP'in "Açık kalan
+küçük sorular" bölümünde de gerçek kullanımdan gelebilecek küçük
+iyileştirmeler var.
 
-**Son dört özellik gerçek veriyle hiç denenmedi** ve bu, sıradaki işten daha
-önemli olabilir:
+**v0.6'nın hiçbir parçası gerçek veriyle denenmedi** ve bu, sıradaki işten
+daha önemli olabilir. Testler bunların DOĞRU ÇALIŞTIĞINI gösteriyor; DOĞRU
+ŞEYİ YAPTIKLARINI göstermiyor:
 - Panelin eşikleri ayarlanmadı. "Dikkat gereken öğrenciler" listesi ya
   bomboş ya herkesle dolu çıkıyorsa `dashboard-rules.ts`'te tek satır.
 - Gelişim oklarının gerçek veride mantıklı çıkıp çıkmadığı görülmedi;
   eşikler `progress-rules.ts`'te.
-- Rapor bir veli toplantısında kullanılmadı; kağıt çıktısının gerçekten işe
-  yarayıp yaramadığı bilinmiyor.
+- Raporlar bir veli toplantısında kullanılmadı; kâğıt çıktısının gerçekten
+  işe yarayıp yaramadığı, kalabalık bir sınıfta tablonun sığıp sığmadığı
+  bilinmiyor.
 - QR akışı gerçek bir akıllı tahtada denenmedi.
+
+Bir sonraki büyük özelliğe geçmeden önce bir haftalık gerçek kullanım,
+buradaki eşikleri ve tasarım kararlarını yeni bir modülden daha çok
+düzeltir.
 
 ### Açık kalan küçük sorular
 - Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
