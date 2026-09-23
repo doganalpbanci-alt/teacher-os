@@ -72,8 +72,13 @@ const sesSayaci = (sayfa) => sayfa.evaluate(() => window.__tahtaSesSayaci ?? 0);
 const yoklamaSayaci = (sayfa) => sayfa.evaluate(() => window.__tahtaYoklamaSayaci ?? 0);
 const bildirimSayaci = (sayfa) => sayfa.evaluate(() => window.__tahtaBildirimSayaci ?? 0);
 
+// Kutunun kapanmasini beklerken kullanilan sinir. Sure artik olay turune
+// gore degisiyor (`board-rules.ts`); en uzunu kirmizi kart, 10 sn. Bu sabit
+// onun uzerinde kalmali, yoksa test kartin UZUN DURMASI yuzunden kalir.
+const KUTU_KAPANMA_BEKLEME = 14000;
+
 // Sekmeyi gercekten gizlemeden `visibilityState`i ezmek: Playwright'ta bir
-// sekmeyi arka plana atmanin tasinabilir yolu yok, ama bilesenin baktiğı
+// sekmeyi arka plana atmanin tasinabilir yolu yok, ama bilesenin baktigi
 // tek sey bu ozellik.
 const gorunurlukKur = (sayfa, deger) =>
   sayfa.evaluate((d) => {
@@ -105,7 +110,7 @@ const bildirimMetni = await tahta.locator(".canli-bildirim").innerText();
 ok("Bildirim ogrenci adini tasiyor", bildirimMetni.includes("Elif"));
 ok("Yoklama gercekten calisiyordu", (await yoklamaSayaci(tahta)) > yoklamaOncesi);
 
-await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 5000 });
+await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: KUTU_KAPANMA_BEKLEME });
 ok("Bildirim kendiliginden kapandi", (await tahta.locator(".canli-bildirim").count()) === 0);
 
 // Bildirim geciciydi; asil mesele altindaki listenin de tazelenmesi. Tahta
@@ -158,7 +163,7 @@ await tahta.waitForFunction(
   { timeout: 8000 },
 );
 ok("Sari kart bildirimi goruldu", (await tahta.locator(".canli-bildirim").innerText()).includes("sarı kart"));
-await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 5000 });
+await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: KUTU_KAPANMA_BEKLEME });
 
 // Sari ustune sari kirmizidir: RED_CARD + otomatik MINUS tek olay yazar
 // (davranisKaydet ikisini tek createMany ile, ayni createdAt ile yazar),
@@ -170,7 +175,7 @@ await tahta.waitForFunction(
   { timeout: 8000 },
 );
 ok("Kirmiziya yukselme bildirimi goruldu", (await tahta.locator(".canli-bildirim").innerText()).includes("kırmızı kart"));
-await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 5000 });
+await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: KUTU_KAPANMA_BEKLEME });
 // Ikinci bir bildirim gelseydi burada tekrar "canli-bildirim" belirirdi;
 // gelmediginden emin olmak icin kisa bir sure daha beklenir.
 await tahta.waitForTimeout(1500);
@@ -211,7 +216,7 @@ ok("Kilitli tahta yine de bildirim gosterdi", (await tahta.locator(".canli-bildi
 // gorunmesi gereken ani oldurdugu icin kaldirildi -- ogretmen tahtada baska
 // bir uygulamaya gectigi anda butun bildirimler kesiliyordu.
 console.log("\nG. Arka plan");
-await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 5000 });
+await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: KUTU_KAPANMA_BEKLEME });
 
 const gizlenmedenOnce = await yoklamaSayaci(tahta);
 await gorunurlukKur(tahta, "hidden");
@@ -304,7 +309,7 @@ ok(
   "Gorunurken isletim sistemi bildirimi gosterilmedi",
   (await bildirimSayaci(tahta)) === gBildirimGorunurOnce,
 );
-await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 6000 }).catch(() => {});
+await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: KUTU_KAPANMA_BEKLEME }).catch(() => {});
 
 // Bildirim izni tarayicida KALICIDIR; ses baglami degildir (her sayfa
 // yuklemesinde kullanici dokunusu ister). Yani ogretmen izni bir kez
@@ -526,7 +531,7 @@ console.log("\nK. Ders yokken acilan tahta");
 
   // --- L. Ders bitip yenisi baslayinca tahta yeni derse gecer ---
   console.log("\nL. Ders degisimi");
-  await kTahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 6000 }).catch(() => {});
+  await kTahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: KUTU_KAPANMA_BEKLEME }).catch(() => {});
   await kTelefon.getByRole("button", { name: "Dersi bitir" }).click();
   await kTelefon.waitForFunction(() => document.body.innerText.includes("Aktif ders yok"), null, { timeout: 10000 });
   await kTelefon.getByRole("button", { name: "Yeni ders başlat" }).click();
@@ -624,6 +629,100 @@ console.log("\nM. Bildirim izni yokken");
 
   await mTahtaB.close();
   await mTelefonB.close();
+}
+
+// --- N. Bildirim suresi olay turune gore degisir ---
+// Ogretmenin "kizmak yerine kart islettigi" an bu: kart yazisi yildizla ayni
+// surede kaybolursa, sesi duyup basini kaldiran ogrenci bos ekran gorur.
+// Sureler `board-rules.ts`te; buradaki olcum EKRANDA gercekten oyle
+// davrandigini dogrular.
+console.log("\nN. Bildirim suresi");
+{
+  const kurulum = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  const nKurulum = await kurulum.newPage();
+  await oturumHazirla(nKurulum, T);
+  await nKurulum.goto(T, { waitUntil: "networkidle" });
+  await nKurulum.getByLabel("Sınıf adı").fill("Sure-Testi");
+  await nKurulum.getByRole("button", { name: "Sınıf ekle" }).click();
+  await nKurulum.waitForFunction(() => document.body.innerText.includes("Sure-Testi"), null, { timeout: 10000 });
+  await nKurulum.getByRole("link", { name: /Sure-Testi/ }).click();
+  await nKurulum.waitForURL(/\/sinif\//, { timeout: 10000 });
+  const N_YOL = new URL(nKurulum.url()).pathname;
+  await ogrenciFormunuAc(nKurulum);
+  await nKurulum.getByLabel("Ad", { exact: true }).fill("Mert");
+  await nKurulum.getByLabel("Soyad").fill("Ozer");
+  await nKurulum.getByRole("button", { name: "Öğrenci ekle" }).click();
+  await nKurulum.waitForFunction(() => document.body.innerText.includes("Mert"), null, { timeout: 10000 });
+  await dersBaslat(nKurulum);
+  await kurulum.close();
+
+  const nTahtaB = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  const nTahta = await nTahtaB.newPage();
+  await oturumHazirla(nTahta, T);
+  await nTahta.goto(`${T}${N_YOL}`, { waitUntil: "networkidle" });
+
+  const nTelefonB = await tarayici.newContext({ viewport: { width: 390, height: 844 } });
+  const nTelefon = await nTelefonB.newPage();
+  await oturumHazirla(nTelefon, T);
+  await nTelefon.goto(`${T}${N_YOL}`, { waitUntil: "networkidle" });
+
+  // Kutunun DOM'da kalis suresi. Beliren ani baslangic sayar; yoklama
+  // gecikmesi (2 sn'ye kadar) olcume karismasin.
+  async function kutuOmru(sayfa, dugme) {
+    await satir(nTelefon, "Mert").getByRole("button", { name: dugme }).click();
+    await sayfa.waitForFunction(() => document.querySelector(".canli-bildirim") !== null, null, { timeout: 12000 });
+    const bas = Date.now();
+    await sayfa.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 25000 });
+    return Date.now() - bas;
+  }
+
+  const yildizOmru = await kutuOmru(nTahta, "Yıldız ver");
+  ok("Yildiz kisa durur (< 4 sn)", yildizOmru < 4000, `${yildizOmru} ms`);
+
+  const kirmiziOmru = await kutuOmru(nTahta, "Kırmızı kart ver");
+  ok("Kirmizi kart uzun durur (> 7 sn)", kirmiziOmru > 7000, `${kirmiziOmru} ms`);
+  ok(
+    "Kirmizi kart yildizdan belirgin uzun durur",
+    kirmiziOmru > yildizOmru * 2,
+    `yildiz ${yildizOmru} ms, kirmizi ${kirmiziOmru} ms`,
+  );
+
+  // Arka plandaki isletim sistemi bildiriminde ayni ayrim `requireInteraction`
+  // ile korunur: Chrome bayraksiz bildirimi ~8 sn sonra kendiliginden indirir,
+  // kart bildirimi bundan uzun durmali.
+  await nTahta.evaluate(() => {
+    window.__yakalananBildirimler = [];
+    class TaklitBildirim {
+      static permission = "granted";
+      constructor(baslik, secenekler) {
+        window.__yakalananBildirimler.push({ baslik, ...secenekler });
+      }
+      close() {}
+    }
+    window.Notification = TaklitBildirim;
+  });
+  await gorunurlukKur(nTahta, "hidden");
+
+  await satir(nTelefon, "Mert").getByRole("button", { name: "Yıldız ver" }).click();
+  await nTahta.waitForFunction(() => (window.__yakalananBildirimler ?? []).length === 1, null, { timeout: 12000 }).catch(() => {});
+  await satir(nTelefon, "Mert").getByRole("button", { name: "Kırmızı kart ver" }).click();
+  await nTahta.waitForFunction(() => (window.__yakalananBildirimler ?? []).length === 2, null, { timeout: 12000 }).catch(() => {});
+
+  const nYakalanan = await nTahta.evaluate(() => window.__yakalananBildirimler ?? []);
+  ok("Iki bildirim de yakalandi", nYakalanan.length === 2, JSON.stringify(nYakalanan));
+  ok(
+    "Yildiz bildirimi ekrana sabitlenmez",
+    nYakalanan[0]?.requireInteraction === false,
+    String(nYakalanan[0]?.requireInteraction),
+  );
+  ok(
+    "Kirmizi kart bildirimi ekrana sabitlenir",
+    nYakalanan[1]?.requireInteraction === true,
+    String(nYakalanan[1]?.requireInteraction),
+  );
+
+  await nTahtaB.close();
+  await nTelefonB.close();
 }
 
 console.log(`\nSonuc: ${gecti} gecti, ${kaldi} kaldi\n`);

@@ -1,5 +1,4 @@
-import type { BehaviorTemplate, BehaviorType } from "@prisma/client";
-import { OLAY_GORUNUMU } from "./behavior-rules";
+import { ekranaSabitlenmeli, type BildirimMetni } from "./board-rules";
 
 // Tahtanın işletim sistemi seviyesindeki bildirimi.
 //
@@ -19,30 +18,6 @@ import { OLAY_GORUNUMU } from "./behavior-rules";
 /** Tek bir bildirim yeri: art arda verilen kartlar ekranda birikmez, sonuncusu
  *  öncekinin yerini alır -- sayfa içi kutunun da davranışı bu. */
 const ETIKET = "teacher-os-tahta";
-
-/** Bildirim bu süre sonunda kapatılır. Sekme gizliyken `setTimeout` dakikada
- *  bire kısıtlanabildiği için kapanma gecikebilir; aynı etiket zaten üsttekini
- *  değiştirdiğinden ekranda yığılma olmaz. */
-const KAPANMA_MS = 8000;
-
-export type BildirimMetni = { baslik: string; govde: string };
-
-/**
- * Bildirimin metni. Şablona bağlıdır: aynı kayıt basit sistemde "eksi aldı",
- * kart sisteminde "kırmızı kart aldı" diye okunur (`OLAY_GORUNUMU`).
- * Şablonda karşılığı olmayan tür (ör. basit sistemde sarı kart) bildirim
- * üretmez -- uydurulmuş bir etiket göstermektense hiç göstermemek doğru.
- */
-export function bildirimMetni(
-  tur: BehaviorType,
-  ogrenciAdi: string,
-  sablon: BehaviorTemplate,
-): BildirimMetni | null {
-  const gorunum = OLAY_GORUNUMU[sablon][tur];
-  if (!gorunum) return null;
-  // Simge başlıkta: bildirim listesinde metin kısalsa bile renk/şekil kalır.
-  return { baslik: `${gorunum.yazi} ${ogrenciAdi}`, govde: gorunum.etiket };
-}
 
 export function bildirimDesteklenir(): boolean {
   return typeof window !== "undefined" && "Notification" in window;
@@ -76,15 +51,20 @@ export async function bildirimIzniIste(): Promise<boolean> {
  * susturulur -- iki ses üst üste binmesin. Sesimiz açılmamışsa işletim
  * sisteminin sesi tek uyarı kalır, o yüzden açık bırakılır.
  */
-export function bildirimGoster(metin: BildirimMetni, sessiz: boolean): boolean {
+export function bildirimGoster(
+  metin: BildirimMetni,
+  sessiz: boolean,
+  sureMs: number,
+): boolean {
   if (!bildirimVerildiMi()) return false;
   try {
     const bildirim = new Notification(metin.baslik, {
       body: metin.govde,
       tag: ETIKET,
       silent: sessiz,
+      requireInteraction: ekranaSabitlenmeli(sureMs),
     });
-    setTimeout(() => bildirim.close(), KAPANMA_MS);
+    setTimeout(() => bildirim.close(), sureMs);
     return true;
   } catch {
     // Bazı tarayıcılar sayfa içinden `new Notification`'a izin vermez
