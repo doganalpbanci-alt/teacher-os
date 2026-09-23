@@ -4,6 +4,7 @@ import {
   CHROME_KENDILIGINDEN_KAPATMA_MS,
   bildirimMetni,
   bildirimSuresi,
+  buyukGosterilir,
   ekranaSabitlenmeli,
 } from "../../src/lib/board-rules";
 
@@ -71,6 +72,21 @@ ok(
 );
 ok("Kirmizi sabitlenir", ekranaSabitlenmeli(BILDIRIM_SURESI_MS.RED_CARD) === true);
 ok("Esigin 1ms ustu sabitlenir", ekranaSabitlenmeli(CHROME_KENDILIGINDEN_KAPATMA_MS + 1) === true);
+
+// --- Boyut: hangi olay buyuk gosterilir ---
+// Sure karariyla ayni ayrim: yildiz rutin, olumsuz olay sinifin gormesi icin.
+ok("Yildiz buyutulmez", buyukGosterilir("PLUS") === false);
+ok("Eksi buyutulur", buyukGosterilir("MINUS") === true);
+ok("Sari kart buyutulur", buyukGosterilir("YELLOW_CARD") === true);
+ok("Kirmizi kart buyutulur", buyukGosterilir("RED_CARD") === true);
+// Boyut ve sure ayni ayrimi izlemeli: uzun duran her olay buyuk de gosterilir.
+// Ikisi ayrismaya baslarsa biri digerini yalanlar.
+for (const tur of ["PLUS", "MINUS", "YELLOW_CARD", "RED_CARD"] as const) {
+  ok(
+    `${tur}: boyut ve sure ayni yonde`,
+    buyukGosterilir(tur) === (BILDIRIM_SURESI_MS[tur] > BILDIRIM_SURESI_MS.PLUS),
+  );
+}
 
 console.log(`\n${gecti} gecti, ${kaldi} kaldi\n`);
 process.exit(kaldi === 0 ? 0 : 1);

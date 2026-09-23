@@ -1295,32 +1295,86 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   border-color: var(--basari);
 }
 
+/* Ekranin USTUNDE, ortalanmis. Sag alttaki dugme yiginindan ayri duruyor:
+   dugmeler ogretmenin isidir, bildirim sinifin gormesi icindir ve sag alt
+   kose tahtanin en az bakilan yeri. `pointer-events: none` sart -- 10 saniye
+   duran bir katman altindaki listeye tiklamayi yutmamali. */
 .canli-bildirim {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-radius: 0.75rem;
+  max-width: calc(100vw - 2rem);
+  padding: 1rem 1.75rem;
+  border-radius: 0.875rem;
   background: var(--metin);
   color: #ffffff;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
   animation: canli-bildirim-gir 0.2s ease-out;
+  pointer-events: none;
 }
 
 .canli-bildirim-simge {
-  font-size: 1.75rem;
+  font-size: 2rem;
   line-height: 1;
 }
 
 .canli-bildirim-metin {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
+/* Olumsuz olay (eksi / sari / kirmizi) belirgin bicimde buyuk: arka siranin
+   okuyamadigi bir kutu caydirici olmaz. Yildiz rutindir, buyumez.
+   Karar `board-rules.ts`teki `buyukGosterilir` -- sure karariyla ayni ayrim. */
+.canli-bildirim-vurgulu {
+  gap: 1rem;
+  padding: 1.25rem 2.5rem;
+}
+
+.canli-bildirim-vurgulu .canli-bildirim-simge {
+  font-size: 2.75rem;
+}
+
+.canli-bildirim-vurgulu .canli-bildirim-metin {
+  font-size: 1.875rem;
+}
+
+/* Tahta esiginin altinda (telefon ya da bolunmus ekran): uzun bir ad tek
+   satira sigmaz, tasmak yerine sarilsin. */
+@media (max-width: 1279px) {
+  .canli-bildirim {
+    max-width: calc(100vw - 1.5rem);
+    padding: 0.875rem 1.25rem;
+  }
+
+  .canli-bildirim-metin {
+    white-space: normal;
+  }
+
+  .canli-bildirim-vurgulu {
+    padding: 1rem 1.5rem;
+  }
+
+  .canli-bildirim-vurgulu .canli-bildirim-simge {
+    font-size: 2rem;
+  }
+
+  .canli-bildirim-vurgulu .canli-bildirim-metin {
+    font-size: 1.375rem;
+  }
+}
+
 @keyframes canli-bildirim-gir {
-  from { opacity: 0; transform: translateY(0.5rem); }
-  to { opacity: 1; transform: translateY(0); }
+  /* translate(-50%, ...) -- yalnizca translateY yazilsaydi taban kuraldaki
+     translateX(-50%) ezilir, kutu animasyon boyunca saga kayardi. */
+  from { opacity: 0; transform: translate(-50%, -0.5rem); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 /* ---------- Veli iletişimi ---------- */
@@ -1751,7 +1805,8 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
 @media print {
   .yazdirma-gizle,
   .ust-menu,
-  .canli-yayin {
+  .canli-yayin,
+  .canli-bildirim {
     display: none !important;
   }
 

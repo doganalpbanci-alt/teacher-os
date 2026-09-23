@@ -725,6 +725,119 @@ console.log("\nN. Bildirim suresi");
   await nTelefonB.close();
 }
 
+// --- O. Bildirimin yeri ve boyutu ---
+// Kutu eskiden sag alt kosede, dugmelerin arasindaydi -- tahtanin en az
+// bakilan yeri. Artik ustte ve ortalanmis; kart ise yildizdan belirgin buyuk.
+console.log("\nO. Yer ve boyut");
+{
+  const kurulum = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  const oKurulum = await kurulum.newPage();
+  await oturumHazirla(oKurulum, T);
+  await oKurulum.goto(T, { waitUntil: "networkidle" });
+  await oKurulum.getByLabel("Sınıf adı").fill("Yer-Testi");
+  await oKurulum.getByRole("button", { name: "Sınıf ekle" }).click();
+  await oKurulum.waitForFunction(() => document.body.innerText.includes("Yer-Testi"), null, { timeout: 10000 });
+  await oKurulum.getByRole("link", { name: /Yer-Testi/ }).click();
+  await oKurulum.waitForURL(/\/sinif\//, { timeout: 10000 });
+  const O_YOL = new URL(oKurulum.url()).pathname;
+  await ogrenciFormunuAc(oKurulum);
+  await oKurulum.getByLabel("Ad", { exact: true }).fill("Defne");
+  await oKurulum.getByLabel("Soyad").fill("Ak");
+  await oKurulum.getByRole("button", { name: "Öğrenci ekle" }).click();
+  await oKurulum.waitForFunction(() => document.body.innerText.includes("Defne"), null, { timeout: 10000 });
+  await dersBaslat(oKurulum);
+  await kurulum.close();
+
+  const oTahtaB = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  const oTahta = await oTahtaB.newPage();
+  await oturumHazirla(oTahta, T);
+  await oTahta.goto(`${T}${O_YOL}`, { waitUntil: "networkidle" });
+
+  const oTelefonB = await tarayici.newContext({ viewport: { width: 390, height: 844 } });
+  const oTelefon = await oTelefonB.newPage();
+  await oturumHazirla(oTelefon, T);
+  await oTelefon.goto(`${T}${O_YOL}`, { waitUntil: "networkidle" });
+
+  async function kutuOlc(dugme) {
+    await satir(oTelefon, "Defne").getByRole("button", { name: dugme }).click();
+    await oTahta.waitForFunction(() => document.querySelector(".canli-bildirim") !== null, null, { timeout: 12000 });
+    return await oTahta.evaluate(() => {
+      const kutu = document.querySelector(".canli-bildirim");
+      const metin = kutu.querySelector(".canli-bildirim-metin");
+      const r = kutu.getBoundingClientRect();
+      return {
+        ust: r.top,
+        yatayMerkez: r.left + r.width / 2,
+        yukseklik: r.height,
+        pencereGenisligi: window.innerWidth,
+        pencereYuksekligi: window.innerHeight,
+        yaziBoyutu: parseFloat(getComputedStyle(metin).fontSize),
+        vurgulu: kutu.classList.contains("canli-bildirim-vurgulu"),
+        tiklamaGecirir: getComputedStyle(kutu).pointerEvents === "none",
+        dugmeYigininda: kutu.closest(".canli-yayin") !== null,
+      };
+    });
+  }
+
+  const yildiz = await kutuOlc("Yıldız ver");
+  ok("Bildirim artik dugme yiginin icinde DEGIL", yildiz.dugmeYigininda === false);
+  ok(
+    "Ekranin ust kismi (ust ucte)",
+    yildiz.ust < yildiz.pencereYuksekligi / 3,
+    `ust=${Math.round(yildiz.ust)} / ${yildiz.pencereYuksekligi}`,
+  );
+  ok(
+    "Yatayda ortalanmis",
+    Math.abs(yildiz.yatayMerkez - yildiz.pencereGenisligi / 2) < 20,
+    `merkez=${Math.round(yildiz.yatayMerkez)} / ${yildiz.pencereGenisligi}`,
+  );
+  // 10 saniye duran bir katman altindaki listeye tiklamayi yutmamali.
+  ok("Altindaki sayfaya tiklamayi engellemiyor", yildiz.tiklamaGecirir === true);
+  ok("Yildiz vurgulu degil", yildiz.vurgulu === false);
+
+  await oTahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: KUTU_KAPANMA_BEKLEME });
+  const kart = await kutuOlc("Kırmızı kart ver");
+  ok("Kart vurgulu", kart.vurgulu === true);
+  ok(
+    "Kart yazisi yildizdan buyuk",
+    kart.yaziBoyutu > yildiz.yaziBoyutu,
+    `yildiz ${yildiz.yaziBoyutu}px, kart ${kart.yaziBoyutu}px`,
+  );
+  ok(
+    "Kart kutusu yildizdan yuksek",
+    kart.yukseklik > yildiz.yukseklik,
+    `yildiz ${Math.round(yildiz.yukseklik)}px, kart ${Math.round(kart.yukseklik)}px`,
+  );
+  // "Abartmadan": kutu ekrani kaplamamali.
+  ok(
+    "Kart kutusu ekranin ucte birinden alcak (abartili degil)",
+    kart.yukseklik < kart.pencereYuksekligi / 3,
+    `${Math.round(kart.yukseklik)}px / ${kart.pencereYuksekligi}px`,
+  );
+  ok("Kart da ust kisimda", kart.ust < kart.pencereYuksekligi / 3, `ust=${Math.round(kart.ust)}`);
+
+  // Dar ekranda tasmamali: uzun ad sarilsin, kutu pencereden genis olmasin.
+  await oTahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: KUTU_KAPANMA_BEKLEME });
+  await oTahta.setViewportSize({ width: 390, height: 844 });
+  await oTahta.reload({ waitUntil: "networkidle" });
+  await oTahta.getByRole("button", { name: /Tahta modu/ }).click();
+  await oTahta.waitForSelector(".canli-ses-dugmesi", { timeout: 10000 });
+  const dar = await kutuOlc("Kırmızı kart ver");
+  ok(
+    "Dar ekranda kutu pencereden tasmiyor",
+    dar.yatayMerkez - dar.pencereGenisligi / 2 < 20 && dar.pencereGenisligi <= 390,
+    `merkez=${Math.round(dar.yatayMerkez)} / ${dar.pencereGenisligi}`,
+  );
+  ok(
+    "Dar ekranda yazi kucultulmus",
+    dar.yaziBoyutu < kart.yaziBoyutu,
+    `genis ${kart.yaziBoyutu}px, dar ${dar.yaziBoyutu}px`,
+  );
+
+  await oTahtaB.close();
+  await oTelefonB.close();
+}
+
 console.log(`\nSonuc: ${gecti} gecti, ${kaldi} kaldi\n`);
 await tarayici.close();
 process.exit(kaldi === 0 ? 0 : 1);
