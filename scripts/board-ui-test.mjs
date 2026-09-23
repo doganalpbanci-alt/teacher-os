@@ -35,6 +35,10 @@ const tarayici = await chromium.launch(
 // kendini açıp kapatıyor, bunu gerçekten iki farklı ekran boyutuyla sınamak
 // gerekir.
 const tahtaBaglami = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+// Gercek tahtada ogretmen izni bir kez elle verir; testte izin kutusu
+// cikamayacagi icin bastan verilir. IZIN VERILMEYEN hali M bolumunde ayrica
+// sinanir -- iki yol da calismali.
+await tahtaBaglami.grantPermissions(["notifications"], { origin: T });
 const tahta = await tahtaBaglami.newPage();
 await oturumHazirla(tahta, T);
 
@@ -66,6 +70,16 @@ await telefon.goto(`${T}${SINIF_ADRESI}`, { waitUntil: "networkidle" });
 const satir = (sayfa, ad) => sayfa.locator("li").filter({ hasText: ad });
 const sesSayaci = (sayfa) => sayfa.evaluate(() => window.__tahtaSesSayaci ?? 0);
 const yoklamaSayaci = (sayfa) => sayfa.evaluate(() => window.__tahtaYoklamaSayaci ?? 0);
+const bildirimSayaci = (sayfa) => sayfa.evaluate(() => window.__tahtaBildirimSayaci ?? 0);
+
+// Sekmeyi gercekten gizlemeden `visibilityState`i ezmek: Playwright'ta bir
+// sekmeyi arka plana atmanin tasinabilir yolu yok, ama bilesenin baktiğı
+// tek sey bu ozellik.
+const gorunurlukKur = (sayfa, deger) =>
+  sayfa.evaluate((d) => {
+    Object.defineProperty(document, "visibilityState", { value: d, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, deger);
 
 // --- B. Genislik esigi ---
 console.log("\nB. Genislik esigi");
@@ -115,8 +129,8 @@ await satir(telefon, "Elif").getByRole("button", { name: /Artı ver|Yıldız ver
 await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") !== null, null, { timeout: 8000 });
 ok("Ses acilmadan sayac artmadi", (await sesSayaci(tahta)) === sesOncesi);
 
-await tahta.getByRole("button", { name: /Sesi aç/ }).click();
-await tahta.waitForSelector('button:has-text("Ses açık")', { timeout: 5000 });
+await tahta.getByRole("button", { name: /Ses ve bildirimi aç/ }).click();
+await tahta.waitForSelector('button:has-text("Ses ve bildirim açık")', { timeout: 5000 });
 await satir(telefon, "Elif").getByRole("button", { name: /Artı ver|Yıldız ver/ }).click();
 await tahta.waitForFunction(
   (onceki) => (window.__tahtaSesSayaci ?? 0) > onceki,
@@ -133,7 +147,7 @@ await telefon.locator(".sablon-formu").getByRole("button", { name: "Kaydet" }).c
 await telefon.waitForSelector(".basari", { timeout: 10000 });
 await telefon.goto(`${T}${SINIF_ADRESI}`, { waitUntil: "networkidle" });
 await tahta.reload({ waitUntil: "networkidle" });
-await tahta.getByRole("button", { name: /Sesi aç/ }).click();
+await tahta.getByRole("button", { name: /Ses ve bildirimi aç/ }).click();
 
 const sesOncesiKart = await sesSayaci(tahta);
 
@@ -180,7 +194,7 @@ await tahta.waitForSelector(".basari", { timeout: 10000 });
 await tahta.goto(`${T}${SINIF_ADRESI}`, { waitUntil: "networkidle" });
 await tahta.getByRole("button", { name: /Bu cihazı kilitle/ }).click();
 await tahta.waitForFunction(() => document.body.innerText.includes("Tahta kilitli"), null, { timeout: 10000 });
-await tahta.getByRole("button", { name: /Sesi aç/ }).click();
+await tahta.getByRole("button", { name: /Ses ve bildirimi aç/ }).click();
 
 await satir(telefon, "Elif").getByRole("button", { name: "Yıldız ver" }).click();
 await tahta.waitForFunction(
@@ -190,24 +204,135 @@ await tahta.waitForFunction(
 );
 ok("Kilitli tahta yine de bildirim gosterdi", (await tahta.locator(".canli-bildirim").innerText()).includes("yıldız"));
 
-// --- G. Sekme arka plandayken yoklama durur ---
+// --- G. Sekme arka plandayken de bildirim gelir ---
+//
+// ESKIDEN TERSI SINANIYORDU: bilesen `visibilityState !== "visible"` iken
+// yoklamayi kesiyordu, pil tasarrufu gerekcesiyle. Tahtada bu tam da kartin
+// gorunmesi gereken ani oldurdugu icin kaldirildi -- ogretmen tahtada baska
+// bir uygulamaya gectigi anda butun bildirimler kesiliyordu.
 console.log("\nG. Arka plan");
 await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 5000 });
+
 const gizlenmedenOnce = await yoklamaSayaci(tahta);
-await tahta.evaluate(() => {
-  Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
-  document.dispatchEvent(new Event("visibilitychange"));
-});
+await gorunurlukKur(tahta, "hidden");
 await tahta.waitForTimeout(3000);
 const gizliyken = await yoklamaSayaci(tahta);
-ok("Gizliyken yoklama durdu", gizliyken === gizlenmedenOnce, `${gizlenmedenOnce} -> ${gizliyken}`);
+ok("Gizliyken yoklama SURUYOR", gizliyken > gizlenmedenOnce, `${gizlenmedenOnce} -> ${gizliyken}`);
 
+const gBildirimOncesi = await bildirimSayaci(tahta);
+const gSesOncesi = await sesSayaci(tahta);
+await satir(telefon, "Elif").getByRole("button", { name: "Kırmızı kart ver" }).click();
+await tahta.waitForFunction(
+  (onceki) => (window.__tahtaBildirimSayaci ?? 0) > onceki,
+  gBildirimOncesi,
+  { timeout: 10000 },
+).catch(() => {});
+ok(
+  "Arka plandayken isletim sistemi bildirimi gosterildi",
+  (await bildirimSayaci(tahta)) === gBildirimOncesi + 1,
+  `${gBildirimOncesi} -> ${await bildirimSayaci(tahta)}`,
+);
+ok("Arka plandayken ses de caldi", (await sesSayaci(tahta)) > gSesOncesi);
+
+// Sayfa ici kutu arka planda ZATEN gorunmez; kuyruga girseydi ogretmen
+// sekmeye dondugunde birikmis bildirimler arka arkaya patlardi.
+ok(
+  "Arka plandayken sayfa ici kutu acilmadi",
+  (await tahta.locator(".canli-bildirim").count()) === 0,
+);
+
+// Bildirimin ICERIGI: yukaridaki kontroller yalnizca "bir bildirim cikti"
+// diyor. Gercek `Notification` nesnesinin basligini disaridan okumanin yolu
+// yok, bu yuzden yapici gecici olarak kaydeden bir taklitle degistirilir.
+// Sablon KART oldugu icin metin "kirmizi kart aldi" olmali -- basit sistemde
+// ayni kayit "eksi aldi" diye okunurdu (`OLAY_GORUNUMU`).
 await tahta.evaluate(() => {
-  Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
-  document.dispatchEvent(new Event("visibilitychange"));
+  window.__yakalananBildirimler = [];
+  class TaklitBildirim {
+    static permission = "granted";
+    constructor(baslik, secenekler) {
+      window.__yakalananBildirimler.push({ baslik, ...secenekler });
+    }
+    close() {}
+  }
+  window.Notification = TaklitBildirim;
 });
+await satir(telefon, "Elif").getByRole("button", { name: "Kırmızı kart ver" }).click();
+await tahta.waitForFunction(
+  () => (window.__yakalananBildirimler ?? []).length > 0,
+  null,
+  { timeout: 10000 },
+).catch(() => {});
+const yakalanan = await tahta.evaluate(() => window.__yakalananBildirimler ?? []);
+ok("Bildirim icerigi yakalandi", yakalanan.length === 1, JSON.stringify(yakalanan));
+ok(
+  "Baslik ogrenci adini ve simgeyi tasiyor",
+  yakalanan[0]?.baslik === "🟥 Elif Demir",
+  yakalanan[0]?.baslik,
+);
+ok(
+  "Govde kart sablonunun diliyle yazilmis",
+  yakalanan[0]?.body === "kırmızı kart aldı",
+  yakalanan[0]?.body,
+);
+ok(
+  "Kendi sesimiz acikken isletim sistemi sesi susturuldu",
+  yakalanan[0]?.silent === true,
+  String(yakalanan[0]?.silent),
+);
+ok(
+  "Art arda gelenler biriksin diye tek etiket kullanildi",
+  yakalanan[0]?.tag === "teacher-os-tahta",
+  yakalanan[0]?.tag,
+);
+
+await gorunurlukKur(tahta, "visible");
 await tahta.waitForTimeout(3000);
 ok("Tekrar gorununce yoklama devam etti", (await yoklamaSayaci(tahta)) > gizliyken);
+ok(
+  "Sekmeye donunce birikmis bildirim patlamasi olmadi",
+  (await tahta.locator(".canli-bildirim").count()) === 0,
+);
+
+// Gorunurken isletim sistemi bildirimi DEGIL, sayfa ici kutu cikar: tahtaya
+// bakan sinif zaten kutuyu goruyor, ustune bir de sistem bildirimi gereksiz.
+const gBildirimGorunurOnce = await bildirimSayaci(tahta);
+await satir(telefon, "Elif").getByRole("button", { name: "Yıldız ver" }).click();
+await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") !== null, null, { timeout: 10000 });
+ok("Gorunurken sayfa ici kutu cikti", (await tahta.locator(".canli-bildirim").count()) === 1);
+ok(
+  "Gorunurken isletim sistemi bildirimi gosterilmedi",
+  (await bildirimSayaci(tahta)) === gBildirimGorunurOnce,
+);
+await tahta.waitForFunction(() => document.querySelector(".canli-bildirim") === null, null, { timeout: 6000 }).catch(() => {});
+
+// Bildirim izni tarayicida KALICIDIR; ses baglami degildir (her sayfa
+// yuklemesinde kullanici dokunusu ister). Yani ogretmen izni bir kez
+// verdikten sonra sonraki derslerde dugmeye hic dokunmadan da isletim
+// sistemi bildirimi almali -- tahtada en cok ise yarayacak durum bu.
+await tahta.reload({ waitUntil: "networkidle" });
+ok(
+  "Yeniden yuklemede ses hala kapali (dokunus bekliyor)",
+  (await tahta.getByRole("button", { name: /Ses ve bildirimi aç/ }).count()) === 1,
+);
+await gorunurlukKur(tahta, "hidden");
+await satir(telefon, "Elif").getByRole("button", { name: "Yıldız ver" }).click();
+await tahta.waitForFunction(
+  () => (window.__tahtaBildirimSayaci ?? 0) > 0,
+  null,
+  { timeout: 10000 },
+).catch(() => {});
+ok(
+  "Izin kalici: dugmeye dokunmadan da bildirim geldi",
+  (await bildirimSayaci(tahta)) === 1,
+  String(await bildirimSayaci(tahta)),
+);
+ok(
+  "Dokunulmadigi icin kendi sesimiz calmadi (isletim sistemi sesi devrede)",
+  (await sesSayaci(tahta)) === 0,
+  String(await sesSayaci(tahta)),
+);
+await gorunurlukKur(tahta, "visible");
 
 // --- H. Yetki: oturumsuz ve baska ogretmen ---
 console.log("\nH. Yetki");
@@ -428,6 +553,77 @@ console.log("\nK. Ders yokken acilan tahta");
 
   await kTahtaB.close();
   await kTelefonB.close();
+}
+
+// --- M. Bildirim izni VERILMEMISKEN de arka plan calismali ---
+// Gercek tahtada izin reddedilmis ya da hic sorulmamis olabilir. O zaman
+// isletim sistemi bildirimi cikmaz, ama ses ve yoklama calismaya devam
+// etmeli: bir izin eksigi butun canli katmani goturmemeli.
+console.log("\nM. Bildirim izni yokken");
+{
+  const kurulum = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  const mKurulum = await kurulum.newPage();
+  await oturumHazirla(mKurulum, T);
+  await mKurulum.goto(T, { waitUntil: "networkidle" });
+  await mKurulum.getByLabel("Sınıf adı").fill("Izinsiz-Tahta");
+  await mKurulum.getByRole("button", { name: "Sınıf ekle" }).click();
+  await mKurulum.waitForFunction(() => document.body.innerText.includes("Izinsiz-Tahta"), null, { timeout: 10000 });
+  await mKurulum.getByRole("link", { name: /Izinsiz-Tahta/ }).click();
+  await mKurulum.waitForURL(/\/sinif\//, { timeout: 10000 });
+  const M_YOL = new URL(mKurulum.url()).pathname;
+  await ogrenciFormunuAc(mKurulum);
+  await mKurulum.getByLabel("Ad", { exact: true }).fill("Selin");
+  await mKurulum.getByLabel("Soyad").fill("Kara");
+  await mKurulum.getByRole("button", { name: "Öğrenci ekle" }).click();
+  await mKurulum.waitForFunction(() => document.body.innerText.includes("Selin"), null, { timeout: 10000 });
+  await dersBaslat(mKurulum);
+  await kurulum.close();
+
+  // IZIN VERILMEZ: `grantPermissions` bilerek cagrilmiyor.
+  const mTahtaB = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  const mTahta = await mTahtaB.newPage();
+  await oturumHazirla(mTahta, T);
+  await mTahta.goto(`${T}${M_YOL}`, { waitUntil: "networkidle" });
+  ok(
+    "Izin verilmedi (baslangic durumu dogru)",
+    (await mTahta.evaluate(() => Notification.permission)) !== "granted",
+    await mTahta.evaluate(() => Notification.permission),
+  );
+  await mTahta.getByRole("button", { name: /Ses ve bildirimi aç/ }).click();
+  await mTahta.waitForSelector('button:has-text("Ses ve bildirim açık")', { timeout: 5000 });
+  ok("Izin reddedilse de ses acildi", true);
+
+  const mTelefonB = await tarayici.newContext({ viewport: { width: 390, height: 844 } });
+  const mTelefon = await mTelefonB.newPage();
+  await oturumHazirla(mTelefon, T);
+  await mTelefon.goto(`${T}${M_YOL}`, { waitUntil: "networkidle" });
+
+  await gorunurlukKur(mTahta, "hidden");
+  const mYoklamaOnce = await yoklamaSayaci(mTahta);
+  const mSesOnce = await sesSayaci(mTahta);
+  await satir(mTelefon, "Selin").getByRole("button", { name: "Kırmızı kart ver" }).click();
+  await mTahta.waitForFunction(
+    (onceki) => (window.__tahtaSesSayaci ?? 0) > onceki,
+    mSesOnce,
+    { timeout: 10000 },
+  ).catch(() => {});
+
+  ok("Izin yokken de ses caldi", (await sesSayaci(mTahta)) > mSesOnce);
+  ok("Izin yokken bildirim sayaci artmadi", (await bildirimSayaci(mTahta)) === 0);
+  ok("Izin yokken yoklama surdu", (await yoklamaSayaci(mTahta)) > mYoklamaOnce);
+
+  // Sekmeye donunce sayfa ici kutu yine calismali: canli katman ayakta.
+  await gorunurlukKur(mTahta, "visible");
+  await mTahta.waitForTimeout(500);
+  await satir(mTelefon, "Selin").getByRole("button", { name: "Yıldız ver" }).click();
+  await mTahta.waitForFunction(() => document.querySelector(".canli-bildirim") !== null, null, { timeout: 10000 }).catch(() => {});
+  ok(
+    "Izin yokken sayfa ici kutu hala calisiyor",
+    (await mTahta.locator(".canli-bildirim").count()) === 1,
+  );
+
+  await mTahtaB.close();
+  await mTelefonB.close();
 }
 
 console.log(`\nSonuc: ${gecti} gecti, ${kaldi} kaldi\n`);
