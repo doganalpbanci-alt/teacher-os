@@ -5,9 +5,17 @@ import { useRouter } from "next/navigation";
 import type { BehaviorTemplate, BehaviorType } from "@prisma/client";
 import { OLAY_GORUNUMU } from "@/lib/behavior-rules";
 import { sesCal } from "@/lib/board-sound";
+import { bildirimGoster, bildirimIzniIste, bildirimMetni } from "@/lib/board-notification";
 
 // Telefondan verilen bir kart/yıldızın tahtada anında görünmesi ve dikkat
 // çekici bir ses çalması.
+//
+// İKİ AYRI GÖSTERİM YOLU, sekmenin görünür olup olmamasına göre:
+//   görünür → sayfa içindeki `.canli-bildirim` kutusu + ses
+//   arka planda → işletim sistemi bildirimi (`board-notification.ts`) + ses
+// Tahtada sunum ya da başka bir uygulama öndeyken sayfa içi kutuyu kimse
+// göremez; öğrenciyi uyarmanın işe yaraması için bildirimin önde ne varsa
+// onun üstünde çıkması gerekir.
 //
 // AYRI BİR SAYFA YOK: bu bileşen mevcut sınıf ekranına eklenir.
 //
@@ -40,6 +48,7 @@ declare global {
   interface Window {
     __tahtaSesSayaci?: number;
     __tahtaYoklamaSayaci?: number;
+    __tahtaBildirimSayaci?: number;
   }
 }
 
@@ -128,29 +137,51 @@ export function SinifCanliBildirimleri({
     return () => sorgu.removeEventListener("change", dinle);
   }, []);
 
+  // Ses hem sayfa içi kutuyla hem arka plan bildirimiyle çalar, bu yüzden
+  // ikisinin de çağırdığı tek yerde durur.
+  const sesiCal = useCallback((tur: BehaviorType) => {
+    if (!sesAcikRef.current || !sesBaglami.current) return;
+    sesCal(sesBaglami.current, tur);
+    window.__tahtaSesSayaci = (window.__tahtaSesSayaci ?? 0) + 1;
+  }, []);
+
   // Sıradaki bildirimi gösterir; yalnızca ref'lere dokunduğu için bileşen
   // yeniden render olsa bile davranışı değişmez (bayat closure sorunu yok).
-  const siradakiniGoster = useCallback(function goster() {
-    if (gosteriliyor.current) return;
-    const olay = kuyruk.current.shift();
-    if (!olay) return;
+  const siradakiniGoster = useCallback(
+    function goster() {
+      if (gosteriliyor.current) return;
+      const olay = kuyruk.current.shift();
+      if (!olay) return;
 
-    gosteriliyor.current = true;
-    setGosterilen(olay);
+      gosteriliyor.current = true;
+      setGosterilen(olay);
+      sesiCal(olay.tur);
 
-    if (sesAcikRef.current && sesBaglami.current) {
-      sesCal(sesBaglami.current, olay.tur);
-      if (typeof window !== "undefined") {
-        window.__tahtaSesSayaci = (window.__tahtaSesSayaci ?? 0) + 1;
+      setTimeout(() => {
+        gosteriliyor.current = false;
+        setGosterilen(null);
+        goster();
+      }, BILDIRIM_SURESI_MS);
+    },
+    [sesiCal],
+  );
+
+  // Sekme arka plandayken: sayfa içi kutu görünmez olduğundan kuyruğa hiç
+  // girilmez. Girseydi iki sorun çıkardı -- kutuyu sıraya sokan `setTimeout`
+  // gizli sekmede dakikada bire kısıtlanır, ve öğretmen sekmeye döndüğünde
+  // ders boyunca birikmiş bildirimler arka arkaya patlardı.
+  const arkaPlandaDuyur = useCallback(
+    (olay: Olay) => {
+      sesiCal(olay.tur);
+      const metin = bildirimMetni(olay.tur, olay.ogrenciAdi, sablon);
+      // Sesimiz çalabiliyorsa işletim sistemi sesi susturulur; çalamıyorsa
+      // tek uyarı işletim sisteminin sesidir, açık bırakılır.
+      if (metin && bildirimGoster(metin, sesAcikRef.current)) {
+        window.__tahtaBildirimSayaci = (window.__tahtaBildirimSayaci ?? 0) + 1;
       }
-    }
-
-    setTimeout(() => {
-      gosteriliyor.current = false;
-      setGosterilen(null);
-      goster();
-    }, BILDIRIM_SURESI_MS);
-  }, []);
+    },
+    [sablon, sesiCal],
+  );
 
   // İmleç HİÇBİR ZAMAN geri ya da ileri atlatılmaz; yalnızca sunucunun
   // döndürdüğü değerle ilerler. Ders değişiminde sıfırlayan bir effect
@@ -167,8 +198,16 @@ export function SinifCanliBildirimleri({
     if (!etkin) return;
 
     async function yokla() {
-      // Sekme arka plandayken durur: pil ve ağ boşuna tüketilmesin.
-      if (document.visibilityState !== "visible") return;
+      // ARKA PLANDA DA YOKLAR. Burada `visibilityState !== "visible"` ise
+      // duran bir kontrol vardı; gerekçesi pil ve ağ tasarrufuydu ve telefon
+      // için doğruydu. Ama bu döngü zaten YALNIZCA tahta modunda çalışıyor
+      // (yukarıdaki `if (!etkin) return`): tahta prize takılı, ve öğretmen
+      // tahtada başka bir uygulamaya geçtiği anda -- yani tam kartın
+      // görünmesi gereken anda -- bildirimler tamamen kesiliyordu.
+      //
+      // Chrome, 5 dakikadan uzun süre gizli kalan sekmede `setInterval`i
+      // dakikada bire indirir. Bu yüzden ses önemli: son 30 saniyede ses
+      // çalmış sekme bu kısıtlamadan muaf tutulur.
       if (typeof window !== "undefined") {
         window.__tahtaYoklamaSayaci = (window.__tahtaYoklamaSayaci ?? 0) + 1;
       }
@@ -187,8 +226,12 @@ export function SinifCanliBildirimleri({
 
         if (veri.sonKontrol) sonKontrol.current = veri.sonKontrol;
         if (veri.olaylar.length > 0) {
-          kuyruk.current.push(...veri.olaylar);
-          siradakiniGoster();
+          if (document.visibilityState === "visible") {
+            kuyruk.current.push(...veri.olaylar);
+            siradakiniGoster();
+          } else {
+            for (const olay of veri.olaylar) arkaPlandaDuyur(olay);
+          }
         }
 
         // Bildirim geçicidir; altındaki liste (kimde kaç yıldız, kartı ne
@@ -205,12 +248,18 @@ export function SinifCanliBildirimleri({
 
     const zamanlayici = setInterval(yokla, YOKLAMA_ARALIGI_MS);
     return () => clearInterval(zamanlayici);
-  }, [etkin, sinifId, router, siradakiniGoster]);
+  }, [etkin, sinifId, router, siradakiniGoster, arkaPlandaDuyur]);
 
-  async function sesiAc() {
+  // Tek dokunuş iki izni birden açar: ses bağlamı ancak kullanıcı
+  // dokunuşuyla açılabilir, bildirim izni de öyle. Tahtada ders başında
+  // iki ayrı düğmeye basmaktansa tek düğme doğru.
+  async function sesVeBildirimiAc() {
     if (!sesBaglami.current) sesBaglami.current = new AudioContext();
     await sesBaglami.current.resume();
     setSesAcik(true);
+    // İzin reddedilse bile ses açılmış olur; bu yüzden sonucu beklemek
+    // düğmenin durumunu değiştirmez.
+    await bildirimIzniIste();
   }
 
   function moduDegistir() {
@@ -230,8 +279,13 @@ export function SinifCanliBildirimleri({
       )}
 
       {etkin && (
-        <button type="button" className="canli-ses-dugmesi" onClick={sesiAc} disabled={sesAcik}>
-          {sesAcik ? "🔊 Ses açık" : "🔈 Sesi aç"}
+        <button
+          type="button"
+          className="canli-ses-dugmesi"
+          onClick={sesVeBildirimiAc}
+          disabled={sesAcik}
+        >
+          {sesAcik ? "🔔 Ses ve bildirim açık" : "🔈 Ses ve bildirimi aç"}
         </button>
       )}
 
