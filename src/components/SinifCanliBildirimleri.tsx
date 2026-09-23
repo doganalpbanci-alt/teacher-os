@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import type { BehaviorTemplate, BehaviorType } from "@prisma/client";
 import { OLAY_GORUNUMU } from "@/lib/behavior-rules";
 import { sesCal } from "@/lib/board-sound";
-import { bildirimGoster, bildirimIzniIste, bildirimMetni } from "@/lib/board-notification";
+import { bildirimGoster, bildirimIzniIste } from "@/lib/board-notification";
+import { bildirimMetni, bildirimSuresi } from "@/lib/board-rules";
 
 // Telefondan verilen bir kart/yıldızın tahtada anında görünmesi ve dikkat
 // çekici bir ses çalması.
@@ -38,7 +39,8 @@ import { bildirimGoster, bildirimIzniIste, bildirimMetni } from "@/lib/board-not
 
 const TAHTA_ESIGI = "(min-width: 1280px)";
 const YOKLAMA_ARALIGI_MS = 2000;
-const BILDIRIM_SURESI_MS = 2500;
+// Bildirimin ekranda kalma süresi artık olay türüne göre değişiyor;
+// kural ve gerekçesi `board-notification.ts`te (`bildirimSuresi`).
 const SECIM_ANAHTARI = "teacher_os_tahta_modu";
 
 // Yalnızca tarayıcı testlerinin gözlemlemesi için: sesin çalındığını ve
@@ -157,11 +159,14 @@ export function SinifCanliBildirimleri({
       setGosterilen(olay);
       sesiCal(olay.tur);
 
+      // Süre olay türünden gelir: kart, yıldızdan uzun durur. Sıra uzunluğu
+      // KUYRUKTAN OKUNUR, çünkü bu olay zaten `shift` ile çıkarıldı --
+      // kalanlar gerçekten bekleyenlerdir.
       setTimeout(() => {
         gosteriliyor.current = false;
         setGosterilen(null);
         goster();
-      }, BILDIRIM_SURESI_MS);
+      }, bildirimSuresi(olay.tur, kuyruk.current.length));
     },
     [sesiCal],
   );
@@ -176,7 +181,10 @@ export function SinifCanliBildirimleri({
       const metin = bildirimMetni(olay.tur, olay.ogrenciAdi, sablon);
       // Sesimiz çalabiliyorsa işletim sistemi sesi susturulur; çalamıyorsa
       // tek uyarı işletim sisteminin sesidir, açık bırakılır.
-      if (metin && bildirimGoster(metin, sesAcikRef.current)) {
+      // Arka planda kuyruk kullanılmıyor, sıra baskısı da yok: her olay
+      // kendi tam süresini alır.
+      const sure = bildirimSuresi(olay.tur, 0);
+      if (metin && bildirimGoster(metin, sesAcikRef.current, sure)) {
         window.__tahtaBildirimSayaci = (window.__tahtaBildirimSayaci ?? 0) + 1;
       }
     },
