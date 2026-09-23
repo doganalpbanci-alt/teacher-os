@@ -6,7 +6,7 @@ import type { BehaviorTemplate, BehaviorType } from "@prisma/client";
 import { OLAY_GORUNUMU } from "@/lib/behavior-rules";
 import { sesCal } from "@/lib/board-sound";
 import { bildirimGoster, bildirimIzniIste } from "@/lib/board-notification";
-import { bildirimMetni, bildirimSuresi } from "@/lib/board-rules";
+import { bildirimMetni, bildirimSuresi, buyukGosterilir } from "@/lib/board-rules";
 
 // Telefondan verilen bir kart/yıldızın tahtada anında görünmesi ve dikkat
 // çekici bir ses çalması.
@@ -279,26 +279,19 @@ export function SinifCanliBildirimleri({
   const gorunum = gosterilen ? OLAY_GORUNUMU[sablon][gosterilen.tur] : undefined;
 
   return (
-    <div className="canli-yayin">
-      {!kilitli && (
-        <button type="button" className="canli-mod-dugmesi" onClick={moduDegistir}>
-          {etkin ? "🖥 Tahta modu açık" : "🖥 Tahta modu"}
-        </button>
-      )}
-
-      {etkin && (
-        <button
-          type="button"
-          className="canli-ses-dugmesi"
-          onClick={sesVeBildirimiAc}
-          disabled={sesAcik}
-        >
-          {sesAcik ? "🔔 Ses ve bildirim açık" : "🔈 Ses ve bildirimi aç"}
-        </button>
-      )}
-
+    <>
+      {/* Bildirim düğme yığınının İÇİNDE DEĞİL: düğmeler sağ altta öğretmenin
+          işidir, bildirim ise sınıfın görmesi için ekranın üstünde durur. */}
       {etkin && gosterilen && gorunum && (
-        <div className="canli-bildirim" role="status" aria-live="polite">
+        <div
+          className={
+            buyukGosterilir(gosterilen.tur)
+              ? "canli-bildirim canli-bildirim-vurgulu"
+              : "canli-bildirim"
+          }
+          role="status"
+          aria-live="polite"
+        >
           <span className="canli-bildirim-simge" aria-hidden="true">
             {gorunum.yazi}
           </span>
@@ -307,6 +300,25 @@ export function SinifCanliBildirimleri({
           </span>
         </div>
       )}
-    </div>
+
+      <div className="canli-yayin">
+        {!kilitli && (
+          <button type="button" className="canli-mod-dugmesi" onClick={moduDegistir}>
+            {etkin ? "🖥 Tahta modu açık" : "🖥 Tahta modu"}
+          </button>
+        )}
+
+        {etkin && (
+          <button
+            type="button"
+            className="canli-ses-dugmesi"
+            onClick={sesVeBildirimiAc}
+            disabled={sesAcik}
+          >
+            {sesAcik ? "🔔 Ses ve bildirim açık" : "🔈 Ses ve bildirimi aç"}
+          </button>
+        )}
+      </div>
+    </>
   );
 }

@@ -67,3 +67,14 @@ export const CHROME_KENDILIGINDEN_KAPATMA_MS = 8000;
 export function ekranaSabitlenmeli(sureMs: number): boolean {
   return sureMs > CHROME_KENDILIGINDEN_KAPATMA_MS;
 }
+
+/**
+ * Bildirim büyük mü gösterilir.
+ *
+ * Süre kuralının aynısı, boyut tarafı: yıldız rutindir ve sık verilir, ekranı
+ * kaplamasın; olumsuz olay (eksi, sarı, kırmızı) ise SINIFIN GÖRMESİ için
+ * verilir -- arka sıranın okuyamadığı bir kutu caydırıcı olmaz.
+ */
+export function buyukGosterilir(tur: BehaviorType): boolean {
+  return tur !== "PLUS";
+}
