@@ -6,6 +6,8 @@ import {
   bildirimSuresi,
   buyukGosterilir,
   ekranaSabitlenmeli,
+  PIP_RENGI,
+  PIP_BOS_RENGI,
 } from "../../src/lib/board-rules";
 
 let gecti = 0, kaldi = 0;
@@ -87,6 +89,50 @@ for (const tur of ["PLUS", "MINUS", "YELLOW_CARD", "RED_CARD"] as const) {
     buyukGosterilir(tur) === (BILDIRIM_SURESI_MS[tur] > BILDIRIM_SURESI_MS.PLUS),
   );
 }
+
+
+// --- Tahta penceresi renkleri ---
+// Pencere kucuk ve uzaktan bakiliyor; yazi zeminde okunabilmeli. Kontrast
+// orani WCAG formuluyle hesaplanir, goz karariyla degil.
+function kanal(x: number): number {
+  const o = x / 255;
+  return o <= 0.03928 ? o / 12.92 : Math.pow((o + 0.055) / 1.055, 2.4);
+}
+function parlaklik(hex: string): number {
+  const s = hex.replace("#", "");
+  const r = parseInt(s.slice(0, 2), 16);
+  const g = parseInt(s.slice(2, 4), 16);
+  const b = parseInt(s.slice(4, 6), 16);
+  return 0.2126 * kanal(r) + 0.7152 * kanal(g) + 0.0722 * kanal(b);
+}
+function kontrast(a: string, b: string): number {
+  const x = parlaklik(a), y = parlaklik(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+const tumRenkler = [...Object.entries(PIP_RENGI), ["BOS", PIP_BOS_RENGI] as const];
+for (const [ad, renk] of tumRenkler) {
+  const oran = kontrast(renk.zemin, renk.yazi);
+  // Buyuk punto icin WCAG AA esigi 3:1; pencerede yazi zaten iri.
+  ok(`${ad}: yazi zeminde okunuyor (kontrast >= 3)`, oran >= 3, `${oran.toFixed(2)}:1`);
+}
+
+// Her tur AYRI renk olmali: pencereye uzaktan bakan biri yaziyi okumadan
+// renkten anlayacak. Ikisi ayni olsaydi o ayrim kaybolurdu.
+const zeminler = Object.values(PIP_RENGI).map((r) => r.zemin);
+ok("Her olay turunun zemini farkli", new Set(zeminler).size === zeminler.length, zeminler.join(", "));
+ok(
+  "Bos hali olaylarin hicbiriyle karismaz",
+  !zeminler.includes(PIP_BOS_RENGI.zemin),
+  PIP_BOS_RENGI.zemin,
+);
+// Kirmizi ile yesil klasik tuzak: farkli renkler ama parlakliklari esitse
+// gri tonda (renk korlugu, solmus projeksiyon) ayirt edilemezler. Bu kontrol
+// koyu bir yesile donulurse -- #15803d 1.04:1 veriyordu -- uyarir.
+// ANLAMIN TASIYICISI RENK DEGIL: pencerede etiket de yazili. Bu yuzden esik
+// dusuk tutuldu, renk yalnizca pekistirme.
+const kirmiziYesil = kontrast(PIP_RENGI.RED_CARD.zemin, PIP_RENGI.PLUS.zemin);
+ok("Kirmizi ile yesil gri tonda da ayrisiyor", kirmiziYesil > 1.3, `${kirmiziYesil.toFixed(2)}:1`);
 
 console.log(`\n${gecti} gecti, ${kaldi} kaldi\n`);
 process.exit(kaldi === 0 ? 0 : 1);

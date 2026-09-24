@@ -7,6 +7,8 @@ import { OLAY_GORUNUMU } from "@/lib/behavior-rules";
 import { sesCal } from "@/lib/board-sound";
 import { bildirimGoster, bildirimIzniIste } from "@/lib/board-notification";
 import { bildirimMetni, bildirimSuresi, buyukGosterilir } from "@/lib/board-rules";
+import { pipAc, pipAcilabilir } from "@/lib/board-pip";
+import { TahtaPenceresi, type PipOlayi } from "./TahtaPenceresi";
 
 // Telefondan verilen bir kart/yıldızın tahtada anında görünmesi ve dikkat
 // çekici bir ses çalması.
@@ -85,6 +87,8 @@ export function SinifCanliBildirimleri({
   sablon,
   baslangicZamani,
   kilitli,
+  sinifAdi,
+  dersYazisi,
 }: {
   sinifId: string;
   /** Sayfa sunucuda render edilirken aktif olan ders; yalnızca başlangıç
@@ -96,12 +100,20 @@ export function SinifCanliBildirimleri({
   baslangicZamani: string;
   /** Kilitli tahtada mod düğmesi gizlenir: öğrenci canlı yayını kapatamasın. */
   kilitli: boolean;
+  /** Tahta penceresi olay yokken bunları gösterir. */
+  sinifAdi: string;
+  dersYazisi: string;
 }) {
   const router = useRouter();
   const [genis, setGenis] = useState(false);
   const [secim, setSecim] = useState<Secim>(null);
   const [sesAcik, setSesAcik] = useState(false);
   const [gosterilen, setGosterilen] = useState<Olay | null>(null);
+  // Tahta penceresi (PiP). Açılabilirliği tarayıcıya bağlı, bu yüzden
+  // düğme de ancak istemcide karar verildikten sonra görünür.
+  const [pipVar, setPipVar] = useState(false);
+  const [pipPenceresi, setPipPenceresi] = useState<Window | null>(null);
+  const [pipOlayi, setPipOlayi] = useState<PipOlayi | null>(null);
 
   const sesAcikRef = useRef(sesAcik);
   const sesBaglami = useRef<AudioContext | null>(null);
@@ -111,6 +123,8 @@ export function SinifCanliBildirimleri({
   // Tahtanın o an hangi dersi izlediği. Sunucudan gelen ders id'si bundan
   // farklıysa ders değişmiştir (başladı, bitti ya da yenisi açıldı).
   const izlenenDers = useRef(dersId);
+  // Pencerenin kendi zamanlayıcısıyla kurulur, onunla temizlenir.
+  const pipZamanlayici = useRef<number | null>(null);
 
   // Kilitli cihaz TANIM GEREĞİ tahtadır: öğretmen onu bilerek kilitledi,
   // sınıfın önünde duran ekran o. Genişlik yalnızca bir tahmindi ve gerçek
@@ -120,6 +134,7 @@ export function SinifCanliBildirimleri({
   // Aksi halde ders boyunca hiçbir bildirim gelmez, kilit açılınca hepsi
   // birden düşer.
   const etkin = kilitli || (secim ?? genis);
+  const pipAcik = pipPenceresi !== null;
 
   useEffect(() => {
     sesAcikRef.current = sesAcik;
@@ -127,6 +142,7 @@ export function SinifCanliBildirimleri({
 
   useEffect(() => {
     setSecim(secimiOku());
+    setPipVar(pipAcilabilir());
   }, []);
 
   // Genişlik eşiği: aynı css breakpoint'i JS tarafında da izler. Bölünmüş
@@ -184,12 +200,53 @@ export function SinifCanliBildirimleri({
       // Arka planda kuyruk kullanılmıyor, sıra baskısı da yok: her olay
       // kendi tam süresini alır.
       const sure = bildirimSuresi(olay.tur, 0);
+      // Tahta penceresi açıksa işletim sistemi bildirimi GÖNDERİLMEZ: ikisi de
+      // arka plan kanalı, ikisi birden çıkarsa aynı olay iki kez duyurulur.
+      // Pencere zaten daha büyük ve her zaman üstte.
+      if (pipAcik) return;
       if (metin && bildirimGoster(metin, sesAcikRef.current, sure)) {
         window.__tahtaBildirimSayaci = (window.__tahtaBildirimSayaci ?? 0) + 1;
       }
     },
-    [sablon, sesiCal],
+    [sablon, sesiCal, pipAcik],
   );
+
+  // Tahta penceresine olayı basar ve süresi dolunca temizler.
+  // Zamanlayıcı PENCERENİN KENDİSİNDEN kurulur: pencere her zaman görünür
+  // olduğu için oradaki `setTimeout` arka plan kısıtlamasına uğramaz.
+  const pipGoster = useCallback(
+    (olay: Olay) => {
+      if (!pipPenceresi) return;
+      if (pipZamanlayici.current !== null) {
+        pipPenceresi.clearTimeout(pipZamanlayici.current);
+      }
+      setPipOlayi({ tur: olay.tur, ogrenciAdi: olay.ogrenciAdi });
+      pipZamanlayici.current = pipPenceresi.setTimeout(() => {
+        setPipOlayi(null);
+        pipZamanlayici.current = null;
+      }, bildirimSuresi(olay.tur, 0));
+    },
+    [pipPenceresi],
+  );
+
+  // Pencereyi öğretmen kapatınca (ya da tarayıcı kapatınca) durum geri alınır:
+  // aksi halde yoklama kapalı bir pencerenin zamanlayıcısına bağlı kalırdı.
+  useEffect(() => {
+    if (!pipPenceresi) return;
+    const kapandi = () => {
+      setPipPenceresi(null);
+      setPipOlayi(null);
+      pipZamanlayici.current = null;
+    };
+    pipPenceresi.addEventListener("pagehide", kapandi);
+    return () => pipPenceresi.removeEventListener("pagehide", kapandi);
+  }, [pipPenceresi]);
+
+  // Tahta modu kapatılırsa pencere de kapanır: yoklama durduğu için pencere
+  // açık kalsa ders boyunca donmuş bir ekran gösterirdi.
+  useEffect(() => {
+    if (!etkin && pipPenceresi) pipPenceresi.close();
+  }, [etkin, pipPenceresi]);
 
   // İmleç HİÇBİR ZAMAN geri ya da ileri atlatılmaz; yalnızca sunucunun
   // döndürdüğü değerle ilerler. Ders değişiminde sıfırlayan bir effect
@@ -234,6 +291,10 @@ export function SinifCanliBildirimleri({
 
         if (veri.sonKontrol) sonKontrol.current = veri.sonKontrol;
         if (veri.olaylar.length > 0) {
+          // Tahta penceresi görünürlükten BAĞIMSIZ: her zaman üstte durduğu
+          // için sekme önde de olsa arkada da aynı şekilde güncellenir.
+          for (const olay of veri.olaylar) pipGoster(olay);
+
           if (document.visibilityState === "visible") {
             kuyruk.current.push(...veri.olaylar);
             siradakiniGoster();
@@ -254,9 +315,14 @@ export function SinifCanliBildirimleri({
       }
     }
 
-    const zamanlayici = setInterval(yokla, YOKLAMA_ARALIGI_MS);
-    return () => clearInterval(zamanlayici);
-  }, [etkin, sinifId, router, siradakiniGoster, arkaPlandaDuyur]);
+    // ZAMANLAYICIYI KİM KURUYOR ÖNEMLİ. Tahta penceresi açıksa onun
+    // üzerinden kurulur: o pencere her zaman görünür olduğu için Chrome'un
+    // "5 dakikadır gizli sekmede dakikada bir uyandır" kısıtlaması ona
+    // işlemez. Pencere yoksa eskisi gibi sayfanın kendi zamanlayıcısı.
+    const sahip: Window = pipPenceresi ?? window;
+    const zamanlayici = sahip.setInterval(yokla, YOKLAMA_ARALIGI_MS);
+    return () => sahip.clearInterval(zamanlayici);
+  }, [etkin, sinifId, router, siradakiniGoster, arkaPlandaDuyur, pipGoster, pipPenceresi]);
 
   // Tek dokunuş iki izni birden açar: ses bağlamı ancak kullanıcı
   // dokunuşuyla açılabilir, bildirim izni de öyle. Tahtada ders başında
@@ -268,6 +334,11 @@ export function SinifCanliBildirimleri({
     // İzin reddedilse bile ses açılmış olur; bu yüzden sonucu beklemek
     // düğmenin durumunu değiştirmez.
     await bildirimIzniIste();
+  }
+
+  async function tahtaPenceresiniAc() {
+    const pencere = await pipAc();
+    if (pencere) setPipPenceresi(pencere);
   }
 
   function moduDegistir() {
@@ -318,7 +389,25 @@ export function SinifCanliBildirimleri({
             {sesAcik ? "🔔 Ses ve bildirim açık" : "🔈 Ses ve bildirimi aç"}
           </button>
         )}
+
+        {/* Yalnızca destekleyen tarayıcıda (Chrome/Edge masaüstü) görünür;
+            Firefox ve Safari'de düğme hiç çıkmaz, boşuna umut vermesin. */}
+        {etkin && pipVar && !pipAcik && (
+          <button type="button" className="canli-pip-dugmesi" onClick={tahtaPenceresiniAc}>
+            📺 Tahta penceresini aç
+          </button>
+        )}
       </div>
+
+      {pipPenceresi && (
+        <TahtaPenceresi
+          pencere={pipPenceresi}
+          olay={pipOlayi}
+          sablon={sablon}
+          sinifAdi={sinifAdi}
+          dersYazisi={dersYazisi}
+        />
+      )}
     </>
   );
 }

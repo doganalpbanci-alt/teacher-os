@@ -838,6 +838,160 @@ console.log("\nO. Yer ve boyut");
   await oTelefonB.close();
 }
 
+// --- P. Tahta penceresi (Document Picture-in-Picture) ---
+// Isletim sistemi bildirimi calisiyor ama gorunumunu Windows belirliyor:
+// kosede, kendi boyutunda. Sinifin arkasindan okunacak bir uyari icin
+// yetmiyor. PiP penceresi her zaman ustte durur ve icerigi tamamen bizim.
+console.log("\nP. Tahta penceresi");
+{
+  const kurulum = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  const pKurulum = await kurulum.newPage();
+  await oturumHazirla(pKurulum, T);
+  await pKurulum.goto(T, { waitUntil: "networkidle" });
+  await pKurulum.getByLabel("Sınıf adı").fill("Pip-Testi");
+  await pKurulum.getByRole("button", { name: "Sınıf ekle" }).click();
+  await pKurulum.waitForFunction(() => document.body.innerText.includes("Pip-Testi"), null, { timeout: 10000 });
+  await pKurulum.getByRole("link", { name: /Pip-Testi/ }).click();
+  await pKurulum.waitForURL(/\/sinif\//, { timeout: 10000 });
+  const P_YOL = new URL(pKurulum.url()).pathname;
+  await ogrenciFormunuAc(pKurulum);
+  await pKurulum.getByLabel("Ad", { exact: true }).fill("Yasin");
+  await pKurulum.getByLabel("Soyad").fill("Tan");
+  await pKurulum.getByRole("button", { name: "Öğrenci ekle" }).click();
+  await pKurulum.waitForFunction(() => document.body.innerText.includes("Yasin"), null, { timeout: 10000 });
+  await dersBaslat(pKurulum);
+  await kurulum.close();
+
+  const pTahtaB = await tarayici.newContext({ viewport: { width: 1366, height: 900 } });
+  await pTahtaB.grantPermissions(["notifications"], { origin: T });
+  const pTahta = await pTahtaB.newPage();
+  await oturumHazirla(pTahta, T);
+  await pTahta.goto(`${T}${P_YOL}`, { waitUntil: "networkidle" });
+
+  const pTelefonB = await tarayici.newContext({ viewport: { width: 390, height: 844 } });
+  const pTelefon = await pTelefonB.newPage();
+  await oturumHazirla(pTelefon, T);
+  await pTelefon.goto(`${T}${P_YOL}`, { waitUntil: "networkidle" });
+
+  // Pencerenin icini okumanin yolu: API acik pencereyi kendisi veriyor.
+  const pipMetni = () =>
+    pTahta.evaluate(() => window.documentPictureInPicture?.window?.document.body.innerText ?? null);
+  const pipZemini = () =>
+    pTahta.evaluate(() => window.documentPictureInPicture?.window?.document.body.style.backgroundColor ?? null);
+
+  ok("Pencere acilmadan once yok", (await pipMetni()) === null);
+  ok(
+    "Dugme gorunuyor",
+    (await pTahta.getByRole("button", { name: /Tahta penceresini aç/ }).count()) === 1,
+  );
+
+  await pTahta.getByRole("button", { name: /Tahta penceresini aç/ }).click();
+  await pTahta.waitForFunction(() => window.documentPictureInPicture?.window != null, null, { timeout: 10000 });
+  ok("Pencere acildi", (await pipMetni()) !== null);
+  ok(
+    "Acikken dugme tekrar gosterilmiyor",
+    (await pTahta.getByRole("button", { name: /Tahta penceresini aç/ }).count()) === 0,
+  );
+
+  // Olay yokken sinif ve ders bilgisi durur; bos bir kutu tahtada anlamsiz.
+  const bos = await pipMetni();
+  ok("Bos halde sinif adi yaziyor", bos.includes("Pip-Testi"), JSON.stringify(bos));
+  ok("Bos halde ders bilgisi yaziyor", /\d+\. ders/.test(bos), JSON.stringify(bos));
+
+  // Kart gelince pencere buyuk yaziyla ve KIRMIZI zeminle gosterir.
+  const bildirimOncesi = await bildirimSayaci(pTahta);
+  await satir(pTelefon, "Yasin").getByRole("button", { name: "Kırmızı kart ver" }).click();
+  await pTahta.waitForFunction(
+    () => (window.documentPictureInPicture?.window?.document.body.innerText ?? "").includes("Yasin"),
+    null,
+    { timeout: 12000 },
+  );
+  const kartMetni = await pipMetni();
+  ok("Pencerede ogrenci adi var", kartMetni.includes("Yasin Tan"), JSON.stringify(kartMetni));
+  ok("Pencerede kart etiketi var", kartMetni.includes("kırmızı kart aldı"), JSON.stringify(kartMetni));
+  ok("Zemin kirmiziya dondu", (await pipZemini()) === "rgb(220, 38, 38)", await pipZemini());
+  // Emoji yok: kirmizi zeminde kirmizi kart simgesi gorunmez olurdu.
+  ok("Pencerede emoji simge yok", !kartMetni.includes("🟥"), JSON.stringify(kartMetni));
+
+  // Sure dolunca sakin haline doner -- kart sonsuza kadar ekranda kalmaz.
+  await pTahta.waitForFunction(
+    () => !(window.documentPictureInPicture?.window?.document.body.innerText ?? "").includes("Yasin"),
+    null,
+    { timeout: 16000 },
+  );
+  ok("Sure dolunca sakin haline dondu", (await pipMetni()).includes("Pip-Testi"));
+  ok("Zemin de sakin renge dondu", (await pipZemini()) === "rgb(28, 25, 23)", await pipZemini());
+
+  // Yildiz farkli renk: uzaktan bakan biri yaziyi okumadan ayirt etsin.
+  await satir(pTelefon, "Yasin").getByRole("button", { name: "Yıldız ver" }).click();
+  await pTahta.waitForFunction(
+    () => (window.documentPictureInPicture?.window?.document.body.innerText ?? "").includes("Yasin"),
+    null,
+    { timeout: 12000 },
+  );
+  ok("Yildizda zemin yesil", (await pipZemini()) === "rgb(22, 163, 74)", await pipZemini());
+
+  // ASIL KAZANC: pencere acikken sekme arka planda da olsa pencere guncellenir
+  // ve isletim sistemi bildirimi ARTIK GONDERILMEZ -- ikisi birden cikarsa
+  // ayni olay iki kez duyurulmus olur.
+  await pTahta.waitForFunction(
+    () => !(window.documentPictureInPicture?.window?.document.body.innerText ?? "").includes("Yasin"),
+    null,
+    { timeout: 16000 },
+  );
+  await gorunurlukKur(pTahta, "hidden");
+  await satir(pTelefon, "Yasin").getByRole("button", { name: "Sarı kart ver" }).click();
+  await pTahta.waitForFunction(
+    () => (window.documentPictureInPicture?.window?.document.body.innerText ?? "").includes("Yasin"),
+    null,
+    { timeout: 12000 },
+  );
+  // Etiketin SARI olmasi beklenmez: bu ogrenci ayni derste zaten kirmizi kart
+  // aldi, sari ustune sari kirmizi demektir (`behavior-rules`). Burada sinanan
+  // sey pencerenin arka plandayken de GUNCELLENDIGI -- hangi kart oldugu degil.
+  const arkaPlanMetni = await pipMetni();
+  ok(
+    "Sekme arka plandayken de pencere guncellendi",
+    arkaPlanMetni.includes("Yasin Tan") &&
+      arkaPlanMetni.includes("kart aldı") &&
+      !arkaPlanMetni.includes("Pip-Testi"),
+    JSON.stringify(arkaPlanMetni),
+  );
+  ok(
+    "Pencere acikken isletim sistemi bildirimi gonderilmedi",
+    (await bildirimSayaci(pTahta)) === bildirimOncesi,
+    `${bildirimOncesi} -> ${await bildirimSayaci(pTahta)}`,
+  );
+  await gorunurlukKur(pTahta, "visible");
+
+  // Pencere kapaninca durum geri alinir ve isletim sistemi bildirimi geri gelir.
+  await pTahta.evaluate(() => window.documentPictureInPicture.window.close());
+  await pTahta.waitForFunction(
+    () => document.querySelector(".canli-ses-dugmesi") !== null,
+    null,
+    { timeout: 8000 },
+  );
+  await pTahta.waitForSelector('button:has-text("Tahta penceresini aç")', { timeout: 8000 });
+  ok("Kapaninca dugme geri geldi", (await pTahta.getByRole("button", { name: /Tahta penceresini aç/ }).count()) === 1);
+
+  await gorunurlukKur(pTahta, "hidden");
+  const kapandiktanSonra = await bildirimSayaci(pTahta);
+  await satir(pTelefon, "Yasin").getByRole("button", { name: "Kırmızı kart ver" }).click();
+  await pTahta.waitForFunction(
+    (onceki) => (window.__tahtaBildirimSayaci ?? 0) > onceki,
+    kapandiktanSonra,
+    { timeout: 12000 },
+  ).catch(() => {});
+  ok(
+    "Pencere kapaninca isletim sistemi bildirimi geri geldi",
+    (await bildirimSayaci(pTahta)) > kapandiktanSonra,
+    `${kapandiktanSonra} -> ${await bildirimSayaci(pTahta)}`,
+  );
+
+  await pTahtaB.close();
+  await pTelefonB.close();
+}
+
 console.log(`\nSonuc: ${gecti} gecti, ${kaldi} kaldi\n`);
 await tarayici.close();
 process.exit(kaldi === 0 ? 0 : 1);
