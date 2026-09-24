@@ -1276,7 +1276,10 @@ a.satir-ad:hover { color: var(--vurgu); text-decoration: underline; }
   pointer-events: none;
 }
 
-.canli-ses-dugmesi {
+/* Iki dugme ayni hapi biciminde ama AYRI SINIFLAR: testler ve secicilerde
+   "ses dugmesi" sayisi gercekten ses dugmesini saysin. */
+.canli-ses-dugmesi,
+.canli-pip-dugmesi {
   pointer-events: auto;
   padding: 0.5rem 0.875rem;
   border: 1px solid var(--cizgi);

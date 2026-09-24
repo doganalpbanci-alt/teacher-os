@@ -78,3 +78,33 @@ export function ekranaSabitlenmeli(sureMs: number): boolean {
 export function buyukGosterilir(tur: BehaviorType): boolean {
   return tur !== "PLUS";
 }
+
+/**
+ * Tahta penceresinin (PiP) renkleri. Sayfa içi kutu hep koyu; orada renk
+ * satırın kendisinden ve simgeden okunuyor. PiP penceresi ise küçük ve
+ * tek başına duruyor -- uzaktan bakan biri yazıyı okuyamadan RENKTEN
+ * anlamalı. Bu yüzden ayrı bir eşleme.
+ *
+ * Renkler burada elle yazılı, CSS değişkeni değil: PiP ayrı bir doküman,
+ * sayfanın `:root` değişkenleri oraya geçmiyor.
+ *
+ * RENK TEK BAŞINA ANLAM TAŞIMAZ: pencerede her zaman "kırmızı kart aldı"
+ * gibi bir etiket de yazıyor. Renk onu pekiştirir, yerine geçmez -- renk
+ * körü bir öğretmen ya da solmuş bir projeksiyon için bu şart.
+ *
+ * Yeşil bilerek #16a34a; daha koyu bir yeşil (#15803d) kırmızıyla NEREDEYSE
+ * AYNI parlaklıkta çıkıyor (1.04:1) ve ikisi gri tonda ayırt edilemiyordu.
+ * Kural testi her rengin yazısıyla kontrastını ölçüyor; koyultmak istersen
+ * oradan geçmesi gerekir.
+ */
+export type PipRengi = { zemin: string; yazi: string };
+
+export const PIP_RENGI: Record<BehaviorType, PipRengi> = {
+  PLUS: { zemin: "#16a34a", yazi: "#ffffff" },
+  MINUS: { zemin: "#b45309", yazi: "#ffffff" },
+  YELLOW_CARD: { zemin: "#facc15", yazi: "#1c1917" },
+  RED_CARD: { zemin: "#dc2626", yazi: "#ffffff" },
+};
+
+/** Olay yokken pencerenin sakin hali. */
+export const PIP_BOS_RENGI: PipRengi = { zemin: "#1c1917", yazi: "#fafaf9" };

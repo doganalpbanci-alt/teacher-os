@@ -66,6 +66,11 @@ export default async function SinifSayfasi({
   const kilit = await kilitDurumu();
   const kilitli = kilit.kapali && kilit.sinifId === sinif.id;
 
+  // Hem başlıkta hem tahta penceresinde aynı yazı görünür; tek yerde üretilir.
+  const dersYazisi = aktifDers
+    ? `${aktifDers.gunlukSira}. ders · ${dersKisaYazisi(aktifDers.tarih)}`
+    : "Aktif ders yok";
+
   const kartSistemi = ogretmen.behaviorTemplate === "CARD";
   const ogrenciler = turkceSirala(
     sinif.students
@@ -150,11 +155,7 @@ export default async function SinifSayfasi({
               {sinif.name}
               {!sinif.isActive && " · arşivde"}
             </h1>
-            <span className="soluk">
-              {aktifDers
-                ? `${aktifDers.gunlukSira}. ders · ${dersKisaYazisi(aktifDers.tarih)}`
-                : "Aktif ders yok"}
-            </span>
+            <span className="soluk">{dersYazisi}</span>
           </div>
           {!kilitli && (
             <div className="ders-basi-sag">
@@ -271,6 +272,8 @@ export default async function SinifSayfasi({
         sablon={ogretmen.behaviorTemplate}
         baslangicZamani={new Date().toISOString()}
         kilitli={kilitli}
+        sinifAdi={sinif.name}
+        dersYazisi={dersYazisi}
       />
     </>
   );
