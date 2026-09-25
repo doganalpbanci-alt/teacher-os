@@ -679,8 +679,11 @@ console.log("\nN. Bildirim suresi");
   const yildizOmru = await kutuOmru(nTahta, "Yıldız ver");
   ok("Yildiz kisa durur (< 4 sn)", yildizOmru < 4000, `${yildizOmru} ms`);
 
+  // Sureler 25 Eylul'de kisaltildi (kirmizi 10 -> 7.5 sn): kartlar ders
+  // materyalini boluyordu. Esik olculen degerin altinda tutuluyor ki
+  // yoklama gecikmesi testi haksiz yere dusurmesin.
   const kirmiziOmru = await kutuOmru(nTahta, "Kırmızı kart ver");
-  ok("Kirmizi kart uzun durur (> 7 sn)", kirmiziOmru > 7000, `${kirmiziOmru} ms`);
+  ok("Kirmizi kart uzun durur (> 6 sn)", kirmiziOmru > 6000, `${kirmiziOmru} ms`);
   ok(
     "Kirmizi kart yildizdan belirgin uzun durur",
     kirmiziOmru > yildizOmru * 2,
@@ -710,14 +713,20 @@ console.log("\nN. Bildirim suresi");
 
   const nYakalanan = await nTahta.evaluate(() => window.__yakalananBildirimler ?? []);
   ok("Iki bildirim de yakalandi", nYakalanan.length === 2, JSON.stringify(nYakalanan));
+  // Sureler kisaltildiktan sonra en uzun tur (kirmizi, 7.5 sn) Chrome'un
+  // kendiliginden kapatma esiginin (8 sn) ALTINDA kaldi; yani hicbir turde
+  // `requireInteraction` acilmiyor ve bu dogru durum -- sayfa ici kutu ile
+  // isletim sistemi bildirimi ayni sure boyunca duruyor. Kural yine de
+  // `board-rules-test`te korunuyor: biri sureyi 8 saniyenin ustune
+  // cikarirsa bayrak kendiliginden devreye girer.
   ok(
     "Yildiz bildirimi ekrana sabitlenmez",
     nYakalanan[0]?.requireInteraction === false,
     String(nYakalanan[0]?.requireInteraction),
   );
   ok(
-    "Kirmizi kart bildirimi ekrana sabitlenir",
-    nYakalanan[1]?.requireInteraction === true,
+    "Kirmizi kart da sabitlenmiyor (suresi esigin altinda)",
+    nYakalanan[1]?.requireInteraction === false,
     String(nYakalanan[1]?.requireInteraction),
   );
 
@@ -964,6 +973,36 @@ console.log("\nP. Tahta penceresi");
   );
   await gorunurlukKur(pTahta, "visible");
 
+  // --- Pencere boyutu ---
+  // `resizeTo` gercek pencere yoneticisi ister; headless'ta pencere hep acan
+  // sayfanin olcusunu bildiriyor. Bu yuzden olcunun UYGULANDIGI degil, DOGRU
+  // CAGRILDIGI sinanir: yanlis sayi gonderirsek burada yakalanir.
+  ok(
+    "Boyut dugmeleri pencere acikken gorunuyor",
+    (await pTahta.locator(".canli-pip-olcu").count()) === 3,
+  );
+  await pTahta.evaluate(() => {
+    window.__olculer = [];
+    const w = window.documentPictureInPicture.window;
+    w.resizeTo = (g, y) => window.__olculer.push([g, y]);
+  });
+  await pTahta.getByRole("button", { name: "Büyük", exact: true }).click();
+  ok(
+    "Buyuk secilince dogru olcuyle boyutlandirildi",
+    JSON.stringify(await pTahta.evaluate(() => window.__olculer)) === "[[760,320]]",
+    JSON.stringify(await pTahta.evaluate(() => window.__olculer)),
+  );
+  await pTahta.getByRole("button", { name: "Küçük", exact: true }).click();
+  ok(
+    "Kucuk secilince de dogru olcu",
+    JSON.stringify(await pTahta.evaluate(() => window.__olculer)) === "[[760,320],[420,180]]",
+    JSON.stringify(await pTahta.evaluate(() => window.__olculer)),
+  );
+  ok(
+    "Secili boyut isaretli",
+    (await pTahta.getByRole("button", { name: "Küçük", exact: true }).getAttribute("aria-pressed")) === "true",
+  );
+
   // Pencere kapaninca durum geri alinir ve isletim sistemi bildirimi geri gelir.
   await pTahta.evaluate(() => window.documentPictureInPicture.window.close());
   await pTahta.waitForFunction(
@@ -986,6 +1025,21 @@ console.log("\nP. Tahta penceresi");
     "Pencere kapaninca isletim sistemi bildirimi geri geldi",
     (await bildirimSayaci(pTahta)) > kapandiktanSonra,
     `${kapandiktanSonra} -> ${await bildirimSayaci(pTahta)}`,
+  );
+
+  // Boyut secimi cihazda kalir (localStorage), tahta modu secimi gibi:
+  // ogretmen her ders yeniden ayarlamasin.
+  await pTahta.reload({ waitUntil: "networkidle" });
+  ok(
+    "Kapaliyken boyut dugmeleri gizli",
+    (await pTahta.locator(".canli-pip-olcu").count()) === 0,
+  );
+  await pTahta.getByRole("button", { name: /Tahta penceresini aç/ }).click();
+  await pTahta.waitForFunction(() => window.documentPictureInPicture?.window != null, null, { timeout: 10000 });
+  await pTahta.waitForSelector(".canli-pip-olcu", { timeout: 8000 });
+  ok(
+    "Yenilemeden sonra secim korundu",
+    (await pTahta.getByRole("button", { name: "Küçük", exact: true }).getAttribute("aria-pressed")) === "true",
   );
 
   await pTahtaB.close();

@@ -6,8 +6,15 @@ import type { BehaviorTemplate, BehaviorType } from "@prisma/client";
 import { OLAY_GORUNUMU } from "@/lib/behavior-rules";
 import { sesCal } from "@/lib/board-sound";
 import { bildirimGoster, bildirimIzniIste } from "@/lib/board-notification";
-import { bildirimMetni, bildirimSuresi, buyukGosterilir } from "@/lib/board-rules";
-import { pipAc, pipAcilabilir } from "@/lib/board-pip";
+import {
+  bildirimMetni,
+  bildirimSuresi,
+  buyukGosterilir,
+  pipBoyutuCozumle,
+  PIP_BOYUTLARI,
+  type PipBoyutAnahtari,
+} from "@/lib/board-rules";
+import { pipAc, pipAcilabilir, pipBoyutlandir } from "@/lib/board-pip";
 import { TahtaPenceresi, type PipOlayi } from "./TahtaPenceresi";
 
 // Telefondan verilen bir kart/yıldızın tahtada anında görünmesi ve dikkat
@@ -44,6 +51,9 @@ const YOKLAMA_ARALIGI_MS = 2000;
 // Bildirimin ekranda kalma süresi artık olay türüne göre değişiyor;
 // kural ve gerekçesi `board-notification.ts`te (`bildirimSuresi`).
 const SECIM_ANAHTARI = "teacher_os_tahta_modu";
+// Pencere boyutu cihazda kalır, tıpkı tahta modu seçimi gibi: tahtanın
+// ekranıyla telefonun ekranı aynı ölçüyü istemez.
+const PIP_BOYUT_ANAHTARI = "teacher_os_pip_boyutu";
 
 // Yalnızca tarayıcı testlerinin gözlemlemesi için: sesin çalındığını ve
 // yoklamanın çalıştığını doğrudan doğrulamanın başka yolu yok (Playwright
@@ -114,6 +124,7 @@ export function SinifCanliBildirimleri({
   const [pipVar, setPipVar] = useState(false);
   const [pipPenceresi, setPipPenceresi] = useState<Window | null>(null);
   const [pipOlayi, setPipOlayi] = useState<PipOlayi | null>(null);
+  const [pipBoyutu, setPipBoyutu] = useState<PipBoyutAnahtari>(() => "ORTA");
 
   const sesAcikRef = useRef(sesAcik);
   const sesBaglami = useRef<AudioContext | null>(null);
@@ -143,6 +154,11 @@ export function SinifCanliBildirimleri({
   useEffect(() => {
     setSecim(secimiOku());
     setPipVar(pipAcilabilir());
+    try {
+      setPipBoyutu(pipBoyutuCozumle(window.localStorage.getItem(PIP_BOYUT_ANAHTARI)));
+    } catch {
+      // Depolama kapalıysa varsayılan boyut kullanılır.
+    }
   }, []);
 
   // Genişlik eşiği: aynı css breakpoint'i JS tarafında da izler. Bölünmüş
@@ -337,8 +353,23 @@ export function SinifCanliBildirimleri({
   }
 
   async function tahtaPenceresiniAc() {
-    const pencere = await pipAc();
+    const olcu = PIP_BOYUTLARI[pipBoyutu];
+    const pencere = await pipAc(olcu.genislik, olcu.yukseklik);
     if (pencere) setPipPenceresi(pencere);
+  }
+
+  // Düğmeye basmak KULLANICI DOKUNUŞUDUR; `resizeTo` bunu şart koşuyor.
+  // Pencere açık değilse yalnızca tercih kaydedilir, bir sonraki açılışta
+  // kullanılır.
+  function pipBoyutunuSec(anahtar: PipBoyutAnahtari) {
+    setPipBoyutu(anahtar);
+    try {
+      window.localStorage.setItem(PIP_BOYUT_ANAHTARI, anahtar);
+    } catch {
+      // Yazılamazsa seçim yalnızca bu oturum için geçerli olur.
+    }
+    const olcu = PIP_BOYUTLARI[anahtar];
+    if (pipPenceresi) pipBoyutlandir(pipPenceresi, olcu.genislik, olcu.yukseklik);
   }
 
   function moduDegistir() {
@@ -396,6 +427,31 @@ export function SinifCanliBildirimleri({
           <button type="button" className="canli-pip-dugmesi" onClick={tahtaPenceresiniAc}>
             📺 Tahta penceresini aç
           </button>
+        )}
+
+        {/* Boyut düğmeleri yalnızca pencere açıkken. Kenardan sürükleyerek de
+            boyutlandırılabiliyor ama akıllı tahtada parmakla kenar yakalamak
+            zor; bu tek dokunuş. Chrome boyutu hatırladığı için bir kez
+            seçmek yetiyor. */}
+        {etkin && pipAcik && (
+          <div className="canli-pip-boyut">
+            <span className="soluk">Pencere:</span>
+            {(Object.keys(PIP_BOYUTLARI) as PipBoyutAnahtari[]).map((anahtar) => (
+              <button
+                key={anahtar}
+                type="button"
+                className={
+                  anahtar === pipBoyutu
+                    ? "canli-pip-olcu canli-pip-olcu-secili"
+                    : "canli-pip-olcu"
+                }
+                aria-pressed={anahtar === pipBoyutu}
+                onClick={() => pipBoyutunuSec(anahtar)}
+              >
+                {PIP_BOYUTLARI[anahtar].ad}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
