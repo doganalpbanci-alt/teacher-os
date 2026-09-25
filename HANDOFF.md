@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 25 Eylül 2026 · anlatılan kod durumu `main` = `3491f18`
+Son güncelleme: 25 Eylül 2026 · anlatılan kod durumu `main` = `bb5c219`
 (üstündeki commit'ler yalnızca bu notun kendisi olabilir)
 
 ---
@@ -386,10 +386,17 @@ Kurallar `board-rules.ts`te, tek yerde:
 
 ```
 yıldız/artı  2.5 sn   küçük     (sık verilir, yol tıkamasın)
-eksi         5   sn   büyük
-sarı kart    8   sn   büyük
-kırmızı kart 10  sn   büyük     (en ağır sonuç, teneffüs cezası buna bağlı)
+eksi         4   sn   büyük
+sarı kart    6   sn   büyük
+kırmızı kart 7.5 sn   büyük     (en ağır sonuç, teneffüs cezası buna bağlı)
 ```
+
+Bu sayılar **25 Eylül'de gerçek tahtada kısaltıldı** (eksi 5→4, sarı 8→6,
+kırmızı 10→7.5): kartlar ders materyalini fazla bölüyordu. Öğretmenin isteği
+"çok kısaltma ama biraz kısalt" — sıralama ve oran korundu, hepsi aşağı
+çekildi. Kural testinde ALT SINIR da var (kırmızı ≥ 6 sn, sarı ≥ 5 sn): daha
+da kısalırsa sesi duyup başını kaldıran öğrenci boş ekran görür, kartın bütün
+anlamı buydu.
 
 **Sıra baskısı:** sırada iki ya da daha fazla olay beklerken süre en kısaya
 düşer. Yoksa üst üste üç kart veren öğretmenin sonuncusu yarım dakika sonra
@@ -399,12 +406,17 @@ düşmesi garanti değil), bu yüzden `board-rules-test`te saf olarak sınanır.
 **Chrome tuzağı:** `requireInteraction` verilmemiş bir bildirimi Chrome ~8
 saniye sonra kendiliğinden bildirim merkezine indirir. Bu eşikten uzun
 gösterilecek türlerde bayrak açılır; kapatma kararı yine bizde kalır.
-Sarı kart TAM 8 saniye, yani eşiğe eşit — eşitlik bayrağı açmaz, bu bilerek
-ve testte açıkça yazılı.
+
+Süreler kısaldıktan sonra **hiçbir tür bu eşiği aşmıyor**, yani bayrak şu an
+hiç açılmıyor — ve bu doğru durum: sayfa içi kutu ile işletim sistemi
+bildirimi artık tam aynı süre boyunca duruyor. Kural silinmedi; biri süreyi
+8 saniyenin üstüne çıkarırsa kendiliğinden devreye girer. `board-rules-test`
+her tür için ayrı ayrı "eşiği aşmıyor" ve "sabitleme gerekmiyor" diye
+sınıyor, ve eşiğin 1 ms üstünün sabitlendiğini de.
 
 Kutu sayfanın sağ altındaydı (düğmelerin arasında, tahtanın en az bakılan
 yeri); artık düğme yığınından ayrı, **ekranın üstünde ve ortalanmış**.
-`pointer-events: none` şart: 10 saniye duran bir katman altındaki listeye
+`pointer-events: none` şart: saniyelerce duran bir katman altındaki listeye
 tıklamayı yutmamalı.
 
 #### Tahta penceresi (Document Picture-in-Picture)
@@ -439,9 +451,30 @@ sayfanın kendi zamanlayıcısı.
 Tahta modu kapatılırsa pencere de kapanır: yoklama durduğu için açık kalsa
 donmuş bir ekran gösterirdi.
 
+**Pencere boyutu ve konumu.** Pencere açıkken üç hazır ölçü düğmesi çıkar
+(Küçük 420×180, Orta 560×240, Büyük 760×320); seçim cihazda kalır.
+Kenarından sürükleyerek de boyutlandırılabiliyor ama akıllı tahtada parmakla
+kenar yakalamak zor, düğme tek dokunuş.
+
+**Sabitleme ayrı bir iş değil:** Chrome, PiP penceresinin boyutunu VE
+konumunu kendisi hatırlıyor. Öğretmen bir kez yerleştirip boyutlandırınca
+sonraki derslerde orada açılıyor. Bu yüzden `preferInitialWindowPlacement`
+BİLEREK verilmiyor — verilseydi her açılışta varsayılan konuma dönerdi ve
+konumu site zaten belirleyemiyor, tek yolu bu hafıza.
+
+`resizeTo` PiP penceresinde çalışır ama **kullanıcı dokunuşu ister**; düğmeye
+basmak zaten o. Gerçek boyutlanma bu ortamda doğrulanamıyor: headless'ta
+pencere yöneticisi yok, pencere hep açan sayfanın ölçüsünü bildiriyor. Test
+ölçünün UYGULANDIĞINI değil DOĞRU ÇAĞRILDIĞINI sınar.
+
 Sınırlar: yalnızca Chrome/Edge masaüstü (Firefox ve Safari'de düğme hiç
 görünmez), ve sayfa gerçekten başka bir adrese giderse pencere kapanır —
 `router.refresh()` gezinme sayılmaz, pencere ayakta kalır.
+
+**Gerçek tahtada doğrulandı (25 Eylül).** Pencere çalışıyor ve öğretmenin
+kendi HTML sunumunun üstünde küçük bir alana yerleştirilebiliyor; sunumun az
+bir kısmını kapatıyor, öğretmen bunu kabul edilebilir buldu. Sunuma gömülü
+bir entegrasyon (aşağıya bak) bu yüzden gereksiz kaldı.
 
 ### Ders kuralı
 Bir sınıfın bitmemiş dersi (`Lesson.endedAt` boş) aktif derstir. Sınıfın aynı
@@ -786,7 +819,7 @@ Karne ortalaması hem raporda hem sınıf gelişiminde aynı formülle hesaplan�
 ## Testler
 
 Yirmi sekiz arayüz testi (gerçek tarayıcıda, Playwright) ve sekiz saf hesap
-testi, toplam **1130 kontrol**. Hepsi geçiyor.
+testi, toplam **1157 kontrol**. Hepsi geçiyor.
 
 ```
 scripts/e2e-test.mjs                       sınıf/öğrenci ekleme, kalıcılık      35
@@ -807,7 +840,8 @@ scripts/lock-ui-test.mjs                   tahta PIN kilidi                     
 scripts/board-ui-test.mjs                  canlı tahta yansıması + ses; ders
                                             yokken açılan tahta, ders değişimi;
                                             arka planda bildirim, süre/boyut
-                                            ölçümü, tahta penceresi (PiP)        91
+                                            ölçümü, tahta penceresi (PiP) ve
+                                            pencere boyutu seçimi                97
 scripts/parent-message-ui-test.mjs         veli mesajı, WhatsApp, taslak        25
 scripts/undo-ui-test.mjs                   davranış kaydını geri alma           40
 scripts/student-name-edit-ui-test.mjs      öğrenci ad/soyad düzenleme           13
@@ -834,7 +868,8 @@ scripts/report-ui-test.mjs                 rapor: dönem seçimi, yazdırma kipi
 scripts/progress-rules-test.mjs            gelişim eşikleri, yön kararı,
                                             kapsama göre etiket               44
 scripts/board-rules-test.mjs               tahta bildirimi: metin, süre, sıra
-                                            baskısı, boyut, PiP renk kontrastı 45
+                                            baskısı, boyut, PiP renk kontrastı
+                                            ve pencere ölçüleri                66
 scripts/class-report-ui-test.mjs           sınıf raporu: alfabetik sıra,
                                             teslim bazlı oran, yazdırma       38
 scripts/class-progress-ui-test.mjs         sınıf gelişimi: öğrenci başına
@@ -1021,6 +1056,15 @@ v0.6'dan geriye yalnızca **grafikler** kaldı; v0.4'ten beri bilerek
 bekliyorlar. ROADMAP'in "Açık kalan küçük sorular" bölümünde de gerçek
 kullanımdan gelebilecek küçük iyileştirmeler var.
 
+**Sunuma gömülü entegrasyon gerekmedi (25 Eylül).** Öğretmen derste kendi
+HTML sunumlarını kullanıyor (Claude'un ürettiği, menülü, çevrimdışı da
+açılabilen tek dosyalar). "Kart slaydın içinde çıksın" için iki yol
+düşünülmüştü — sunuma gömülecek bir betik (sınıfa özel yayın anahtarıyla,
+çünkü oturum çerezi `sameSite: "lax"` ve siteler arası istekte gitmiyor) ya
+da sunumu Teacher OS'te barındırmak. İkisi de yapılmadı: PiP penceresi
+sunumun üstüne küçük bir alana konabiliyor ve bu yeterli görüldü. Ayrıca
+gömülü betik sunumların ÇEVRİMDIŞI açılabilme özelliğini zayıflatırdı.
+
 **K12NET entegrasyonu araştırıldı ve kapatıldı (24 Eylül).** Sebebi
 "yapmaya değmez" değil, teknik olarak mümkün olmaması: `developers.k12net.com`
 partner API'si yalnızca OKUMA yapıyor (öğrenci/öğretmen/şube bilgisi, SSO);
@@ -1045,9 +1089,9 @@ daha önemli olabilir. Testler bunların DOĞRU ÇALIŞTIĞINI gösteriyor; DOĞ
   işe yarayıp yaramadığı, kalabalık bir sınıfta tablonun sığıp sığmadığı
   bilinmiyor.
 - QR akışı gerçek bir akıllı tahtada denenmedi.
-- Tahta penceresi (PiP) gerçek tahtada denenmedi: pencere boyutu, punto ve
-  renkler sınıfın arkasından okunuyor mu bilinmiyor. Hepsi tek yerde
-  (`board-pip.ts` ve `board-rules.ts`), değiştirmesi birer satır.
+- ~~Tahta penceresi (PiP) gerçek tahtada denenmedi~~ **denendi, çalışıyor
+  (25 Eylül)**. Aynı denemede kart süreleri de kısaltıldı. Hazır boyut
+  düğmeleri denemeden SONRA eklendi; "Küçük" ölçü henüz tahtada görülmedi.
 
 Bir sonraki büyük özelliğe geçmeden önce bir haftalık gerçek kullanım,
 buradaki eşikleri ve tasarım kararlarını yeni bir modülden daha çok

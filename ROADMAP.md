@@ -210,7 +210,13 @@ gerektirmiyor, bu yüzden önde:
 - ✓ **Tahta penceresi (Document Picture-in-Picture)** *(25 Eylül — her zaman
   üstte duran, içeriği tamamen bizim olan pencere. 24 Eylül'de gerçek
   tahtada Windows bildiriminin küçük kaldığı görülünce yapıldı. Masaüstü
-  uygulaması gerekmedi; yalnızca Chrome/Edge masaüstünde çalışır)*
+  uygulaması gerekmedi; yalnızca Chrome/Edge masaüstünde çalışır.*
+  **Gerçek tahtada doğrulandı:** öğretmenin kendi sunumunun üstüne küçük bir
+  alana yerleştirilebiliyor.)*
+- ✓ Kart sürelerinin gerçek derse göre ayarlanması *(25 Eylül — sarı 8→6,
+  kırmızı 10→7.5 sn; ders materyalini fazla bölüyordu)*
+- ✓ Pencere boyutu seçimi *(üç hazır ölçü; konumu ve boyutu Chrome zaten
+  hatırlıyor, "sabitleme" ayrı bir iş değil)*
 - Akıllı tahta ders görünümü *(ayrı bir tam ekran görünüm; avatar + sınıf
   haritası işiyle birlikte ele alınması daha mantıklı)*
 
@@ -276,6 +282,15 @@ mı) ve iş sırası geldiğinde ele alınır.
   K12'yle örtüşen tek yanı ödev/sınav/devamsızlık; geri kalan her şey
   (kartlar, EXP, hedefler, canlı yansıma) zaten yalnızca burada. Yeniden
   açılırsa başlangıç noktası `developers.k12net.com`.
+- **Sunuma gömülü entegrasyon (25 Eylül).** Öğretmen derste kendi HTML
+  sunumlarını kullanıyor (menülü, çevrimdışı da açılabilen tek dosyalar).
+  Kartın slaydın İÇİNDE çıkması için iki yol vardı: sunuma gömülecek bir
+  betik (sınıfa özel yayın anahtarıyla — oturum çerezi `sameSite: "lax"`
+  olduğu için siteler arası istekte gitmiyor) ya da sunumu Teacher OS'te
+  barındırmak. İkisi de yapılmadı: PiP penceresi sunumun üstüne küçük bir
+  alana konabiliyor ve yeterli görüldü. Gömülü betik ayrıca sunumların
+  çevrimdışı açılabilme özelliğini zayıflatırdı. Yeniden açılırsa başlangıç
+  noktası yayın anahtarı fikri.
 - **Masaüstü uygulaması (25 Eylül).** "Bildirim başka uygulamanın üstünde
   görünsün" için gerekmedi; Document PiP penceresi aynı işi kurulumsuz
   yapıyor. Masaüstü uygulamasının tek ek getirisi "Chrome hiç açık değilken"
