@@ -3,7 +3,7 @@
 Yeni bir oturuma başlarken önce bunu, sonra `CLAUDE.md` (kurallar) ve
 `ROADMAP.md` (yön) dosyalarını oku. Bu belge **mevcut durumu** anlatır.
 
-Son güncelleme: 21 Eylül 2026 · anlatılan kod durumu `main` = `5d10d14`
+Son güncelleme: 25 Eylül 2026 · anlatılan kod durumu `main` = `3491f18`
 (üstündeki commit'ler yalnızca bu notun kendisi olabilir)
 
 ---
@@ -166,6 +166,12 @@ src/lib/
   lock.ts / lock-rules.ts akıllı tahta PIN kilidi: hash/doğrulama/deneme sınırı
   board-events.ts        telefondan verilen kartın tahtaya yansıması (polling)
   board-sound.ts         WebAudio 8-bit bildirim sesi
+  board-rules.ts         tahta bildiriminin veritabanısız/tarayıcısız kısmı:
+                         metin, ekranda kalma süresi (olay türüne göre), sıra
+                         baskısı eşiği, büyük gösterilecek türler, PiP renkleri
+  board-notification.ts  işletim sistemi bildirimi: izin, gösterme, süre
+  board-pip.ts           tahta penceresi (Document Picture-in-Picture): açma
+                         ve pencerenin kendi stil sayfası
   parent-message.ts / parent-message-rules.ts
                          veli mesajı: WhatsApp bağlantısı, şablonlar, geçmiş
   account-reset.ts       tüm hesap verisini silme (öğretmen kalır)
@@ -210,7 +216,11 @@ src/components/  (~35 dosya; öne çıkanlar)
   DersKontrolu.tsx         duruma göre "Yeni ders başlat" ya da "Dersi bitir"
   CezaKontrolu.tsx         ceza rozeti + kronometre paneli
   TahtaKilidi.tsx          PIN pad'i, kilit rozeti, kilit/aç akışı
-  SinifCanliBildirimleri.tsx  telefonda verilen kartın tahtada canlı yansıması + ses
+  SinifCanliBildirimleri.tsx  telefonda verilen kartın tahtada canlı yansıması + ses;
+                           üç gösterim kanalını da o yönetir (sayfa içi kutu,
+                           işletim sistemi bildirimi, tahta penceresi)
+  TahtaPenceresi.tsx       tahta penceresinin içeriği; `createPortal` ile AYRI
+                           BİR DOKÜMANA render edilir
   OgrenciAdiFormu.tsx      öğrenci sayfası başlığı; "Düzenle" ile ad/soyad düzeltme
   SinifYonetimi.tsx / OgrenciYonetimi.tsx  arşivle/arşivden çıkar/sil
   HesapSifirlamaFormu.tsx  Ayarlar'daki "Tehlike bölgesi"
@@ -342,6 +352,96 @@ değişimi artık `board-ui-test.mjs`'in K ve L bölümlerinde sınanıyor.
 Yan etki (bilinçli): geniş bir ekranda açık duran eskimiş ikinci sekme artık
 kendini düzeltir. `lesson-ui-test`'teki "eskimiş form" senaryosu bu yüzden
 dar ekrana alındı.
+
+#### Üç gösterim kanalı
+Aynı olay, tahtanın o anki durumuna göre farklı yerde görünür. Üçünü de
+`SinifCanliBildirimleri` yönetir:
+
+| durum | ne görünür |
+|---|---|
+| sekme önde | sayfa içi kutu (`.canli-bildirim`) + ses |
+| sekme arka planda | işletim sistemi bildirimi (`board-notification.ts`) + ses |
+| tahta penceresi açık | pencerenin kendisi (`board-pip.ts`) + ses |
+
+**Arka planda yoklama neden durmuyor (23 Eylül):** `yokla` içinde
+`document.visibilityState !== "visible"` ise dönen bir kontrol vardı; gerekçe
+pil ve ağ tasarrufuydu. Ama bu döngü zaten YALNIZCA tahta modunda çalışıyor
+ve tahta prize takılı. Öğretmen tahtada başka bir uygulamaya geçtiği anda —
+yani tam kartın görünmesi gereken anda — bildirimlerin tamamı kesiliyordu.
+Kontrol kaldırıldı. `board-ui-test`'in G bölümü eskiden bunun TERSİNİ
+doğruluyordu; çevrildi.
+
+Chrome, 5 dakikadan uzun süre gizli kalan sekmede `setInterval`i dakikada
+bire indirir. Muafiyet listesi dar; **son 30 saniyede ses çalmış sekme muaf
+tutulur**, bu yüzden sesin arka planda da çalması ayrıca işe yarar.
+
+**Arka plan olayları kuyruğa girmez.** Girseydi iki sorun çıkardı: kutuyu
+sıraya sokan `setTimeout` gizli sekmede kısıtlanır, ve öğretmen sekmeye
+döndüğünde ders boyunca birikmiş bildirimler arka arkaya patlardı.
+
+#### Süre ve boyut olay türüne göre
+Kart, yıldızla aynı sürede kaybolmamalı: yıldız rutindir, kart SINIFIN
+GÖRMESİ için verilir. Öğretmenin "kızmak yerine kart işlettiği" an budur.
+Kurallar `board-rules.ts`te, tek yerde:
+
+```
+yıldız/artı  2.5 sn   küçük     (sık verilir, yol tıkamasın)
+eksi         5   sn   büyük
+sarı kart    8   sn   büyük
+kırmızı kart 10  sn   büyük     (en ağır sonuç, teneffüs cezası buna bağlı)
+```
+
+**Sıra baskısı:** sırada iki ya da daha fazla olay beklerken süre en kısaya
+düşer. Yoksa üst üste üç kart veren öğretmenin sonuncusu yarım dakika sonra
+görünürdü. Bu kural tarayıcıda güvenilir sınanamaz (üç kartın aynı yoklamaya
+düşmesi garanti değil), bu yüzden `board-rules-test`te saf olarak sınanır.
+
+**Chrome tuzağı:** `requireInteraction` verilmemiş bir bildirimi Chrome ~8
+saniye sonra kendiliğinden bildirim merkezine indirir. Bu eşikten uzun
+gösterilecek türlerde bayrak açılır; kapatma kararı yine bizde kalır.
+Sarı kart TAM 8 saniye, yani eşiğe eşit — eşitlik bayrağı açmaz, bu bilerek
+ve testte açıkça yazılı.
+
+Kutu sayfanın sağ altındaydı (düğmelerin arasında, tahtanın en az bakılan
+yeri); artık düğme yığınından ayrı, **ekranın üstünde ve ortalanmış**.
+`pointer-events: none` şart: 10 saniye duran bir katman altındaki listeye
+tıklamayı yutmamalı.
+
+#### Tahta penceresi (Document Picture-in-Picture)
+24 Eylül'de gerçek tahtada denendi: yalnızca Windows bildirimi geldi ve
+küçüktü. İşletim sistemi bildiriminin GÖRÜNÜMÜNÜ belirleyemiyoruz — boyutu,
+yeri, yazı tipi Windows'a ait. Çözüm masaüstü uygulaması değil, Chrome'un
+Document PiP penceresi: her zaman üstte durur, içeriği tamamen bizimdir,
+kurulum gerektirmez.
+
+Öğretmen ders başında "📺 Tahta penceresini aç" der (kullanıcı dokunuşu şart,
+kendiliğinden açılamaz). Pencere olay yokken sınıf adı ve ders bilgisini
+gösterir; olay gelince öğrencinin adı büyük puntoyla ve **tam ekran renkle**
+çıkar, süresi dolunca sakin haline döner.
+
+Üç karar ve nedenleri:
+- **Simge yok.** `OLAY_GORUNUMU`daki 🟥 ve 🟨 emojileri kendi renklerinde
+  geliyor; kırmızı zeminde kırmızı kart görünmez oluyordu (ekran
+  görüntüsünde yakalandı). Rengi zaten zemin taşıyor, ve pencere alçak —
+  simgeyi çıkarmak ada ve etikete daha çok punto bıraktı.
+- **Renk tek başına anlam taşımaz:** etiket ("kırmızı kart aldı") her zaman
+  yazılı. Yeşil `#16a34a`, `#15803d` değil: koyu yeşil kırmızıyla neredeyse
+  aynı parlaklıkta (1.04:1) ve gri tonda ayırt edilemiyordu. Kural testi her
+  rengin kontrastını WCAG formülüyle ölçer, göz kararıyla değil.
+- **Pencere açıkken işletim sistemi bildirimi gönderilmez.** İkisi de arka
+  plan kanalı; ikisi birden çıkarsa aynı olay iki kez duyurulur.
+
+**Yoklama zamanlayıcısı pencereden kurulur.** Pencere ayrı bir dokümandır ve
+`visibilityState` hep `"visible"`; Chrome'un "5 dakikadır gizli sekmede
+dakikada bir uyandır" kısıtlaması ona işlemez. Pencere yoksa eskisi gibi
+sayfanın kendi zamanlayıcısı.
+
+Tahta modu kapatılırsa pencere de kapanır: yoklama durduğu için açık kalsa
+donmuş bir ekran gösterirdi.
+
+Sınırlar: yalnızca Chrome/Edge masaüstü (Firefox ve Safari'de düğme hiç
+görünmez), ve sayfa gerçekten başka bir adrese giderse pencere kapanır —
+`router.refresh()` gezinme sayılmaz, pencere ayakta kalır.
 
 ### Ders kuralı
 Bir sınıfın bitmemiş dersi (`Lesson.endedAt` boş) aktif derstir. Sınıfın aynı
@@ -685,8 +785,8 @@ Karne ortalaması hem raporda hem sınıf gelişiminde aynı formülle hesaplan�
 
 ## Testler
 
-Yirmi sekiz arayüz testi (gerçek tarayıcıda, Playwright) ve yedi saf hesap
-testi, toplam **1030 kontrol**. Hepsi geçiyor.
+Yirmi sekiz arayüz testi (gerçek tarayıcıda, Playwright) ve sekiz saf hesap
+testi, toplam **1130 kontrol**. Hepsi geçiyor.
 
 ```
 scripts/e2e-test.mjs                       sınıf/öğrenci ekleme, kalıcılık      35
@@ -705,7 +805,9 @@ scripts/agenda-ui-test.mjs                 günlük gündem ve sayaç           
 scripts/exam-ui-test.mjs                   sınav açma, not girme, girmedi       40
 scripts/lock-ui-test.mjs                   tahta PIN kilidi                     44
 scripts/board-ui-test.mjs                  canlı tahta yansıması + ses; ders
-                                            yokken açılan tahta, ders değişimi   36
+                                            yokken açılan tahta, ders değişimi;
+                                            arka planda bildirim, süre/boyut
+                                            ölçümü, tahta penceresi (PiP)        91
 scripts/parent-message-ui-test.mjs         veli mesajı, WhatsApp, taslak        25
 scripts/undo-ui-test.mjs                   davranış kaydını geri alma           40
 scripts/student-name-edit-ui-test.mjs      öğrenci ad/soyad düzenleme           13
@@ -731,6 +833,8 @@ scripts/report-ui-test.mjs                 rapor: dönem seçimi, yazdırma kipi
                                             yazdır düğmesi, öğretmen ayrımı     45
 scripts/progress-rules-test.mjs            gelişim eşikleri, yön kararı,
                                             kapsama göre etiket               44
+scripts/board-rules-test.mjs               tahta bildirimi: metin, süre, sıra
+                                            baskısı, boyut, PiP renk kontrastı 45
 scripts/class-report-ui-test.mjs           sınıf raporu: alfabetik sıra,
                                             teslim bazlı oran, yazdırma       38
 scripts/class-progress-ui-test.mjs         sınıf gelişimi: öğrenci başına
@@ -739,12 +843,14 @@ scripts/class-progress-ui-test.mjs         sınıf gelişimi: öğrenci başına
 
 `exam-rules-test.mjs`, `parent-message-rules-test.mjs`,
 `class-goal-rules-test.mjs`, `exp-rules-test.mjs`, `dashboard-rules-test.mjs`,
-`pairing-rules-test.mjs` ve `progress-rules-test.mjs` diğerlerinden farklı:
+`pairing-rules-test.mjs`, `progress-rules-test.mjs` ve `board-rules-test.mjs`
+diğerlerinden farklı:
 tarayıcı açmaz, sunucu gerektirmez. Veritabanına da ekrana da bağlı olmayan saf kurallar
 (ağırlıklı puan/net/dönem; telefon normalizasyonu, WhatsApp bağlantısı,
 şablon üretimi; hedef/ödül geçerliliği ve ilerleme yüzdesi; EXP sabitleri
 ve seviye formülü; panel eşikleri; eşleşme durumu ve açık yönlendirme
-koruması; gelişim eşikleri ve yön kararı) doğrudan sınanır. Kurallar TypeScript'te yazılı olduğundan test önce ilgili
+koruması; gelişim eşikleri ve yön kararı; tahta bildiriminin süresi, sıra
+baskısı eşiği ve PiP renklerinin kontrastı) doğrudan sınanır. Kurallar TypeScript'te yazılı olduğundan test önce ilgili
 `kurallar.ts` dosyasını geçici bir dizine derler. Tek başına da çalışır:
 `node scripts/<ad>.mjs`.
 
@@ -878,7 +984,9 @@ ve **EXP/seviye sistemi** (gamification'ın öğretmen bazlı açılıp kapanan
 iki parçası, aynı anahtarla), performans notu tabanının 90'dan 80'e
 indirilmesi, **genel panel**, **gelişim görünümü** (öğrenci ve sınıf),
 **yazdırılabilir raporlar** (öğrenci ve sınıf), **QR ile akıllı tahta
-girişi** ve giriş sonrası dönüş. v0.6'nın öğrenci ve sınıf tarafı bitti.
+girişi** ve giriş sonrası dönüş, **tahta bildirimlerinin üç kanalı** (sayfa
+içi kutu, işletim sistemi bildirimi, tahta penceresi). v0.6'nın öğrenci ve
+sınıf tarafı bitti.
 
 **Hız:** Vercel fonksiyonları `vercel.json` ile `dub1`'de (Dublin) çalışır —
 veritabanıyla aynı bölge. Varsayılan `iad1` (Washington) her sorguyu
@@ -892,11 +1000,39 @@ iletişimi) canlıda ama henüz birkaç haftalık gerçek kullanımla tam
 sınanmadı. Akıllı tahta kilidi ve canlı yansıma en az bir gerçek ders
 oturumunda denendi.
 
-**Sırada:** v0.6'dan geriye yalnızca **grafikler** kaldı; v0.4'ten beri
-bilerek bekliyorlar. Numaralı sırada sonraki adım **v0.7 (AI Assistant)** —
-bu öncekilerden nitelik olarak daha büyük bir iş. ROADMAP'in "Açık kalan
-küçük sorular" bölümünde de gerçek kullanımdan gelebilecek küçük
-iyileştirmeler var.
+**24 Eylül, gerçek tahta:** arka plan bildirimleri gerçek derste denendi.
+Sonuç: Windows bildirimi geldi ama küçüktü ve öğretmenin istediği
+caydırıcılığı vermedi. Bu ölçüm tahta penceresini (PiP) doğurdu. Pencerenin
+kendisi henüz gerçek tahtada denenmedi.
+
+**YÖN DEĞİŞTİ (24 Eylül).** Öğretmenin kendi sözleriyle: okulun ana sistemi
+K12NET, Teacher OS takip için değil "ileride oyunlaştırma ve virtual
+classroom tarzı bir deneyim" için isteniyor. Bunun iki sonucu var:
+
+1. **Sıradaki büyük iş artık v0.7 (AI Assistant) değil, oyunlaştırma.**
+   Öğretmen üç yön seçti: avatar + sınıf haritası, takım yarışı, rozet ve
+   ödül dükkânı. Ayrıntılı plan ROADMAP'te. Şu an **beklemede** — önce tahta
+   bildirimleri bitirildi.
+2. **Takip modülleri olduğu gibi kalır, dokunulmaz.** Öğretmenin kendi
+   kararı. Silmek EXP'yi ve raporları kırardı, karşılığında bir şey
+   kazandırmazdı. Sınav ve rapor tarafını hiç açmadan da kullanılabilir.
+
+v0.6'dan geriye yalnızca **grafikler** kaldı; v0.4'ten beri bilerek
+bekliyorlar. ROADMAP'in "Açık kalan küçük sorular" bölümünde de gerçek
+kullanımdan gelebilecek küçük iyileştirmeler var.
+
+**K12NET entegrasyonu araştırıldı ve kapatıldı (24 Eylül).** Sebebi
+"yapmaya değmez" değil, teknik olarak mümkün olmaması: `developers.k12net.com`
+partner API'si yalnızca OKUMA yapıyor (öğrenci/öğretmen/şube bilgisi, SSO);
+ödev, devamsızlık, not veya davranış için tek bir yazma endpoint'i yok.
+Erişim ayrıca kurumsal partnerlik sözleşmesi gerektiriyor. K12NET'in kendi
+toplu aktarım kanalı Excel ve E-Okul.
+
+Not: çift giriş sorunu sanıldığı kadar geniş değil. Teacher OS'te olup
+K12'de karşılığı olmayan şeyler (artı/eksi, kartlar, teneffüs cezası, EXP,
+sınıf hedefleri, davranış geçmişi, canlı yansıma) zaten hiçbir zaman iki
+yere girilmiyor. Örtüşen yalnızca **ödev, sınav notu ve devamsızlık** —
+devamsızlık modülü Teacher OS'te zaten hiç yok.
 
 **v0.6'nın hiçbir parçası gerçek veriyle denenmedi** ve bu, sıradaki işten
 daha önemli olabilir. Testler bunların DOĞRU ÇALIŞTIĞINI gösteriyor; DOĞRU
@@ -909,16 +1045,18 @@ daha önemli olabilir. Testler bunların DOĞRU ÇALIŞTIĞINI gösteriyor; DOĞ
   işe yarayıp yaramadığı, kalabalık bir sınıfta tablonun sığıp sığmadığı
   bilinmiyor.
 - QR akışı gerçek bir akıllı tahtada denenmedi.
+- Tahta penceresi (PiP) gerçek tahtada denenmedi: pencere boyutu, punto ve
+  renkler sınıfın arkasından okunuyor mu bilinmiyor. Hepsi tek yerde
+  (`board-pip.ts` ve `board-rules.ts`), değiştirmesi birer satır.
 
 Bir sonraki büyük özelliğe geçmeden önce bir haftalık gerçek kullanım,
 buradaki eşikleri ve tasarım kararlarını yeni bir modülden daha çok
 düzeltir.
 
 ### Açık kalan küçük sorular
-- Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
-  bildirimin görünür kalması (PiP/overlay) denendi ama ölçüm sonucu
-  paylaşılmadı; tanı sayfası kod tabanından kaldırıldı. Gerçekten istenirse
-  yeniden ele alınabilir.
+- ~~Akıllı tahtada üstüne başka bir uygulama açıkken canlı bildirimin
+  görünür kalması~~ **yapıldı (25 Eylül)**: tahta penceresi (Document PiP).
+  Ayrıntısı "Canlı tahta yansıması" bölümünde.
 - Kart şablonunda ders sırasında öğrencinin birikimi görünmüyor (puan
   kaldırıldı, yıldız sayısı hiç yoktu). İstenirse "bu derste kaç yıldız"
   sayacı eklenebilir.

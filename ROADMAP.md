@@ -98,10 +98,9 @@ eklendi:
   *(canlı katman artık derse değil sınıfa bağlı; ders değişimini de yakalar)*
 
 ### Açık kalan küçük sorular
-- Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
-  bildirimin görünür kalması (PiP/overlay) denendi ama ölçüm sonucu
-  paylaşılmadı; tanı sayfası kod tabanından kaldırıldı. Gerçekten istenirse
-  yeniden ele alınabilir.
+- ✓ ~~Akıllı tahtada üstüne başka bir uygulama (PowerPoint vb.) açıkken canlı
+  bildirimin görünür kalması~~ **yapıldı (25 Eylül)**: tahta penceresi
+  (Document PiP). Bkz. v0.9.
 
 ## v0.6 — Dashboard & Raporlama
 - ✓ Genel dashboard *(üst menüde "Panel"; bekleyen işler, dikkat gereken
@@ -151,7 +150,47 @@ Grafikler hâlâ bilerek yok (v0.4'teki aynı gerekçe): ekranlar önce sayılar
 bilerek kullanılmadı — iki nokta arasına çizilen bir çizgi zaten grafik
 değildir.
 
-## v0.7 — AI Assistant
+## Sırada — Oyunlaştırma / Virtual Classroom
+
+**Sıra değişti (24 Eylül).** Öğretmenin kendi sözleriyle: okulun ana sistemi
+K12NET, Teacher OS takip için değil "ileride oyunlaştırma ve virtual
+classroom tarzı bir deneyim" için isteniyor. Numaralı sıradaki v0.7
+(AI Assistant) bu yüzden geriye alındı.
+
+Takip modülleri (sınav, rapor, veli mesajı) **olduğu gibi kalır** — öğretmenin
+kararı. Silmek EXP'yi ve raporları kırardı. Kullanılmadıkları sürece
+görünmüyorlar zaten.
+
+Öğretmen üç yön seçti. Aşağıdaki sıra ucuzdan pahalıya; ilk ikisi migration
+gerektirmiyor, bu yüzden önde:
+
+1. **Avatar + sınıf haritası** *(tek nullable kolon)*
+   Tahtada ders ekranının yeni bir görünümü: her öğrenci bir kutu — avatar,
+   ad, seviye rozeti, o dersteki yıldız/kart. Yıldız gelince kutu canlanır.
+   Avatar öğrenci id'sinden **deterministik türetilir**, yani hiçbir şey
+   girmeden herkesin avatarı olur; `Student.avatarKey` yalnızca öğretmen
+   değiştirmek istediğinde dolar.
+2. **Rozetler** *(migration YOK)*
+   Tamamen türetilir: "5 ders üst üste kartsız", "50 yıldız", "10 ödev
+   zamanında" — hepsi mevcut `BehaviorLog` / `ExpEvent` / `Submission`
+   kayıtlarından. Geçmişe dönük çalışır: açıldığı anda öğrencilerin bugüne
+   kadar hak ettiği rozetler ortaya çıkar, sıfırdan başlamazlar.
+3. **Takım yarışı** *(migration var)*
+   `Team` (sınıf, ad, renk) + `Student.teamId`. Skor yazılmaz, tarih
+   aralığından türetilir — "haftalık sıfırlama" diye bir yazma işlemi olmaz,
+   tıpkı kart durumu ve sınıf hedefi gibi.
+4. **Ödül dükkânı** *(migration var + BİR İLKE KARARI)*
+   Burada çözülmemiş bir sorun var: seviye `expTotal`'dan hesaplanıyor ve
+   EXP'nin yalnızca artması şemada yazılı bir kural. Ödül satın almak EXP'yi
+   düşürürse **öğrenci seviye kaybeder** — oyunlaştırmada bu kötüdür, emeği
+   geri alınmış gibi hissettirir. Önerilen çözüm iki para birimi: **seviye
+   EXP** ömür boyu birikir ve hiç harcanmaz (şimdiki davranış aynen kalır),
+   **jeton** aynı olaylardan kazanılır ama ayrı sayılır ve harcanır. Bir
+   yıldız ikisine birden yazar. Karar verilmedi, iş sırası geldiğinde alınır.
+
+Şu an **beklemede**: öğretmen önce tahta bildirimlerinin bitmesini istedi.
+
+## v0.7 — AI Assistant *(ertelendi)*
 - Öğrenci ve sınıf verilerini analiz etme
 - Öğretmene yardımcı sorgular
 
@@ -162,8 +201,18 @@ değildir.
 - Database'e aktarım
 
 ## v0.9 — Smartboard
-- Akıllı tahta ders görünümü
-- Canlı öğrenci/davranış göstergeleri
+- ✓ Canlı öğrenci/davranış göstergeleri *(telefondan verilen kart tahtada
+  anında görünür; PIN kilidi, QR ile giriş)*
+- ✓ Arka plandayken de bildirim ve ses *(23 Eylül — sekme önde değilken
+  yoklama duruyordu, bilerek yazılmış bir tasarruftu ve tahtada yanlıştı)*
+- ✓ Kart bildiriminin süresi ve boyutu olay türüne göre *(kart yıldızdan
+  uzun durur ve büyük görünür; sınıfın görmesi için verilir)*
+- ✓ **Tahta penceresi (Document Picture-in-Picture)** *(25 Eylül — her zaman
+  üstte duran, içeriği tamamen bizim olan pencere. 24 Eylül'de gerçek
+  tahtada Windows bildiriminin küçük kaldığı görülünce yapıldı. Masaüstü
+  uygulaması gerekmedi; yalnızca Chrome/Edge masaüstünde çalışır)*
+- Akıllı tahta ders görünümü *(ayrı bir tam ekran görünüm; avatar + sınıf
+  haritası işiyle birlikte ele alınması daha mantıklı)*
 
 ## v1.0 — Teacher OS
 Temel öğretmen yönetimi · davranış · ödev · sınav · veli iletişimi ·
@@ -171,10 +220,14 @@ raporlama · AI · smartboard.
 
 ---
 
-## Ekstra — Gamification (opsiyonel modül)
+## Gamification (öğretmen bazlı açılıp kapanan modül)
 
-Numaralı sıranın dışında tutulur: davranış şablonu gibi (`Teacher.behaviorTemplate`)
-öğretmen bazlı açılıp kapanan ayrı bir modül olacak. Kart/yıldız sistemini
+> **Not (24 Eylül):** bu bölüm eskiden "Ekstra — opsiyonel" başlığındaydı.
+> Artık ürünün ana yönü; yukarıdaki "Sırada — Oyunlaştırma" bölümü bunun
+> devamıdır. Aşağıdaki mimari notlar hâlâ geçerli.
+
+Davranış şablonu gibi (`Teacher.behaviorTemplate`) öğretmen bazlı açılıp
+kapanan ayrı bir modül olarak kalır. Kart/yıldız sistemini
 kullanmayan ya da bu tarz bir ödül mekaniği istemeyen öğretmen hiç görmeyecek.
 v1.0'ın temel tanımına dahil değildir.
 
@@ -186,9 +239,11 @@ kendi başına anlamlı, bir sonrakini beklemek zorunda değil:
   kapanır, varsayılan kapalı)*
 - ✓ Tecrübe puanı (EXP) ve seviye *(aynı anahtarla açılıp kapanır; performans
   notundan tamamen bağımsız — kırmızı kart EXP'yi hiç etkilemez)*
-- Bireysel ödüller
-- Karakter özelleştirme
-- Öğrenciler arası düello
+- Rozetler *(bkz. "Sırada — Oyunlaştırma", 2. adım)*
+- Karakter özelleştirme *(avatar + sınıf haritası, 1. adım)*
+- Takım yarışı *(3. adım)*
+- Bireysel ödüller *(ödül dükkânı, 4. adım — para birimi kararı bekliyor)*
+- Öğrenciler arası düello *(henüz tasarlanmadı)*
 
 Mimari not: sınıf hedeflerinin kaynağı `BehaviorLog`'daki PLUS kayıtlarıdır
 (yıldız/artı). EXP'nin kaynağı ayrı bir append-only tablo, `ExpEvent`
@@ -207,10 +262,24 @@ Seviye formülü artan eşikli (her seviye bir öncekinden 20 fazla EXP ister).
 Aynı olaydan iki kez EXP yazılmaz (essiz kısıt korur). Ayrıntısı
 `HANDOFF.md`'de.
 
-Bireysel ödüller / karakter özelleştirme / düello henüz tasarlanmadı;
-daha büyük mimari kararlar gerektirir (ödülün ne olduğu, karakterin neyi
-temsil ettiği, düellonun puanlamaya karışıp karışmayacağı) ve iş sırası
-geldiğinde ele alınır.
+Avatar, rozet ve takım yarışının şekli yukarıda belirlendi. Ödül dükkânının
+para birimi kararı ve düello hâlâ açık; ikisi de daha büyük mimari kararlar
+gerektiriyor (harcanan EXP seviyeyi düşürmeli mi, düello puanlamaya karışacak
+mı) ve iş sırası geldiğinde ele alınır.
+
+---
+
+## Kapatılan yollar
+- **K12NET entegrasyonu (24 Eylül).** Araştırıldı ve kapatıldı. Partner
+  API'si yalnızca okuma yapıyor; ödev, devamsızlık, not veya davranış için
+  yazma endpoint'i yok, ayrıca kurumsal sözleşme gerektiriyor. Teacher OS'ün
+  K12'yle örtüşen tek yanı ödev/sınav/devamsızlık; geri kalan her şey
+  (kartlar, EXP, hedefler, canlı yansıma) zaten yalnızca burada. Yeniden
+  açılırsa başlangıç noktası `developers.k12net.com`.
+- **Masaüstü uygulaması (25 Eylül).** "Bildirim başka uygulamanın üstünde
+  görünsün" için gerekmedi; Document PiP penceresi aynı işi kurulumsuz
+  yapıyor. Masaüstü uygulamasının tek ek getirisi "Chrome hiç açık değilken"
+  olurdu, tahtada Chrome zaten açık.
 
 ---
 
