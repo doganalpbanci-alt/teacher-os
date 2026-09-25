@@ -34,12 +34,16 @@ export function bildirimMetni(
  * kaçırılır, sesi duyup başını kaldıran öğrenci boş ekran görür.
  *
  * Kırmızı en uzun durur: en ağır sonuç (teneffüs cezası) ona bağlı.
+ *
+ * 25 Eylül'de gerçek tahtada kısaltıldı (sarı 8→6, kırmızı 10→7.5, eksi
+ * 5→4): kartlar ders materyalini fazla bölüyordu. Öğretmenin isteği "çok
+ * kısaltma, biraz kısalt" -- sıralama ve oran korundu, hepsi aşağı çekildi.
  */
 export const BILDIRIM_SURESI_MS: Record<BehaviorType, number> = {
   PLUS: 2500,
-  MINUS: 5000,
-  YELLOW_CARD: 8000,
-  RED_CARD: 10000,
+  MINUS: 4000,
+  YELLOW_CARD: 6000,
+  RED_CARD: 7500,
 };
 
 /**
@@ -108,3 +112,33 @@ export const PIP_RENGI: Record<BehaviorType, PipRengi> = {
 
 /** Olay yokken pencerenin sakin hali. */
 export const PIP_BOS_RENGI: PipRengi = { zemin: "#1c1917", yazi: "#fafaf9" };
+
+/**
+ * Tahta penceresinin hazır boyutları.
+ *
+ * Neden düğme var: pencere kenarından sürükleyerek de boyutlandırılabilir
+ * ama akıllı tahtada parmakla kenar yakalamak zor. Düğme tek dokunuş.
+ *
+ * SABİTLEME AYRI BİR İŞ DEĞİL: Chrome, PiP penceresinin boyutunu VE konumunu
+ * kendisi hatırlıyor (`preferInitialWindowPlacement` verilmediği sürece --
+ * bilerek vermiyoruz). Yani öğretmen bir kez ayarlayıp bıraktığı yerde
+ * açılır. Buradaki ölçü yalnızca ilk açılışta kullanılır.
+ */
+export type PipBoyutAnahtari = "KUCUK" | "ORTA" | "BUYUK";
+
+export const PIP_BOYUTLARI: Record<
+  PipBoyutAnahtari,
+  { ad: string; genislik: number; yukseklik: number }
+> = {
+  KUCUK: { ad: "Küçük", genislik: 420, yukseklik: 180 },
+  ORTA: { ad: "Orta", genislik: 560, yukseklik: 240 },
+  BUYUK: { ad: "Büyük", genislik: 760, yukseklik: 320 },
+};
+
+export const VARSAYILAN_PIP_BOYUTU: PipBoyutAnahtari = "ORTA";
+
+export function pipBoyutuCozumle(deger: string | null): PipBoyutAnahtari {
+  return deger === "KUCUK" || deger === "ORTA" || deger === "BUYUK"
+    ? deger
+    : VARSAYILAN_PIP_BOYUTU;
+}

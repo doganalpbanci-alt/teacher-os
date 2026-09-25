@@ -8,6 +8,9 @@ import {
   ekranaSabitlenmeli,
   PIP_RENGI,
   PIP_BOS_RENGI,
+  PIP_BOYUTLARI,
+  VARSAYILAN_PIP_BOYUTU,
+  pipBoyutuCozumle,
 } from "../../src/lib/board-rules";
 
 let gecti = 0, kaldi = 0;
@@ -42,10 +45,15 @@ ok("Eksi yildizdan uzun", BILDIRIM_SURESI_MS.MINUS > BILDIRIM_SURESI_MS.PLUS);
 ok("Sari eksiden uzun", BILDIRIM_SURESI_MS.YELLOW_CARD > BILDIRIM_SURESI_MS.MINUS);
 ok("Kirmizi en uzun", BILDIRIM_SURESI_MS.RED_CARD > BILDIRIM_SURESI_MS.YELLOW_CARD);
 ok(
-  "Her kart turu yildizin en az uc kati durur (gorulmesi icin verilir)",
-  BILDIRIM_SURESI_MS.YELLOW_CARD >= BILDIRIM_SURESI_MS.PLUS * 3 &&
-    BILDIRIM_SURESI_MS.RED_CARD >= BILDIRIM_SURESI_MS.PLUS * 3,
+  "Her kart turu yildizin en az iki kati durur (gorulmesi icin verilir)",
+  BILDIRIM_SURESI_MS.YELLOW_CARD >= BILDIRIM_SURESI_MS.PLUS * 2 &&
+    BILDIRIM_SURESI_MS.RED_CARD >= BILDIRIM_SURESI_MS.PLUS * 2,
 );
+// 25 Eylul'de gercek tahtada kisaltildi: kartlar ders materyalini boluyordu.
+// Alt sinir da var -- cok kisalirsa sesi duyup basini kaldiran ogrenci bos
+// ekran gorur, kartin butun anlami buydu.
+ok("Kirmizi kart en az 6 saniye durur", BILDIRIM_SURESI_MS.RED_CARD >= 6000, String(BILDIRIM_SURESI_MS.RED_CARD));
+ok("Sari kart en az 5 saniye durur", BILDIRIM_SURESI_MS.YELLOW_CARD >= 5000, String(BILDIRIM_SURESI_MS.YELLOW_CARD));
 
 // --- Sure: sira baskisi ---
 ok("Sira bosken tam sure", bildirimSuresi("RED_CARD", 0) === BILDIRIM_SURESI_MS.RED_CARD);
@@ -65,14 +73,20 @@ for (const [tur, sure] of Object.entries(BILDIRIM_SURESI_MS)) {
 // --- Chrome'un kendiliginden kapatmasi ---
 // Bu esikten UZUN gosterilecek turlerde `requireInteraction` acilmali,
 // yoksa Chrome bildirimi biz kapatmadan indirir.
-ok("Yildiz sabitlenmez", ekranaSabitlenmeli(BILDIRIM_SURESI_MS.PLUS) === false);
-ok("Eksi sabitlenmez", ekranaSabitlenmeli(BILDIRIM_SURESI_MS.MINUS) === false);
-ok(
-  "Sari tam esikte sabitlenmez (esitlik yeterli degil)",
-  BILDIRIM_SURESI_MS.YELLOW_CARD === CHROME_KENDILIGINDEN_KAPATMA_MS &&
-    ekranaSabitlenmeli(BILDIRIM_SURESI_MS.YELLOW_CARD) === false,
-);
-ok("Kirmizi sabitlenir", ekranaSabitlenmeli(BILDIRIM_SURESI_MS.RED_CARD) === true);
+// Sureler kisaltildiktan sonra HICBIR tur esigi asmiyor; yani su an
+// `requireInteraction` hicbir yerde acilmiyor ve bu DOGRU durum: sayfa ici
+// kutu ile isletim sistemi bildirimi ayni sure boyunca duruyor. Kural yine
+// de duruyor -- biri sureyi 8 saniyenin ustune cikarirsa kendiliginden
+// devreye girsin diye.
+for (const [tur, sure] of Object.entries(BILDIRIM_SURESI_MS)) {
+  ok(
+    `${tur}: Chrome'un kendiliginden kapatma esigini asmiyor`,
+    sure <= CHROME_KENDILIGINDEN_KAPATMA_MS,
+    `${sure} > ${CHROME_KENDILIGINDEN_KAPATMA_MS}`,
+  );
+  ok(`${tur}: sabitleme gerekmiyor`, ekranaSabitlenmeli(sure) === false);
+}
+ok("Tam esikte sabitlenmez (esitlik yeterli degil)", ekranaSabitlenmeli(CHROME_KENDILIGINDEN_KAPATMA_MS) === false);
 ok("Esigin 1ms ustu sabitlenir", ekranaSabitlenmeli(CHROME_KENDILIGINDEN_KAPATMA_MS + 1) === true);
 
 // --- Boyut: hangi olay buyuk gosterilir ---
@@ -133,6 +147,32 @@ ok(
 // dusuk tutuldu, renk yalnizca pekistirme.
 const kirmiziYesil = kontrast(PIP_RENGI.RED_CARD.zemin, PIP_RENGI.PLUS.zemin);
 ok("Kirmizi ile yesil gri tonda da ayrisiyor", kirmiziYesil > 1.3, `${kirmiziYesil.toFixed(2)}:1`);
+
+// --- Tahta penceresi boyutlari ---
+const boyutlar = Object.values(PIP_BOYUTLARI);
+ok("Uc hazir boyut var", boyutlar.length === 3, String(boyutlar.length));
+ok(
+  "Boyutlar kucukten buyuge siralı",
+  PIP_BOYUTLARI.KUCUK.genislik < PIP_BOYUTLARI.ORTA.genislik &&
+    PIP_BOYUTLARI.ORTA.genislik < PIP_BOYUTLARI.BUYUK.genislik &&
+    PIP_BOYUTLARI.KUCUK.yukseklik < PIP_BOYUTLARI.ORTA.yukseklik &&
+    PIP_BOYUTLARI.ORTA.yukseklik < PIP_BOYUTLARI.BUYUK.yukseklik,
+);
+// En kucugunde bile iki satir yazi sigmali; Chrome cok kucuk pencereyi
+// kendi alt sinirina ceker ama biz oraya dusurmeyelim.
+ok("En kucuk boyut bile makul", PIP_BOYUTLARI.KUCUK.genislik >= 320 && PIP_BOYUTLARI.KUCUK.yukseklik >= 150);
+for (const [anahtar, olcu] of Object.entries(PIP_BOYUTLARI)) {
+  ok(`${anahtar}: genis-alcak oranda (yazi yatayda akar)`, olcu.genislik > olcu.yukseklik, `${olcu.genislik}x${olcu.yukseklik}`);
+  ok(`${anahtar}: adi var`, olcu.ad.length > 0);
+}
+
+// Depolamadan okunan deger her zaman gecerli bir anahtara dusmeli:
+// bozuk ya da eski bir deger pencereyi acilamaz hale getirmemeli.
+ok("Bos deger varsayilana duser", pipBoyutuCozumle(null) === VARSAYILAN_PIP_BOYUTU);
+ok("Tanimsiz metin varsayilana duser", pipBoyutuCozumle("DEVASA") === VARSAYILAN_PIP_BOYUTU);
+ok("Bos metin varsayilana duser", pipBoyutuCozumle("") === VARSAYILAN_PIP_BOYUTU);
+ok("Gecerli deger korunur", pipBoyutuCozumle("BUYUK") === "BUYUK");
+ok("Varsayilan gercekten tabloda var", PIP_BOYUTLARI[VARSAYILAN_PIP_BOYUTU] !== undefined);
 
 console.log(`\n${gecti} gecti, ${kaldi} kaldi\n`);
 process.exit(kaldi === 0 ? 0 : 1);

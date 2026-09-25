@@ -21,9 +21,6 @@
 //  - Sayfa gerçekten başka bir adrese giderse pencere kapanır.
 //    `router.refresh()` gezinme sayılmaz, pencere ayakta kalır.
 
-const PENCERE_GENISLIGI = 560;
-const PENCERE_YUKSEKLIGI = 240;
-
 type PipApi = {
   requestWindow: (secenekler: { width: number; height: number }) => Promise<Window>;
 };
@@ -94,15 +91,17 @@ const STIL = `
  * Pencereyi açar. KULLANICI DOKUNUŞUNDAN çağrılmalı.
  * Açılamazsa `null` -- çağıran taraf buna takılmaz, diğer kanallar
  * (sayfa içi kutu, işletim sistemi bildirimi) zaten çalışıyor.
+ *
+ * `preferInitialWindowPlacement` BİLEREK VERİLMİYOR: verilmediğinde Chrome
+ * pencereyi öğretmenin bıraktığı boyut ve KONUMDA açar. Konumu site zaten
+ * belirleyemiyor; tek yolu bu hafıza. Yani buradaki ölçü ilk açılışta (ya da
+ * temiz bir profilde) geçerli.
  */
-export async function pipAc(): Promise<Window | null> {
+export async function pipAc(genislik: number, yukseklik: number): Promise<Window | null> {
   const api = pipApi();
   if (!api) return null;
   try {
-    const pencere = await api.requestWindow({
-      width: PENCERE_GENISLIGI,
-      height: PENCERE_YUKSEKLIGI,
-    });
+    const pencere = await api.requestWindow({ width: genislik, height: yukseklik });
     const stil = pencere.document.createElement("style");
     stil.textContent = STIL;
     pencere.document.head.appendChild(stil);
@@ -110,5 +109,21 @@ export async function pipAc(): Promise<Window | null> {
   } catch {
     // Kullanıcı vazgeçti, tarayıcı reddetti ya da zaten açık bir pencere var.
     return null;
+  }
+}
+
+/**
+ * Açık pencereyi yeniden boyutlandırır.
+ *
+ * `resizeTo` PiP penceresinde çalışır ama KULLANICI DOKUNUŞU ister; bu yüzden
+ * yalnızca düğme tıklamasından çağrılmalı. Chrome çok küçük ya da çok büyük
+ * değerleri kendi sınırlarına çeker, bu normaldir.
+ */
+export function pipBoyutlandir(pencere: Window, genislik: number, yukseklik: number): void {
+  try {
+    pencere.resizeTo(genislik, yukseklik);
+  } catch {
+    // Tarayıcı reddederse pencere olduğu gibi kalır; öğretmen kenardan
+    // sürükleyerek yine boyutlandırabilir.
   }
 }
